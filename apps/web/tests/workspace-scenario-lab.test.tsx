@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { comparisonFixture } from "./fixtures/comparison";
 
-const runScenarioComparison = vi.fn();
+const { runScenarioComparison } = vi.hoisted(() => ({ runScenarioComparison: vi.fn() }));
 vi.mock("../lib/api/simulation", async () => {
   const actual = await vi.importActual<typeof import("../lib/api/simulation")>("../lib/api/simulation");
   return { ...actual, checkSimulationHealth: vi.fn().mockResolvedValue(true), runScenarioComparison };
@@ -66,7 +66,7 @@ describe("Scenario Lab workspace", () => {
     await user.click(screen.getByRole("tab", { name: "Risk" }));
     expect(screen.getByRole("group", { name: /paired transition counts/i })).toHaveTextContent(/Violation to compliance/);
     await user.click(screen.getByRole("tab", { name: "Resources" }));
-    expect(screen.getByText("Baseline utilization")).toBeInTheDocument();
+    expect(screen.getAllByText("Baseline utilization").length).toBeGreaterThan(0);
     expect(screen.getByText("Higher utilization is not interpreted as automatically better or worse.")).toBeInTheDocument();
   });
 

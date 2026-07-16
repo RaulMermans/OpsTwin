@@ -18,8 +18,10 @@ describe("comparison request lifecycle", () => {
     vi.stubGlobal("fetch", vi.fn((_path, init: RequestInit) => new Promise((_resolve, reject) => {
       init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     })));
-    const request = runScenarioComparison({}); await vi.advanceTimersByTimeAsync(60_000);
-    await expect(request).rejects.toMatchObject({ code: "TIMEOUT", message: "The comparison took longer than the browser waiting limit. Your inputs have been preserved." });
+    const request = runScenarioComparison({});
+    const timeout = expect(request).rejects.toMatchObject({ code: "TIMEOUT", message: "The comparison took longer than the browser waiting limit. Your inputs have been preserved." });
+    await vi.advanceTimersByTimeAsync(60_000);
+    await timeout;
   });
 
   it("maps malformed success JSON to an unexpected response", async () => {

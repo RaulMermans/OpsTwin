@@ -37,8 +37,8 @@ export function WorkflowVisualization({ model, baseline, scenarios, result }: Pr
 
   const closeInspector = () => {
     const ref = selectedId ? nodeRefs.current.get(selectedId) : null;
+    ref?.focus();
     setSelectedId(null);
-    window.requestAnimationFrame(() => ref?.focus());
   };
   const handleKey = (event: KeyboardEvent<HTMLElement>) => { if (event.key === "Escape" && selectedId) { event.preventDefault(); closeInspector(); } };
 

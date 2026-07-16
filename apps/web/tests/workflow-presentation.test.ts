@@ -80,7 +80,7 @@ describe("scenario change mapping", () => {
 
   it("maps route and SLA overrides explicitly", () => {
     const mapped = mapScenarioChanges(model, { id: "x", name: "x", overrides: [
-      { entityType: "route", entityId: "triage-routing", field: "options.0.probability", operation: "replace", value: 0.7 },
+      { entityType: "route", entityId: "triage-routing:level-1", field: "probability", operation: "replace", value: 0.7 },
       { entityType: "slaRule", entityId: "support-resolution-sla", field: "targetDuration", operation: "replace", value: 45 },
     ] });
     expect(mapped.changes.map((change) => change.targetKind)).toEqual(["route", "sla"]);
