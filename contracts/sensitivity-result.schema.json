@@ -1,0 +1,915 @@
+{
+  "$defs": {
+    "AggregateMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "mean": {
+          "title": "Mean",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "sampleVariance": {
+          "minimum": 0,
+          "title": "Samplevariance",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "standardDeviation": {
+          "minimum": 0,
+          "title": "Standarddeviation",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "minimum": {
+          "title": "Minimum",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "maximum": {
+          "title": "Maximum",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "p10": {
+          "title": "P10",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "p50": {
+          "title": "P50",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "p90": {
+          "title": "P90",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "confidenceInterval": {
+          "$ref": "#/$defs/ConfidenceInterval"
+        }
+      },
+      "required": [
+        "count",
+        "mean",
+        "sampleVariance",
+        "standardDeviation",
+        "minimum",
+        "maximum",
+        "p10",
+        "p50",
+        "p90",
+        "confidenceInterval"
+      ],
+      "title": "AggregateMetric",
+      "type": "object"
+    },
+    "ConfidenceInterval": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "title": "Level",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "lower": {
+          "title": "Lower",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "method": {
+          "const": "normal_approximation",
+          "default": "normal_approximation",
+          "title": "Method",
+          "type": "string"
+        },
+        "successfulRunCount": {
+          "minimum": 1,
+          "title": "Successfulruncount",
+          "type": "integer"
+        },
+        "reliableSampleSize": {
+          "title": "Reliablesamplesize",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "level",
+        "lower",
+        "upper",
+        "successfulRunCount",
+        "reliableSampleSize"
+      ],
+      "title": "ConfidenceInterval",
+      "type": "object"
+    },
+    "FiniteDifference": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "lowerParameterValue": {
+          "title": "Lowerparametervalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "upperParameterValue": {
+          "title": "Upperparametervalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "parameterDifference": {
+          "title": "Parameterdifference",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "metricDifference": {
+          "title": "Metricdifference",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "finiteDifference": {
+          "title": "Finitedifference",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "metric",
+        "unit",
+        "lowerParameterValue",
+        "upperParameterValue",
+        "parameterDifference",
+        "metricDifference",
+        "finiteDifference"
+      ],
+      "title": "FiniteDifference",
+      "type": "object"
+    },
+    "ImprovementResult": {
+      "additionalProperties": false,
+      "properties": {
+        "improvedCount": {
+          "minimum": 0,
+          "title": "Improvedcount",
+          "type": "integer"
+        },
+        "degradedCount": {
+          "minimum": 0,
+          "title": "Degradedcount",
+          "type": "integer"
+        },
+        "tiedCount": {
+          "minimum": 0,
+          "title": "Tiedcount",
+          "type": "integer"
+        },
+        "probabilityOfImprovement": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probabilityofimprovement",
+          "type": "number"
+        },
+        "probabilityOfDegradation": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probabilityofdegradation",
+          "type": "number"
+        },
+        "probabilityOfTie": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probabilityoftie",
+          "type": "number"
+        },
+        "validPairedRunCount": {
+          "minimum": 1,
+          "title": "Validpairedruncount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "improvedCount",
+        "degradedCount",
+        "tiedCount",
+        "probabilityOfImprovement",
+        "probabilityOfDegradation",
+        "probabilityOfTie",
+        "validPairedRunCount"
+      ],
+      "title": "ImprovementResult",
+      "type": "object"
+    },
+    "MetricResponseCurve": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "direction": {
+          "title": "Direction",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/ResponsePoint"
+          },
+          "title": "Points",
+          "type": "array"
+        },
+        "finiteDifferences": {
+          "items": {
+            "$ref": "#/$defs/FiniteDifference"
+          },
+          "title": "Finitedifferences",
+          "type": "array"
+        },
+        "monotonicity": {
+          "enum": [
+            "observed_increasing",
+            "observed_decreasing",
+            "observed_flat",
+            "observed_mixed",
+            "insufficient_evidence"
+          ],
+          "title": "Monotonicity",
+          "type": "string"
+        },
+        "thresholdCrossings": {
+          "items": {
+            "$ref": "#/$defs/ThresholdCrossing"
+          },
+          "title": "Thresholdcrossings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "metric",
+        "unit",
+        "direction",
+        "points",
+        "finiteDifferences",
+        "monotonicity",
+        "thresholdCrossings"
+      ],
+      "title": "MetricResponseCurve",
+      "type": "object"
+    },
+    "PairedMetricResult": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "absoluteDelta": {
+          "$ref": "#/$defs/AggregateMetric"
+        },
+        "relativeDelta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AggregateMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relativeDeltaUndefinedCount": {
+          "minimum": 0,
+          "title": "Relativedeltaundefinedcount",
+          "type": "integer"
+        },
+        "improvement": {
+          "$ref": "#/$defs/ImprovementResult"
+        }
+      },
+      "required": [
+        "metric",
+        "absoluteDelta",
+        "relativeDelta",
+        "relativeDeltaUndefinedCount",
+        "improvement"
+      ],
+      "title": "PairedMetricResult",
+      "type": "object"
+    },
+    "ResponsePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "parameterValue": {
+          "title": "Parametervalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "isBaselineValue": {
+          "title": "Isbaselinevalue",
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "confidenceIntervalLower": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidenceintervallower"
+        },
+        "confidenceIntervalUpper": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidenceintervalupper"
+        },
+        "observedElasticity": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observedelasticity"
+        }
+      },
+      "required": [
+        "parameterValue",
+        "isBaselineValue",
+        "status"
+      ],
+      "title": "ResponsePoint",
+      "type": "object"
+    },
+    "RunSeed": {
+      "additionalProperties": false,
+      "properties": {
+        "runIndex": {
+          "minimum": 0,
+          "title": "Runindex",
+          "type": "integer"
+        },
+        "seed": {
+          "maximum": 18446744073709552000,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "runIndex",
+        "seed"
+      ],
+      "title": "RunSeed",
+      "type": "object"
+    },
+    "SensitivityExecutionMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "executionOrder": {
+          "const": "run_index_then_values",
+          "default": "run_index_then_values",
+          "title": "Executionorder",
+          "type": "string"
+        },
+        "ordinarySimulationExecutions": {
+          "minimum": 0,
+          "title": "Ordinarysimulationexecutions",
+          "type": "integer"
+        },
+        "ordinaryRunIncludedEventCount": {
+          "const": 0,
+          "default": 0,
+          "title": "Ordinaryrunincludedeventcount",
+          "type": "integer"
+        },
+        "ordinaryRunRetainedEventCount": {
+          "const": 0,
+          "default": 0,
+          "title": "Ordinaryrunretainedeventcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ordinarySimulationExecutions"
+      ],
+      "title": "SensitivityExecutionMetadata",
+      "type": "object"
+    },
+    "SensitivityFailureEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "target_validation",
+            "value_validation",
+            "materialization_validation",
+            "domain_validation",
+            "execution_failure",
+            "integrity_failure",
+            "paired_ratio_failure",
+            "serialization_failure"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "message"
+      ],
+      "title": "SensitivityFailureEvidence",
+      "type": "object"
+    },
+    "SensitivityIntegrityStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "passed",
+          "default": "passed",
+          "title": "Status",
+          "type": "string"
+        },
+        "checksRun": {
+          "minimum": 18,
+          "title": "Checksrun",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "checksRun"
+      ],
+      "title": "SensitivityIntegrityStatus",
+      "type": "object"
+    },
+    "SensitivityTargetMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "entityType": {
+          "title": "Entitytype",
+          "type": "string"
+        },
+        "entityId": {
+          "title": "Entityid",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "valueType": {
+          "enum": [
+            "integer",
+            "number"
+          ],
+          "title": "Valuetype",
+          "type": "string"
+        },
+        "baselineValue": {
+          "title": "Baselinevalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "entityType",
+        "entityId",
+        "field",
+        "label",
+        "unit",
+        "valueType",
+        "baselineValue"
+      ],
+      "title": "SensitivityTargetMetadata",
+      "type": "object"
+    },
+    "SensitivityValueResult": {
+      "additionalProperties": false,
+      "properties": {
+        "parameterValue": {
+          "title": "Parametervalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "isBaselineValue": {
+          "title": "Isbaselinevalue",
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SensitivityFailureEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "modelHash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Modelhash"
+        },
+        "successfulRunCount": {
+          "minimum": 0,
+          "title": "Successfulruncount",
+          "type": "integer"
+        },
+        "failedRunCount": {
+          "minimum": 0,
+          "title": "Failedruncount",
+          "type": "integer"
+        },
+        "successfulRunRatio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Successfulrunratio",
+          "type": "number"
+        },
+        "pairedRunCount": {
+          "minimum": 0,
+          "title": "Pairedruncount",
+          "type": "integer"
+        },
+        "pairedRunRatio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pairedrunratio",
+          "type": "number"
+        },
+        "systemMetrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AggregateMetric"
+          },
+          "title": "Systemmetrics",
+          "type": "object"
+        },
+        "pairedMetrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PairedMetricResult"
+          },
+          "title": "Pairedmetrics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "parameterValue",
+        "isBaselineValue",
+        "status",
+        "successfulRunCount",
+        "failedRunCount",
+        "successfulRunRatio",
+        "pairedRunCount",
+        "pairedRunRatio",
+        "systemMetrics",
+        "pairedMetrics"
+      ],
+      "title": "SensitivityValueResult",
+      "type": "object"
+    },
+    "SensitivityWorkBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "baselineItemCount": {
+          "minimum": 1,
+          "title": "Baselineitemcount",
+          "type": "integer"
+        },
+        "runCount": {
+          "maximum": 100,
+          "minimum": 2,
+          "title": "Runcount",
+          "type": "integer"
+        },
+        "testedValueCount": {
+          "maximum": 10,
+          "minimum": 2,
+          "title": "Testedvaluecount",
+          "type": "integer"
+        },
+        "estimatedWorkUnits": {
+          "minimum": 1,
+          "title": "Estimatedworkunits",
+          "type": "integer"
+        },
+        "maximumWorkUnits": {
+          "const": 100000,
+          "default": 100000,
+          "title": "Maximumworkunits",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "baselineItemCount",
+        "runCount",
+        "testedValueCount",
+        "estimatedWorkUnits"
+      ],
+      "title": "SensitivityWorkBudget",
+      "type": "object"
+    },
+    "ThresholdCrossing": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "greaterThanOrEqual",
+            "lessThanOrEqual"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "lowerParameterValue": {
+          "title": "Lowerparametervalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "upperParameterValue": {
+          "title": "Upperparametervalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "lowerObservedMetric": {
+          "title": "Lowerobservedmetric",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "upperObservedMetric": {
+          "title": "Upperobservedmetric",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "direction": {
+          "enum": [
+            "entered_compliance",
+            "left_compliance"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "label": {
+          "const": "Observed threshold crossing interval",
+          "default": "Observed threshold crossing interval",
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric",
+        "operator",
+        "threshold",
+        "lowerParameterValue",
+        "upperParameterValue",
+        "lowerObservedMetric",
+        "upperObservedMetric",
+        "direction"
+      ],
+      "title": "ThresholdCrossing",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "0.6.0",
+      "default": "0.6.0",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "baselineModelHash": {
+      "title": "Baselinemodelhash",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "target": {
+      "$ref": "#/$defs/SensitivityTargetMetadata"
+    },
+    "originalValues": {
+      "items": {
+        "type": "number",
+        "minimum": -1e+308,
+        "maximum": 1e+308
+      },
+      "title": "Originalvalues",
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 10
+    },
+    "canonicalValues": {
+      "items": {
+        "type": "number",
+        "minimum": -1e+308,
+        "maximum": 1e+308
+      },
+      "title": "Canonicalvalues",
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 10,
+      "uniqueItems": true
+    },
+    "requestedRunCount": {
+      "maximum": 100,
+      "minimum": 2,
+      "title": "Requestedruncount",
+      "type": "integer"
+    },
+    "baseSeed": {
+      "maximum": 9223372036854776000,
+      "minimum": 0,
+      "title": "Baseseed",
+      "type": "integer"
+    },
+    "seedScheduleAlgorithm": {
+      "const": "sha256_first_64_bits",
+      "title": "Seedschedulealgorithm",
+      "type": "string"
+    },
+    "runSeeds": {
+      "items": {
+        "$ref": "#/$defs/RunSeed"
+      },
+      "title": "Runseeds",
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100
+    },
+    "confidenceLevel": {
+      "title": "Confidencelevel",
+      "type": "number",
+      "minimum": -1e+308,
+      "maximum": 1e+308,
+      "enum": [
+        0.9,
+        0.95,
+        0.99
+      ]
+    },
+    "workBudget": {
+      "$ref": "#/$defs/SensitivityWorkBudget"
+    },
+    "values": {
+      "items": {
+        "$ref": "#/$defs/SensitivityValueResult"
+      },
+      "title": "Values",
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 10
+    },
+    "responseCurves": {
+      "items": {
+        "$ref": "#/$defs/MetricResponseCurve"
+      },
+      "title": "Responsecurves",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "execution": {
+      "$ref": "#/$defs/SensitivityExecutionMetadata"
+    },
+    "integrity": {
+      "$ref": "#/$defs/SensitivityIntegrityStatus"
+    }
+  },
+  "required": [
+    "baselineModelHash",
+    "target",
+    "originalValues",
+    "canonicalValues",
+    "requestedRunCount",
+    "baseSeed",
+    "seedScheduleAlgorithm",
+    "runSeeds",
+    "confidenceLevel",
+    "workBudget",
+    "values",
+    "responseCurves",
+    "execution",
+    "integrity"
+  ],
+  "title": "OpsTwin sensitivity result 0.6.0",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/sensitivity-result.schema.json"
+}

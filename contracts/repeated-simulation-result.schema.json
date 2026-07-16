@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/repeated-simulation-result.schema.json",
+  "title": "OpsTwin repeated simulation result 0.4.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "modelName", "requestedRunCount", "successfulRunCount", "failedRunCount", "successfulRunRatio", "baseSeed", "seedScheduleAlgorithm", "runSeeds", "observation", "confidenceLevel", "systemMetrics", "stageMetrics", "resourcePoolMetrics", "risks", "convergenceMethod", "convergence", "failedRuns", "representativeRun", "execution", "integrity"],
+  "$defs": {
+    "confidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["level", "lower", "upper", "method", "successfulRunCount", "reliableSampleSize"],
+      "properties": {
+        "level": { "enum": [0.9, 0.95, 0.99] }, "lower": { "type": "number" }, "upper": { "type": "number" },
+        "method": { "const": "normal_approximation" }, "successfulRunCount": { "type": "integer", "minimum": 1 }, "reliableSampleSize": { "type": "boolean" }
+      }
+    },
+    "aggregate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["count", "mean", "sampleVariance", "standardDeviation", "minimum", "maximum", "p10", "p50", "p90", "confidenceInterval"],
+      "properties": {
+        "count": { "type": "integer", "minimum": 1 }, "mean": { "type": "number" }, "sampleVariance": { "type": "number", "minimum": 0 },
+        "standardDeviation": { "type": "number", "minimum": 0 }, "minimum": { "type": "number" }, "maximum": { "type": "number" },
+        "p10": { "type": "number" }, "p50": { "type": "number" }, "p90": { "type": "number" }, "confidenceInterval": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "metricMap": { "type": "object", "additionalProperties": { "$ref": "#/$defs/aggregate" } }
+  },
+  "properties": {
+    "schemaVersion": { "const": "0.4.0" }, "modelName": { "type": "string", "minLength": 1 },
+    "requestedRunCount": { "type": "integer", "minimum": 2, "maximum": 500 }, "successfulRunCount": { "type": "integer", "minimum": 0 },
+    "failedRunCount": { "type": "integer", "minimum": 0 }, "successfulRunRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+    "baseSeed": { "type": "integer", "minimum": 0 }, "seedScheduleAlgorithm": { "const": "sha256_first_64_bits" },
+    "runSeeds": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["runIndex", "seed"], "properties": { "runIndex": { "type": "integer", "minimum": 0 }, "seed": { "type": "integer", "minimum": 0 } } } },
+    "observation": { "type": "object" }, "confidenceLevel": { "enum": [0.9, 0.95, 0.99] }, "systemMetrics": { "$ref": "#/$defs/metricMap" },
+    "stageMetrics": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["stageId", "metrics"], "properties": { "stageId": { "type": "string" }, "metrics": { "$ref": "#/$defs/metricMap" } } } },
+    "resourcePoolMetrics": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["resourcePoolId", "metrics"], "properties": { "resourcePoolId": { "type": "string" }, "metrics": { "$ref": "#/$defs/metricMap" } } } },
+    "risks": { "type": "array" }, "convergenceMethod": { "const": "observed_running_mean_stability" }, "convergence": { "type": "array" }, "failedRuns": { "type": "array" },
+    "representativeRun": { "type": "object", "required": ["runIndex", "seed", "selectionMethod", "distance", "medianVector", "metricVector", "rerunSnapshotMatches", "detailMode", "includedEventCount", "result"], "properties": { "runIndex": { "type": "integer" }, "seed": { "type": "integer" }, "selectionMethod": { "const": "normalized_median_vector" }, "distance": { "type": "number" }, "medianVector": { "type": "object" }, "metricVector": { "type": "object" }, "rerunSnapshotMatches": { "const": true }, "detailMode": { "enum": ["summary", "sampled", "full"] }, "includedEventCount": { "type": "integer" }, "result": { "$ref": "https://opstwin.local/contracts/simulation-result.schema.json" } } },
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ordinaryRunCount", "ordinaryRunIncludedEventCount", "ordinaryRunRetainedEventCount", "representativeRerunCount", "maximumSimultaneouslyRetainedSingleRunResults", "totalGeneratedEventCount", "returnedEventCount"],
+      "properties": {
+        "ordinaryRunCount": { "type": "integer", "minimum": 0 },
+        "ordinaryRunIncludedEventCount": { "const": 0 },
+        "ordinaryRunRetainedEventCount": { "const": 0 },
+        "representativeRerunCount": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "maximumSimultaneouslyRetainedSingleRunResults": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "totalGeneratedEventCount": { "type": "integer", "minimum": 0 },
+        "returnedEventCount": { "type": "integer", "minimum": 0 }
+      }
+    }, "integrity": { "type": "object", "required": ["status", "checksRun"], "properties": { "status": { "const": "passed" }, "checksRun": { "type": "integer", "minimum": 1 } } }
+  }
+}

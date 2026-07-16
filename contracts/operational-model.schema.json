@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/operational-model.schema.json",
+  "title": "OpsTwin operational model 0.2.0",
+  "description": "A seeded multi-stage operational model with durations in minutes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "name", "timeUnit", "runConfig", "sources", "resourcePools", "stages", "routes", "slaRules"],
+  "$defs": {
+    "fixedArrival": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "interval"],
+      "properties": { "type": { "const": "fixed" }, "interval": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "poissonArrival": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "meanInterarrivalTime"],
+      "properties": { "type": { "const": "poisson" }, "meanInterarrivalTime": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "fixedDistribution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": { "type": { "const": "fixed" }, "value": { "type": "number", "minimum": 0 } }
+    },
+    "exponentialDistribution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "mean"],
+      "properties": { "type": { "const": "exponential" }, "mean": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "uniformDistribution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "minimum", "maximum"],
+      "properties": { "type": { "const": "uniform" }, "minimum": { "type": "number", "minimum": 0 }, "maximum": { "type": "number", "minimum": 0 } }
+    },
+    "triangularDistribution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "minimum", "mode", "maximum"],
+      "properties": { "type": { "const": "triangular" }, "minimum": { "type": "number", "minimum": 0 }, "mode": { "type": "number", "minimum": 0 }, "maximum": { "type": "number", "minimum": 0 } }
+    },
+    "routeOption": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["targetType", "targetId", "probability"],
+          "properties": { "targetType": { "const": "stage" }, "targetId": { "type": "string", "minLength": 1 }, "probability": { "type": "number", "minimum": 0, "maximum": 1 } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["targetType", "probability"],
+          "properties": { "targetType": { "const": "completion" }, "probability": { "type": "number", "minimum": 0, "maximum": 1 } }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "schemaVersion": { "const": "0.2.0" },
+    "name": { "type": "string", "minLength": 1 },
+    "timeUnit": { "const": "minutes" },
+    "runConfig": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "seed": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 } }
+    },
+    "sources": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "itemCount", "initialArrivalTime", "priority", "firstStageId", "arrival"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 },
+          "itemCount": { "type": "integer", "minimum": 1 }, "initialArrivalTime": { "type": "number", "minimum": 0 },
+          "priority": { "type": "integer", "minimum": 0 }, "firstStageId": { "type": "string", "minLength": 1 },
+          "arrival": { "oneOf": [{ "$ref": "#/$defs/fixedArrival" }, { "$ref": "#/$defs/poissonArrival" }] }
+        }
+      }
+    },
+    "resourcePools": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "capacity"],
+        "properties": { "id": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 }, "capacity": { "type": "integer", "minimum": 1 } }
+      }
+    },
+    "stages": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "resourcePoolId", "processingTime", "queuePolicy"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 },
+          "resourcePoolId": { "type": "string", "minLength": 1 }, "queuePolicy": { "enum": ["fifo", "priority"] },
+          "processingTime": { "oneOf": [{ "$ref": "#/$defs/fixedDistribution" }, { "$ref": "#/$defs/exponentialDistribution" }, { "$ref": "#/$defs/uniformDistribution" }, { "$ref": "#/$defs/triangularDistribution" }] },
+          "failure": {
+            "type": "object", "additionalProperties": false,
+            "required": ["probability", "routeId", "maximumReworkAttempts"],
+            "properties": { "probability": { "type": "number", "minimum": 0, "maximum": 1 }, "routeId": { "type": "string", "minLength": 1 }, "maximumReworkAttempts": { "type": "integer", "minimum": 0 } }
+          }
+        }
+      }
+    },
+    "routes": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "kind", "fromStageId", "options"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "kind": { "enum": ["success", "failure"] },
+          "fromStageId": { "type": "string", "minLength": 1 },
+          "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/routeOption" } }
+        }
+      }
+    },
+    "slaRules": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "targetDuration"],
+        "properties": { "id": { "type": "string", "minLength": 1 }, "targetDuration": { "type": "number", "minimum": 0 }, "sourceId": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

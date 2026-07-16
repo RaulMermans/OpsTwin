@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "0.5.0",
+  "baselineModel": {
+    "schemaVersion": "0.2.0",
+    "name": "Support Operations Product Baseline",
+    "timeUnit": "minutes",
+    "runConfig": {},
+    "sources": [{
+      "id": "incoming-tickets", "name": "Incoming tickets", "itemCount": 100,
+      "initialArrivalTime": 0, "priority": 1, "firstStageId": "triage",
+      "arrival": { "type": "poisson", "meanInterarrivalTime": 1.5 }
+    }],
+    "resourcePools": [
+      { "id": "triage-team", "name": "Triage team", "capacity": 2 },
+      { "id": "level-1-agents", "name": "Level 1 agents", "capacity": 4 },
+      { "id": "level-2-agents", "name": "Level 2 agents", "capacity": 2 },
+      { "id": "quality-team", "name": "Quality team", "capacity": 1 }
+    ],
+    "stages": [
+      { "id": "triage", "name": "Triage", "resourcePoolId": "triage-team", "processingTime": { "type": "exponential", "mean": 2 }, "queuePolicy": "fifo" },
+      { "id": "level-1", "name": "Level 1", "resourcePoolId": "level-1-agents", "processingTime": { "type": "triangular", "minimum": 3, "mode": 5, "maximum": 9 }, "queuePolicy": "priority" },
+      { "id": "level-2", "name": "Level 2", "resourcePoolId": "level-2-agents", "processingTime": { "type": "triangular", "minimum": 6, "mode": 10, "maximum": 16 }, "queuePolicy": "priority" },
+      { "id": "quality-check", "name": "Quality check", "resourcePoolId": "quality-team", "processingTime": { "type": "fixed", "value": 2 }, "queuePolicy": "fifo", "failure": { "probability": 0.1, "routeId": "quality-rework", "maximumReworkAttempts": 2 } }
+    ],
+    "routes": [
+      { "id": "triage-routing", "kind": "success", "fromStageId": "triage", "options": [{ "targetType": "stage", "targetId": "level-1", "probability": 0.8 }, { "targetType": "stage", "targetId": "level-2", "probability": 0.2 }] },
+      { "id": "level-1-quality", "kind": "success", "fromStageId": "level-1", "options": [{ "targetType": "stage", "targetId": "quality-check", "probability": 1 }] },
+      { "id": "level-2-quality", "kind": "success", "fromStageId": "level-2", "options": [{ "targetType": "stage", "targetId": "quality-check", "probability": 1 }] },
+      { "id": "quality-resolved", "kind": "success", "fromStageId": "quality-check", "options": [{ "targetType": "completion", "probability": 1 }] },
+      { "id": "quality-rework", "kind": "failure", "fromStageId": "quality-check", "options": [{ "targetType": "stage", "targetId": "level-2", "probability": 1 }] }
+    ],
+    "slaRules": [{ "id": "support-resolution-sla", "targetDuration": 60 }]
+  },
+  "scenarios": [
+    {
+      "id": "add-level-1-agent",
+      "name": "Add one Level 1 agent",
+      "overrides": [{ "entityType": "resourcePool", "entityId": "level-1-agents", "field": "capacity", "operation": "replace", "value": 5 }]
+    },
+    {
+      "id": "faster-triage",
+      "name": "Reduce triage processing time",
+      "overrides": [{ "entityType": "stage", "entityId": "triage", "field": "processing.exponential.mean", "operation": "replace", "value": 1.5 }]
+    }
+  ],
+  "execution": {
+    "baseSeed": 20260716,
+    "runCount": 50,
+    "confidenceLevel": 0.95,
+    "minimumSuccessfulRunRatio": 1,
+    "minimumPairedRunRatio": 1,
+    "observation": { "warmupDuration": 0 },
+    "thresholds": { "minimumSlaAttainment": 0.8, "maximumAverageCycleTime": 60 }
+  },
+  "objective": { "metric": "averageCycleTime", "direction": "minimize" },
+  "guardrails": [{ "metric": "slaAttainment", "operator": "greaterThanOrEqual", "value": 0.75 }],
+  "representativeEvidence": { "baseline": true, "topRankedScenario": true, "detailMode": "sampled", "sampledItemLimit": 25 }
+}

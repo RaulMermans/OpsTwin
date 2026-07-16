@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "0.2.0",
+  "name": "Deterministic Support Baseline",
+  "timeUnit": "minutes",
+  "runConfig": { "seed": 42 },
+  "sources": [{
+    "id": "tickets",
+    "name": "Ticket Source",
+    "itemCount": 5,
+    "initialArrivalTime": 0,
+    "priority": 0,
+    "firstStageId": "triage",
+    "arrival": { "type": "fixed", "interval": 5 }
+  }],
+  "resourcePools": [{ "id": "agents", "name": "Agents", "capacity": 1 }],
+  "stages": [{
+    "id": "triage",
+    "name": "Triage",
+    "resourcePoolId": "agents",
+    "processingTime": { "type": "fixed", "value": 8 },
+    "queuePolicy": "fifo"
+  }],
+  "routes": [{
+    "id": "triage-complete",
+    "kind": "success",
+    "fromStageId": "triage",
+    "options": [{ "targetType": "completion", "probability": 1 }]
+  }],
+  "slaRules": [{ "id": "default", "targetDuration": 30 }]
+}

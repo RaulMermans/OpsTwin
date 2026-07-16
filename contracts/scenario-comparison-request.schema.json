@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/scenario-comparison-request.schema.json",
+  "title": "OpsTwin scenario comparison request 0.5.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "baselineModel", "scenarios", "execution", "objective"],
+  "properties": {
+    "schemaVersion": { "const": "0.5.0" },
+    "baselineModel": { "$ref": "https://opstwin.local/contracts/operational-model.schema.json" },
+    "scenarios": {
+      "type": "array", "minItems": 1, "maxItems": 5,
+      "items": { "$ref": "#/$defs/scenario" }
+    },
+    "execution": { "$ref": "#/$defs/execution" },
+    "objective": { "$ref": "#/$defs/objective" },
+    "guardrails": {
+      "type": "array", "maxItems": 20,
+      "items": { "$ref": "#/$defs/guardrail" }
+    },
+    "representativeEvidence": { "$ref": "#/$defs/representative" }
+  },
+  "$defs": {
+    "override": {
+      "type": "object", "additionalProperties": false,
+      "required": ["entityType", "entityId", "field", "operation", "value"],
+      "properties": {
+        "entityType": { "enum": ["resourcePool", "source", "stage", "route", "slaRule"] },
+        "entityId": { "type": "string", "minLength": 1 },
+        "field": { "type": "string", "minLength": 1 },
+        "operation": { "const": "replace" },
+        "value": { "type": "number" }
+      }
+    },
+    "scenario": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "overrides"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": ["string", "null"], "maxLength": 500 },
+        "overrides": {
+          "type": "array", "minItems": 1, "maxItems": 20,
+          "items": { "$ref": "#/$defs/override" }
+        }
+      }
+    },
+    "observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["warmupDuration"],
+      "properties": {
+        "warmupDuration": { "type": "number", "minimum": 0 },
+        "measurementDuration": { "type": ["number", "null"], "exclusiveMinimum": 0 }
+      }
+    },
+    "thresholds": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "minimumSlaAttainment": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "maximumAverageCycleTime": { "$ref": "#/$defs/nullableNonNegative" },
+        "maximumP95CycleTime": { "$ref": "#/$defs/nullableNonNegative" },
+        "maximumTimeWeightedQueueLength": { "$ref": "#/$defs/nullableNonNegative" },
+        "maximumTerminalFailureRate": { "$ref": "#/$defs/nullableNonNegative" }
+      }
+    },
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseSeed", "runCount", "confidenceLevel", "minimumSuccessfulRunRatio", "minimumPairedRunRatio", "observation", "thresholds"],
+      "properties": {
+        "baseSeed": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+        "runCount": { "type": "integer", "minimum": 2, "maximum": 500 },
+        "confidenceLevel": { "enum": [0.9, 0.95, 0.99] },
+        "minimumSuccessfulRunRatio": { "type": "number", "minimum": 0.5, "maximum": 1 },
+        "minimumPairedRunRatio": { "type": "number", "minimum": 0.5, "maximum": 1 },
+        "observation": { "$ref": "#/$defs/observation" },
+        "thresholds": { "$ref": "#/$defs/thresholds" }
+      }
+    },
+    "objective": {
+      "type": "object", "additionalProperties": false,
+      "required": ["metric", "direction"],
+      "properties": {
+        "metric": { "enum": ["slaAttainment", "completionRate", "flowEfficiency", "averageWaitingTime", "averageCycleTime", "p95CycleTime", "terminalFailureRate", "timeWeightedWip", "timeWeightedQueueLength", "totalReworkCount"] },
+        "direction": { "enum": ["maximize", "minimize"] }
+      }
+    },
+    "guardrail": {
+      "type": "object", "additionalProperties": false,
+      "required": ["metric", "operator", "value"],
+      "properties": {
+        "metric": { "enum": ["slaAttainment", "averageCycleTime", "p95CycleTime", "terminalFailureRate", "timeWeightedQueueLength", "resourcePoolUtilization"] },
+        "operator": { "enum": ["lessThanOrEqual", "greaterThanOrEqual"] },
+        "value": { "type": "number" },
+        "resourcePoolId": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "representative": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseline", "topRankedScenario", "detailMode"],
+      "properties": {
+        "baseline": { "type": "boolean" },
+        "topRankedScenario": { "type": "boolean" },
+        "detailMode": { "enum": ["summary", "sampled", "full"] },
+        "sampledItemLimit": { "type": ["integer", "null"], "minimum": 1, "maximum": 1000 }
+      }
+    },
+    "nullableNonNegative": { "type": ["number", "null"], "minimum": 0 }
+  }
+}

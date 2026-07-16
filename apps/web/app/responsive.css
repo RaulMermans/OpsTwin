@@ -1,0 +1,7 @@
+.evidence-grid > section {
+  min-width: 0;
+}
+
+.table-wrap {
+  max-width: 100%;
+}

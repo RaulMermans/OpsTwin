@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "0.2.0",
+  "name": "Support Operations Baseline",
+  "timeUnit": "minutes",
+  "runConfig": { "seed": 42 },
+  "sources": [
+    {
+      "id": "tickets",
+      "name": "Ticket Source",
+      "itemCount": 8,
+      "initialArrivalTime": 0,
+      "priority": 1,
+      "firstStageId": "triage",
+      "arrival": { "type": "fixed", "interval": 2 }
+    }
+  ],
+  "resourcePools": [
+    { "id": "intake-quality", "name": "Intake and Quality", "capacity": 1 },
+    { "id": "support", "name": "Support Specialists", "capacity": 2 }
+  ],
+  "stages": [
+    {
+      "id": "triage",
+      "name": "Triage",
+      "resourcePoolId": "intake-quality",
+      "processingTime": { "type": "uniform", "minimum": 1, "maximum": 2 },
+      "queuePolicy": "fifo"
+    },
+    {
+      "id": "level-1",
+      "name": "Level 1",
+      "resourcePoolId": "support",
+      "processingTime": { "type": "exponential", "mean": 3 },
+      "queuePolicy": "priority"
+    },
+    {
+      "id": "level-2",
+      "name": "Level 2",
+      "resourcePoolId": "support",
+      "processingTime": { "type": "triangular", "minimum": 2, "mode": 3, "maximum": 5 },
+      "queuePolicy": "priority"
+    },
+    {
+      "id": "quality",
+      "name": "Quality Check",
+      "resourcePoolId": "intake-quality",
+      "processingTime": { "type": "fixed", "value": 1 },
+      "queuePolicy": "fifo",
+      "failure": {
+        "probability": 0.25,
+        "routeId": "quality-rework",
+        "maximumReworkAttempts": 2
+      }
+    }
+  ],
+  "routes": [
+    {
+      "id": "triage-outcome",
+      "kind": "success",
+      "fromStageId": "triage",
+      "options": [
+        { "targetType": "completion", "probability": 0.25 },
+        { "targetType": "stage", "targetId": "level-1", "probability": 0.75 }
+      ]
+    },
+    {
+      "id": "level-1-next",
+      "kind": "success",
+      "fromStageId": "level-1",
+      "options": [{ "targetType": "stage", "targetId": "level-2", "probability": 1 }]
+    },
+    {
+      "id": "level-2-next",
+      "kind": "success",
+      "fromStageId": "level-2",
+      "options": [{ "targetType": "stage", "targetId": "quality", "probability": 1 }]
+    },
+    {
+      "id": "quality-complete",
+      "kind": "success",
+      "fromStageId": "quality",
+      "options": [{ "targetType": "completion", "probability": 1 }]
+    },
+    {
+      "id": "quality-rework",
+      "kind": "failure",
+      "fromStageId": "quality",
+      "options": [{ "targetType": "stage", "targetId": "level-2", "probability": 1 }]
+    }
+  ],
+  "slaRules": [{ "id": "support-sla", "targetDuration": 30 }]
+}

@@ -1,0 +1,2784 @@
+{
+  "$defs": {
+    "AggregateMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "mean": {
+          "title": "Mean",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "sampleVariance": {
+          "minimum": 0,
+          "title": "Samplevariance",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "standardDeviation": {
+          "minimum": 0,
+          "title": "Standarddeviation",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "minimum": {
+          "title": "Minimum",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "maximum": {
+          "title": "Maximum",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "p10": {
+          "title": "P10",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "p50": {
+          "title": "P50",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "p90": {
+          "title": "P90",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "confidenceInterval": {
+          "$ref": "#/$defs/ConfidenceInterval"
+        }
+      },
+      "required": [
+        "count",
+        "mean",
+        "sampleVariance",
+        "standardDeviation",
+        "minimum",
+        "maximum",
+        "p10",
+        "p50",
+        "p90",
+        "confidenceInterval"
+      ],
+      "title": "AggregateMetric",
+      "type": "object"
+    },
+    "AppliedOverrideSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "entityType": {
+          "title": "Entitytype",
+          "type": "string"
+        },
+        "entityId": {
+          "title": "Entityid",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "previousValue": {
+          "title": "Previousvalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "value": {
+          "title": "Value",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "entityType",
+        "entityId",
+        "field",
+        "previousValue",
+        "value"
+      ],
+      "title": "AppliedOverrideSummary",
+      "type": "object"
+    },
+    "ComparativeRankingEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "rank": {
+          "minimum": 1,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "scenarioId": {
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "eligible": {
+          "const": true,
+          "default": true,
+          "title": "Eligible",
+          "type": "boolean"
+        },
+        "guardrailsPassed": {
+          "title": "Guardrailspassed",
+          "type": "boolean"
+        },
+        "objectiveMetric": {
+          "title": "Objectivemetric",
+          "type": "string"
+        },
+        "objectiveMeanDelta": {
+          "title": "Objectivemeandelta",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "probabilityOfImprovement": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probabilityofimprovement",
+          "type": "number"
+        },
+        "confidenceIntervalWidth": {
+          "minimum": 0,
+          "title": "Confidenceintervalwidth",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "tieBreakExplanation": {
+          "title": "Tiebreakexplanation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rank",
+        "scenarioId",
+        "guardrailsPassed",
+        "objectiveMetric",
+        "objectiveMeanDelta",
+        "probabilityOfImprovement",
+        "confidenceIntervalWidth",
+        "tieBreakExplanation"
+      ],
+      "title": "ComparativeRankingEntry",
+      "type": "object"
+    },
+    "ComparisonExecutionMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "executionOrder": {
+          "const": "run_index_then_baseline_then_scenarios",
+          "title": "Executionorder",
+          "type": "string"
+        },
+        "ordinarySimulationExecutions": {
+          "minimum": 0,
+          "title": "Ordinarysimulationexecutions",
+          "type": "integer"
+        },
+        "representativeReruns": {
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Representativereruns",
+          "type": "integer"
+        },
+        "ordinaryRunIncludedEventCount": {
+          "const": 0,
+          "default": 0,
+          "title": "Ordinaryrunincludedeventcount",
+          "type": "integer"
+        },
+        "ordinaryRunRetainedEventCount": {
+          "const": 0,
+          "default": 0,
+          "title": "Ordinaryrunretainedeventcount",
+          "type": "integer"
+        },
+        "maximumSimultaneouslyRetainedEventRichResults": {
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Maximumsimultaneouslyretainedeventrichresults",
+          "type": "integer"
+        },
+        "totalGeneratedEventCount": {
+          "minimum": 0,
+          "title": "Totalgeneratedeventcount",
+          "type": "integer"
+        },
+        "returnedEventCount": {
+          "minimum": 0,
+          "title": "Returnedeventcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "executionOrder",
+        "ordinarySimulationExecutions",
+        "representativeReruns",
+        "maximumSimultaneouslyRetainedEventRichResults",
+        "totalGeneratedEventCount",
+        "returnedEventCount"
+      ],
+      "title": "ComparisonExecutionMetadata",
+      "type": "object"
+    },
+    "ComparisonIntegrityStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "passed",
+          "default": "passed",
+          "title": "Status",
+          "type": "string"
+        },
+        "checksRun": {
+          "minimum": 1,
+          "title": "Checksrun",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "checksRun"
+      ],
+      "title": "ComparisonIntegrityStatus",
+      "type": "object"
+    },
+    "ComparisonObjective": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "enum": [
+            "slaAttainment",
+            "completionRate",
+            "flowEfficiency",
+            "averageWaitingTime",
+            "averageCycleTime",
+            "p95CycleTime",
+            "terminalFailureRate",
+            "timeWeightedWip",
+            "timeWeightedQueueLength",
+            "totalReworkCount"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "maximize",
+            "minimize"
+          ],
+          "title": "Direction",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric",
+        "direction"
+      ],
+      "title": "ComparisonObjective",
+      "type": "object"
+    },
+    "ComparisonRepresentatives": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RepresentativeVariantResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scenario": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RepresentativeVariantResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ComparisonRepresentatives",
+      "type": "object"
+    },
+    "ConfidenceInterval": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "title": "Level",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "lower": {
+          "title": "Lower",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "method": {
+          "const": "normal_approximation",
+          "default": "normal_approximation",
+          "title": "Method",
+          "type": "string"
+        },
+        "successfulRunCount": {
+          "minimum": 1,
+          "title": "Successfulruncount",
+          "type": "integer"
+        },
+        "reliableSampleSize": {
+          "title": "Reliablesamplesize",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "level",
+        "lower",
+        "upper",
+        "successfulRunCount",
+        "reliableSampleSize"
+      ],
+      "title": "ConfidenceInterval",
+      "type": "object"
+    },
+    "ConvergenceCheckpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "requestedRunCount": {
+          "minimum": 1,
+          "title": "Requestedruncount",
+          "type": "integer"
+        },
+        "successfulRunCount": {
+          "minimum": 0,
+          "title": "Successfulruncount",
+          "type": "integer"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/RunningMeanPoint"
+          },
+          "title": "Metrics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "requestedRunCount",
+        "successfulRunCount",
+        "metrics"
+      ],
+      "title": "ConvergenceCheckpoint",
+      "type": "object"
+    },
+    "CostAggregate": {
+      "additionalProperties": false,
+      "properties": {
+        "recurringOperatingCost": {
+          "$ref": "#/$defs/AggregateMetric"
+        },
+        "costPerCompletedItem": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AggregateMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "undefinedCostPerCompletedItemCount": {
+          "minimum": 0,
+          "title": "Undefinedcostpercompleteditemcount",
+          "type": "integer"
+        },
+        "componentCosts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AggregateMetric"
+          },
+          "title": "Componentcosts",
+          "type": "object"
+        }
+      },
+      "required": [
+        "recurringOperatingCost",
+        "costPerCompletedItem",
+        "undefinedCostPerCompletedItemCount",
+        "componentCosts"
+      ],
+      "title": "CostAggregate",
+      "type": "object"
+    },
+    "EconomicExecutionMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "executionOrder": {
+          "const": "shared_operational_comparison",
+          "default": "shared_operational_comparison",
+          "title": "Executionorder",
+          "type": "string"
+        },
+        "economicSnapshotEvaluations": {
+          "minimum": 0,
+          "title": "Economicsnapshotevaluations",
+          "type": "integer"
+        },
+        "economicEvaluationSeconds": {
+          "minimum": 0,
+          "title": "Economicevaluationseconds",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "ordinaryRunIncludedEventCount": {
+          "const": 0,
+          "default": 0,
+          "title": "Ordinaryrunincludedeventcount",
+          "type": "integer"
+        },
+        "ordinaryRunRetainedEventCount": {
+          "const": 0,
+          "default": 0,
+          "title": "Ordinaryrunretainedeventcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "economicSnapshotEvaluations",
+        "economicEvaluationSeconds"
+      ],
+      "title": "EconomicExecutionMetadata",
+      "type": "object"
+    },
+    "EconomicGuardrailResult": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "operator": {
+          "const": "lessThanOrEqual",
+          "default": "lessThanOrEqual",
+          "title": "Operator",
+          "type": "string"
+        },
+        "threshold": {
+          "minimum": 0,
+          "title": "Threshold",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "observedValue": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Observedvalue"
+        },
+        "passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Passed"
+        }
+      },
+      "required": [
+        "metric",
+        "threshold",
+        "observedValue",
+        "passed"
+      ],
+      "title": "EconomicGuardrailResult",
+      "type": "object"
+    },
+    "EconomicIntegrityStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "passed",
+          "default": "passed",
+          "title": "Status",
+          "type": "string"
+        },
+        "checksRun": {
+          "minimum": 22,
+          "title": "Checksrun",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "checksRun"
+      ],
+      "title": "EconomicIntegrityStatus",
+      "type": "object"
+    },
+    "EconomicScenarioResult": {
+      "additionalProperties": false,
+      "properties": {
+        "scenarioId": {
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "scenarioName": {
+          "title": "Scenarioname",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "economic_failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "failureCategory": {
+          "anyOf": [
+            {
+              "enum": [
+                "economic_assumption_validation",
+                "economic_source_metric_missing",
+                "economic_snapshot_failure",
+                "economic_aggregation_failure",
+                "economic_pairing_failure",
+                "economic_guardrail_failure",
+                "economic_serialization_failure"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Failurecategory"
+        },
+        "baselineCost": {
+          "$ref": "#/$defs/CostAggregate"
+        },
+        "scenarioCost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CostAggregate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recurringCostDelta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PairedCostDelta"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "componentCostDeltas": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PairedCostDelta"
+          },
+          "title": "Componentcostdeltas",
+          "type": "object"
+        },
+        "pairedRunCount": {
+          "minimum": 0,
+          "title": "Pairedruncount",
+          "type": "integer"
+        },
+        "pairedRunRatio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pairedrunratio",
+          "type": "number"
+        },
+        "probabilityLowerCost": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Probabilitylowercost"
+        },
+        "probabilityHigherCost": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Probabilityhighercost"
+        },
+        "probabilityTiedCost": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Probabilitytiedcost"
+        },
+        "objectiveMetric": {
+          "title": "Objectivemetric",
+          "type": "string"
+        },
+        "objectiveMeanPairedDelta": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Objectivemeanpaireddelta"
+        },
+        "probabilityOperationallyImproved": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Probabilityoperationallyimproved"
+        },
+        "tradeoffClassification": {
+          "enum": [
+            "lower_cost_and_improved",
+            "higher_cost_and_improved",
+            "lower_cost_and_degraded",
+            "higher_cost_and_degraded",
+            "cost_flat_and_improved",
+            "cost_flat_and_degraded",
+            "lower_cost_and_objective_flat",
+            "higher_cost_and_objective_flat",
+            "both_flat",
+            "mixed_or_insufficient_evidence"
+          ],
+          "title": "Tradeoffclassification",
+          "type": "string"
+        },
+        "evidenceStatement": {
+          "title": "Evidencestatement",
+          "type": "string"
+        },
+        "intervention": {
+          "$ref": "#/$defs/InterventionCostEvidence"
+        },
+        "economicGuardrails": {
+          "items": {
+            "$ref": "#/$defs/EconomicGuardrailResult"
+          },
+          "title": "Economicguardrails",
+          "type": "array"
+        },
+        "combinedEligibility": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Combinedeligibility"
+        },
+        "incrementalCostPerObservedImprovement": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Incrementalcostperobservedimprovement"
+        },
+        "incrementalCostLabel": {
+          "const": "Incremental recurring cost per observed unit of objective improvement",
+          "default": "Incremental recurring cost per observed unit of objective improvement",
+          "title": "Incrementalcostlabel",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenarioId",
+        "scenarioName",
+        "status",
+        "baselineCost",
+        "scenarioCost",
+        "recurringCostDelta",
+        "componentCostDeltas",
+        "pairedRunCount",
+        "pairedRunRatio",
+        "objectiveMetric",
+        "objectiveMeanPairedDelta",
+        "tradeoffClassification",
+        "evidenceStatement",
+        "intervention",
+        "economicGuardrails"
+      ],
+      "title": "EconomicScenarioResult",
+      "type": "object"
+    },
+    "EventType": {
+      "enum": [
+        "ITEM_CREATED",
+        "QUEUE_ENTERED",
+        "RESOURCE_REQUESTED",
+        "PROCESS_STARTED",
+        "PROCESS_COMPLETED",
+        "RESOURCE_RELEASED",
+        "ROUTE_SELECTED",
+        "ITEM_FAILED",
+        "ITEM_REWORKED",
+        "ITEM_COMPLETED"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "FactualPairedMetricResult": {
+      "additionalProperties": false,
+      "properties": {
+        "absoluteDelta": {
+          "$ref": "#/$defs/AggregateMetric"
+        },
+        "relativeDelta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AggregateMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relativeDeltaUndefinedCount": {
+          "minimum": 0,
+          "title": "Relativedeltaundefinedcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "absoluteDelta",
+        "relativeDelta",
+        "relativeDeltaUndefinedCount"
+      ],
+      "title": "FactualPairedMetricResult",
+      "type": "object"
+    },
+    "FailedRunEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "runIndex": {
+          "minimum": 0,
+          "title": "Runindex",
+          "type": "integer"
+        },
+        "seed": {
+          "maximum": 18446744073709552000,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "category": {
+          "enum": [
+            "domain_validation",
+            "integrity_failure",
+            "execution_failure",
+            "serialization_failure"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "runIndex",
+        "seed",
+        "category",
+        "message"
+      ],
+      "title": "FailedRunEvidence",
+      "type": "object"
+    },
+    "GuardrailEvaluation": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "operator": {
+          "title": "Operator",
+          "type": "string"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "observedValue": {
+          "title": "Observedvalue",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "statistic": {
+          "const": "mean",
+          "default": "mean",
+          "title": "Statistic",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "resourcePoolId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resourcepoolid"
+        }
+      },
+      "required": [
+        "metric",
+        "operator",
+        "threshold",
+        "observedValue",
+        "passed"
+      ],
+      "title": "GuardrailEvaluation",
+      "type": "object"
+    },
+    "ImprovementResult": {
+      "additionalProperties": false,
+      "properties": {
+        "improvedCount": {
+          "minimum": 0,
+          "title": "Improvedcount",
+          "type": "integer"
+        },
+        "degradedCount": {
+          "minimum": 0,
+          "title": "Degradedcount",
+          "type": "integer"
+        },
+        "tiedCount": {
+          "minimum": 0,
+          "title": "Tiedcount",
+          "type": "integer"
+        },
+        "probabilityOfImprovement": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probabilityofimprovement",
+          "type": "number"
+        },
+        "probabilityOfDegradation": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probabilityofdegradation",
+          "type": "number"
+        },
+        "probabilityOfTie": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probabilityoftie",
+          "type": "number"
+        },
+        "validPairedRunCount": {
+          "minimum": 1,
+          "title": "Validpairedruncount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "improvedCount",
+        "degradedCount",
+        "tiedCount",
+        "probabilityOfImprovement",
+        "probabilityOfDegradation",
+        "probabilityOfTie",
+        "validPairedRunCount"
+      ],
+      "title": "ImprovementResult",
+      "type": "object"
+    },
+    "IntegrityStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "passed",
+          "default": "passed",
+          "title": "Status",
+          "type": "string"
+        },
+        "checksRun": {
+          "minimum": 0,
+          "title": "Checksrun",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "checksRun"
+      ],
+      "title": "IntegrityStatus",
+      "type": "object"
+    },
+    "InterventionCostEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "oneTimeCost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number",
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Onetimecost"
+        },
+        "amortizationPeriods": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amortizationperiods"
+        },
+        "amortizedCostPerPeriod": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number",
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amortizedcostperperiod"
+        },
+        "combinedPerPeriodCost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number",
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Combinedperperiodcost"
+        }
+      },
+      "title": "InterventionCostEvidence",
+      "type": "object"
+    },
+    "ItemLifecycle": {
+      "additionalProperties": false,
+      "properties": {
+        "itemId": {
+          "title": "Itemid",
+          "type": "string"
+        },
+        "sourceId": {
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "priority": {
+          "title": "Priority",
+          "type": "integer"
+        },
+        "createdAt": {
+          "title": "Createdat",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "visits": {
+          "items": {
+            "$ref": "#/$defs/StageVisit"
+          },
+          "title": "Visits",
+          "type": "array"
+        },
+        "completedAt": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completedat"
+        },
+        "terminalFailureAt": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminalfailureat"
+        },
+        "completed": {
+          "default": false,
+          "title": "Completed",
+          "type": "boolean"
+        },
+        "terminallyFailed": {
+          "default": false,
+          "title": "Terminallyfailed",
+          "type": "boolean"
+        },
+        "reworkCount": {
+          "default": 0,
+          "title": "Reworkcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "itemId",
+        "sourceId",
+        "priority",
+        "createdAt",
+        "visits"
+      ],
+      "title": "ItemLifecycle",
+      "type": "object"
+    },
+    "ObservationMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "simulationStart": {
+          "default": 0,
+          "title": "Simulationstart",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "measurementStart": {
+          "title": "Measurementstart",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "measurementEnd": {
+          "title": "Measurementend",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "simulationEnd": {
+          "title": "Simulationend",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "measurementDuration": {
+          "title": "Measurementduration",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "createdDuringWindow": {
+          "title": "Createdduringwindow",
+          "type": "integer"
+        },
+        "completedDuringWindow": {
+          "title": "Completedduringwindow",
+          "type": "integer"
+        },
+        "terminallyFailedDuringWindow": {
+          "title": "Terminallyfailedduringwindow",
+          "type": "integer"
+        },
+        "activeAtMeasurementEnd": {
+          "title": "Activeatmeasurementend",
+          "type": "integer"
+        },
+        "excludedPreWarmupItems": {
+          "title": "Excludedprewarmupitems",
+          "type": "integer"
+        },
+        "incompleteAtMeasurementEnd": {
+          "title": "Incompleteatmeasurementend",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "measurementStart",
+        "measurementEnd",
+        "simulationEnd",
+        "measurementDuration",
+        "createdDuringWindow",
+        "completedDuringWindow",
+        "terminallyFailedDuringWindow",
+        "activeAtMeasurementEnd",
+        "excludedPreWarmupItems",
+        "incompleteAtMeasurementEnd"
+      ],
+      "title": "ObservationMetadata",
+      "type": "object"
+    },
+    "PairedCostDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "absoluteDelta": {
+          "$ref": "#/$defs/AggregateMetric"
+        },
+        "relativeDelta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AggregateMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relativeDeltaUndefinedCount": {
+          "minimum": 0,
+          "title": "Relativedeltaundefinedcount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "absoluteDelta",
+        "relativeDelta",
+        "relativeDeltaUndefinedCount"
+      ],
+      "title": "PairedCostDelta",
+      "type": "object"
+    },
+    "PairedMetricResult": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "absoluteDelta": {
+          "$ref": "#/$defs/AggregateMetric"
+        },
+        "relativeDelta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AggregateMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relativeDeltaUndefinedCount": {
+          "minimum": 0,
+          "title": "Relativedeltaundefinedcount",
+          "type": "integer"
+        },
+        "improvement": {
+          "$ref": "#/$defs/ImprovementResult"
+        }
+      },
+      "required": [
+        "metric",
+        "absoluteDelta",
+        "relativeDelta",
+        "relativeDeltaUndefinedCount",
+        "improvement"
+      ],
+      "title": "PairedMetricResult",
+      "type": "object"
+    },
+    "RepresentativeRunResult": {
+      "additionalProperties": false,
+      "properties": {
+        "runIndex": {
+          "minimum": 0,
+          "title": "Runindex",
+          "type": "integer"
+        },
+        "seed": {
+          "maximum": 18446744073709552000,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "selectionMethod": {
+          "const": "normalized_median_vector",
+          "default": "normalized_median_vector",
+          "title": "Selectionmethod",
+          "type": "string"
+        },
+        "distance": {
+          "minimum": 0,
+          "title": "Distance",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "medianVector": {
+          "additionalProperties": {
+            "type": "number",
+            "minimum": -1e+308,
+            "maximum": 1e+308
+          },
+          "title": "Medianvector",
+          "type": "object"
+        },
+        "metricVector": {
+          "additionalProperties": {
+            "type": "number",
+            "minimum": -1e+308,
+            "maximum": 1e+308
+          },
+          "title": "Metricvector",
+          "type": "object"
+        },
+        "rerunSnapshotMatches": {
+          "title": "Rerunsnapshotmatches",
+          "type": "boolean"
+        },
+        "detailMode": {
+          "enum": [
+            "summary",
+            "sampled",
+            "full"
+          ],
+          "title": "Detailmode",
+          "type": "string"
+        },
+        "includedEventCount": {
+          "minimum": 0,
+          "title": "Includedeventcount",
+          "type": "integer"
+        },
+        "result": {
+          "$ref": "#/$defs/SimulationResult"
+        }
+      },
+      "required": [
+        "runIndex",
+        "seed",
+        "distance",
+        "medianVector",
+        "metricVector",
+        "rerunSnapshotMatches",
+        "detailMode",
+        "includedEventCount",
+        "result"
+      ],
+      "title": "RepresentativeRunResult",
+      "type": "object"
+    },
+    "RepresentativeVariantResult": {
+      "additionalProperties": false,
+      "properties": {
+        "variantId": {
+          "title": "Variantid",
+          "type": "string"
+        },
+        "representative": {
+          "$ref": "#/$defs/RepresentativeRunResult"
+        }
+      },
+      "required": [
+        "variantId",
+        "representative"
+      ],
+      "title": "RepresentativeVariantResult",
+      "type": "object"
+    },
+    "ResourceMetricAggregates": {
+      "additionalProperties": false,
+      "properties": {
+        "resourcePoolId": {
+          "title": "Resourcepoolid",
+          "type": "string"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AggregateMetric"
+          },
+          "title": "Metrics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "resourcePoolId",
+        "metrics"
+      ],
+      "title": "ResourceMetricAggregates",
+      "type": "object"
+    },
+    "ResourcePoolMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "resourcePoolId": {
+          "title": "Resourcepoolid",
+          "type": "string"
+        },
+        "capacity": {
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "busyTime": {
+          "title": "Busytime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "utilization": {
+          "title": "Utilization",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "maximumConcurrentUsage": {
+          "title": "Maximumconcurrentusage",
+          "type": "integer"
+        },
+        "totalRequests": {
+          "title": "Totalrequests",
+          "type": "integer"
+        },
+        "busyCapacityTime": {
+          "title": "Busycapacitytime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "availableCapacityTime": {
+          "title": "Availablecapacitytime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "idleCapacityProportion": {
+          "title": "Idlecapacityproportion",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "meanRequestWait": {
+          "title": "Meanrequestwait",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "resourcePoolId",
+        "capacity",
+        "busyTime",
+        "utilization",
+        "maximumConcurrentUsage",
+        "totalRequests",
+        "busyCapacityTime",
+        "availableCapacityTime",
+        "idleCapacityProportion",
+        "meanRequestWait"
+      ],
+      "title": "ResourcePoolMetrics",
+      "type": "object"
+    },
+    "ResultDetailMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "summary",
+            "sampled",
+            "full"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "totalEventCount": {
+          "minimum": 0,
+          "title": "Totaleventcount",
+          "type": "integer"
+        },
+        "includedEventCount": {
+          "minimum": 0,
+          "title": "Includedeventcount",
+          "type": "integer"
+        },
+        "selectedItemIds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selecteditemids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mode",
+        "totalEventCount",
+        "includedEventCount",
+        "selectedItemIds"
+      ],
+      "title": "ResultDetailMetadata",
+      "type": "object"
+    },
+    "RiskComparisonResult": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "baselineProbability": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Baselineprobability",
+          "type": "number"
+        },
+        "scenarioProbability": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Scenarioprobability",
+          "type": "number"
+        },
+        "probabilityPointChange": {
+          "title": "Probabilitypointchange",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "relativeChange": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Relativechange"
+        },
+        "baselineOnlyViolates": {
+          "minimum": 0,
+          "title": "Baselineonlyviolates",
+          "type": "integer"
+        },
+        "scenarioOnlyViolates": {
+          "minimum": 0,
+          "title": "Scenarioonlyviolates",
+          "type": "integer"
+        },
+        "bothViolate": {
+          "minimum": 0,
+          "title": "Bothviolate",
+          "type": "integer"
+        },
+        "neitherViolates": {
+          "minimum": 0,
+          "title": "Neitherviolates",
+          "type": "integer"
+        },
+        "pairedRunCount": {
+          "minimum": 1,
+          "title": "Pairedruncount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "metric",
+        "threshold",
+        "baselineProbability",
+        "scenarioProbability",
+        "probabilityPointChange",
+        "relativeChange",
+        "baselineOnlyViolates",
+        "scenarioOnlyViolates",
+        "bothViolate",
+        "neitherViolates",
+        "pairedRunCount"
+      ],
+      "title": "RiskComparisonResult",
+      "type": "object"
+    },
+    "RiskResult": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "below",
+            "above"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "violatingRuns": {
+          "minimum": 0,
+          "title": "Violatingruns",
+          "type": "integer"
+        },
+        "validRuns": {
+          "minimum": 1,
+          "title": "Validruns",
+          "type": "integer"
+        },
+        "probability": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probability",
+          "type": "number"
+        }
+      },
+      "required": [
+        "metric",
+        "operator",
+        "threshold",
+        "violatingRuns",
+        "validRuns",
+        "probability"
+      ],
+      "title": "RiskResult",
+      "type": "object"
+    },
+    "RunMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "modelName": {
+          "title": "Modelname",
+          "type": "string"
+        },
+        "timeUnit": {
+          "const": "minutes",
+          "default": "minutes",
+          "title": "Timeunit",
+          "type": "string"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "startedAt": {
+          "default": 0,
+          "title": "Startedat",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "completedAt": {
+          "title": "Completedat",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "deterministic": {
+          "title": "Deterministic",
+          "type": "boolean"
+        },
+        "runLabel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runlabel"
+        }
+      },
+      "required": [
+        "modelName",
+        "seed",
+        "completedAt",
+        "deterministic"
+      ],
+      "title": "RunMetadata",
+      "type": "object"
+    },
+    "RunSeed": {
+      "additionalProperties": false,
+      "properties": {
+        "runIndex": {
+          "minimum": 0,
+          "title": "Runindex",
+          "type": "integer"
+        },
+        "seed": {
+          "maximum": 18446744073709552000,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "runIndex",
+        "seed"
+      ],
+      "title": "RunSeed",
+      "type": "object"
+    },
+    "RunningMeanPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "mean": {
+          "title": "Mean",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "changeFromPrevious": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Changefromprevious"
+        },
+        "relativeChange": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1e+308,
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relativechange"
+        }
+      },
+      "required": [
+        "mean"
+      ],
+      "title": "RunningMeanPoint",
+      "type": "object"
+    },
+    "ScenarioComparisonEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "scenarioId": {
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "scenarioName": {
+          "title": "Scenarioname",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScenarioFailureEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "baselineModelHash": {
+          "title": "Baselinemodelhash",
+          "type": "string"
+        },
+        "scenarioModelHash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scenariomodelhash"
+        },
+        "appliedOverrideCount": {
+          "minimum": 0,
+          "title": "Appliedoverridecount",
+          "type": "integer"
+        },
+        "appliedOverrides": {
+          "items": {
+            "$ref": "#/$defs/AppliedOverrideSummary"
+          },
+          "title": "Appliedoverrides",
+          "type": "array"
+        },
+        "variant": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VariantAggregateResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "requestedRunCount": {
+          "maximum": 500,
+          "minimum": 2,
+          "title": "Requestedruncount",
+          "type": "integer"
+        },
+        "baselineSuccessfulRunCount": {
+          "minimum": 0,
+          "title": "Baselinesuccessfulruncount",
+          "type": "integer"
+        },
+        "scenarioSuccessfulRunCount": {
+          "minimum": 0,
+          "title": "Scenariosuccessfulruncount",
+          "type": "integer"
+        },
+        "pairedRunCount": {
+          "minimum": 0,
+          "title": "Pairedruncount",
+          "type": "integer"
+        },
+        "pairedRunRatio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pairedrunratio",
+          "type": "number"
+        },
+        "pairedRunIndexes": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Pairedrunindexes",
+          "type": "array"
+        },
+        "baselineOnlySuccessfulIndexes": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Baselineonlysuccessfulindexes",
+          "type": "array"
+        },
+        "scenarioOnlySuccessfulIndexes": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Scenarioonlysuccessfulindexes",
+          "type": "array"
+        },
+        "failedIndexes": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Failedindexes",
+          "type": "array"
+        },
+        "pairedMetrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PairedMetricResult"
+          },
+          "title": "Pairedmetrics",
+          "type": "object"
+        },
+        "resourceUtilizationDeltas": {
+          "additionalProperties": {
+            "$ref": "#/$defs/FactualPairedMetricResult"
+          },
+          "title": "Resourceutilizationdeltas",
+          "type": "object"
+        },
+        "riskComparisons": {
+          "items": {
+            "$ref": "#/$defs/RiskComparisonResult"
+          },
+          "title": "Riskcomparisons",
+          "type": "array"
+        },
+        "guardrails": {
+          "items": {
+            "$ref": "#/$defs/GuardrailEvaluation"
+          },
+          "title": "Guardrails",
+          "type": "array"
+        },
+        "eligible": {
+          "title": "Eligible",
+          "type": "boolean"
+        },
+        "evidenceStatements": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Evidencestatements",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scenarioId",
+        "scenarioName",
+        "status",
+        "baselineModelHash",
+        "appliedOverrideCount",
+        "appliedOverrides",
+        "requestedRunCount",
+        "baselineSuccessfulRunCount",
+        "scenarioSuccessfulRunCount",
+        "pairedRunCount",
+        "pairedRunRatio",
+        "pairedRunIndexes",
+        "baselineOnlySuccessfulIndexes",
+        "scenarioOnlySuccessfulIndexes",
+        "failedIndexes",
+        "pairedMetrics",
+        "resourceUtilizationDeltas",
+        "riskComparisons",
+        "guardrails",
+        "eligible",
+        "evidenceStatements"
+      ],
+      "title": "ScenarioComparisonEntry",
+      "type": "object"
+    },
+    "ScenarioComparisonResult": {
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "0.5.0",
+          "default": "0.5.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "baselineModelHash": {
+          "title": "Baselinemodelhash",
+          "type": "string"
+        },
+        "requestedRunCount": {
+          "maximum": 500,
+          "minimum": 2,
+          "title": "Requestedruncount",
+          "type": "integer"
+        },
+        "baseSeed": {
+          "maximum": 9223372036854776000,
+          "minimum": 0,
+          "title": "Baseseed",
+          "type": "integer"
+        },
+        "seedScheduleAlgorithm": {
+          "const": "sha256_first_64_bits",
+          "title": "Seedschedulealgorithm",
+          "type": "string"
+        },
+        "runSeeds": {
+          "items": {
+            "$ref": "#/$defs/RunSeed"
+          },
+          "title": "Runseeds",
+          "type": "array"
+        },
+        "confidenceLevel": {
+          "title": "Confidencelevel",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "workBudget": {
+          "$ref": "#/$defs/WorkBudgetResult"
+        },
+        "baseline": {
+          "$ref": "#/$defs/VariantAggregateResult"
+        },
+        "scenarios": {
+          "items": {
+            "$ref": "#/$defs/ScenarioComparisonEntry"
+          },
+          "title": "Scenarios",
+          "type": "array"
+        },
+        "objective": {
+          "$ref": "#/$defs/ComparisonObjective"
+        },
+        "rankingLabel": {
+          "const": "comparative ranking",
+          "default": "comparative ranking",
+          "title": "Rankinglabel",
+          "type": "string"
+        },
+        "ranking": {
+          "items": {
+            "$ref": "#/$defs/ComparativeRankingEntry"
+          },
+          "title": "Ranking",
+          "type": "array"
+        },
+        "representatives": {
+          "$ref": "#/$defs/ComparisonRepresentatives"
+        },
+        "execution": {
+          "$ref": "#/$defs/ComparisonExecutionMetadata"
+        },
+        "integrity": {
+          "$ref": "#/$defs/ComparisonIntegrityStatus"
+        }
+      },
+      "required": [
+        "baselineModelHash",
+        "requestedRunCount",
+        "baseSeed",
+        "seedScheduleAlgorithm",
+        "runSeeds",
+        "confidenceLevel",
+        "workBudget",
+        "baseline",
+        "scenarios",
+        "objective",
+        "ranking",
+        "representatives",
+        "execution",
+        "integrity"
+      ],
+      "title": "ScenarioComparisonResult",
+      "type": "object"
+    },
+    "ScenarioFailureEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "override_validation",
+            "materialization_validation",
+            "domain_validation",
+            "paired_execution",
+            "paired_ratio_failure",
+            "serialization_failure"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "message"
+      ],
+      "title": "ScenarioFailureEvidence",
+      "type": "object"
+    },
+    "SimulationEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "simulationTime": {
+          "minimum": 0,
+          "title": "Simulationtime",
+          "type": "number",
+          "maximum": 1e+308
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "eventType": {
+          "$ref": "#/$defs/EventType"
+        },
+        "itemId": {
+          "title": "Itemid",
+          "type": "string"
+        },
+        "sourceId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourceid"
+        },
+        "stageId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stageid"
+        },
+        "resourcePoolId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resourcepoolid"
+        },
+        "routeId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Routeid"
+        },
+        "targetId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targetid"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority"
+        },
+        "attempt": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attempt"
+        },
+        "sampledDuration": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number",
+              "maximum": 1e+308
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sampledduration"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "simulationTime",
+        "sequence",
+        "eventType",
+        "itemId"
+      ],
+      "title": "SimulationEvent",
+      "type": "object"
+    },
+    "SimulationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "0.3.0",
+          "default": "0.3.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "run": {
+          "$ref": "#/$defs/RunMetadata"
+        },
+        "observation": {
+          "$ref": "#/$defs/ObservationMetadata"
+        },
+        "systemMetrics": {
+          "$ref": "#/$defs/SystemMetrics"
+        },
+        "stageMetrics": {
+          "items": {
+            "$ref": "#/$defs/StageMetrics"
+          },
+          "title": "Stagemetrics",
+          "type": "array"
+        },
+        "resourcePoolMetrics": {
+          "items": {
+            "$ref": "#/$defs/ResourcePoolMetrics"
+          },
+          "title": "Resourcepoolmetrics",
+          "type": "array"
+        },
+        "integrity": {
+          "$ref": "#/$defs/IntegrityStatus"
+        },
+        "resultDetail": {
+          "$ref": "#/$defs/ResultDetailMetadata"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/SimulationEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ItemLifecycle"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "run",
+        "observation",
+        "systemMetrics",
+        "stageMetrics",
+        "resourcePoolMetrics",
+        "integrity",
+        "resultDetail",
+        "events",
+        "items"
+      ],
+      "title": "SimulationResult",
+      "type": "object"
+    },
+    "StageMetricAggregates": {
+      "additionalProperties": false,
+      "properties": {
+        "stageId": {
+          "title": "Stageid",
+          "type": "string"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AggregateMetric"
+          },
+          "title": "Metrics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "stageId",
+        "metrics"
+      ],
+      "title": "StageMetricAggregates",
+      "type": "object"
+    },
+    "StageMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "stageId": {
+          "title": "Stageid",
+          "type": "string"
+        },
+        "visitCount": {
+          "title": "Visitcount",
+          "type": "integer"
+        },
+        "completedProcessingCount": {
+          "title": "Completedprocessingcount",
+          "type": "integer"
+        },
+        "averageWaitingTime": {
+          "title": "Averagewaitingtime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "averageProcessingTime": {
+          "title": "Averageprocessingtime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "failureCount": {
+          "title": "Failurecount",
+          "type": "integer"
+        },
+        "reworkCount": {
+          "title": "Reworkcount",
+          "type": "integer"
+        },
+        "maximumQueueLength": {
+          "title": "Maximumqueuelength",
+          "type": "integer"
+        },
+        "timeWeightedQueueLength": {
+          "title": "Timeweightedqueuelength",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "waitingTimeShare": {
+          "title": "Waitingtimeshare",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "processingTimeShare": {
+          "title": "Processingtimeshare",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "stageId",
+        "visitCount",
+        "completedProcessingCount",
+        "averageWaitingTime",
+        "averageProcessingTime",
+        "failureCount",
+        "reworkCount",
+        "maximumQueueLength",
+        "timeWeightedQueueLength",
+        "waitingTimeShare",
+        "processingTimeShare"
+      ],
+      "title": "StageMetrics",
+      "type": "object"
+    },
+    "StageVisit": {
+      "additionalProperties": false,
+      "properties": {
+        "itemId": {
+          "title": "Itemid",
+          "type": "string"
+        },
+        "stageId": {
+          "title": "Stageid",
+          "type": "string"
+        },
+        "resourcePoolId": {
+          "title": "Resourcepoolid",
+          "type": "string"
+        },
+        "visitNumber": {
+          "minimum": 1,
+          "title": "Visitnumber",
+          "type": "integer"
+        },
+        "queueEnteredAt": {
+          "title": "Queueenteredat",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "processStartedAt": {
+          "title": "Processstartedat",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "processCompletedAt": {
+          "title": "Processcompletedat",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "sampledDuration": {
+          "title": "Sampledduration",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "failed": {
+          "title": "Failed",
+          "type": "boolean"
+        },
+        "reworked": {
+          "title": "Reworked",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "itemId",
+        "stageId",
+        "resourcePoolId",
+        "visitNumber",
+        "queueEnteredAt",
+        "processStartedAt",
+        "processCompletedAt",
+        "sampledDuration",
+        "failed",
+        "reworked"
+      ],
+      "title": "StageVisit",
+      "type": "object"
+    },
+    "SystemMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "createdItems": {
+          "title": "Createditems",
+          "type": "integer"
+        },
+        "completedItems": {
+          "title": "Completeditems",
+          "type": "integer"
+        },
+        "terminallyFailedItems": {
+          "title": "Terminallyfaileditems",
+          "type": "integer"
+        },
+        "throughput": {
+          "title": "Throughput",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "averageWaitingTime": {
+          "title": "Averagewaitingtime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "averageProcessingTime": {
+          "title": "Averageprocessingtime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "averageCycleTime": {
+          "title": "Averagecycletime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "p95CycleTime": {
+          "title": "P95Cycletime",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "maximumQueueLength": {
+          "title": "Maximumqueuelength",
+          "type": "integer"
+        },
+        "slaAttainment": {
+          "title": "Slaattainment",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "totalReworkCount": {
+          "title": "Totalreworkcount",
+          "type": "integer"
+        },
+        "eventCount": {
+          "title": "Eventcount",
+          "type": "integer"
+        },
+        "arrivalRate": {
+          "title": "Arrivalrate",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "completionRate": {
+          "title": "Completionrate",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "failureRate": {
+          "title": "Failurerate",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "timeWeightedWip": {
+          "title": "Timeweightedwip",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "timeWeightedQueueLength": {
+          "title": "Timeweightedqueuelength",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        },
+        "flowEfficiency": {
+          "title": "Flowefficiency",
+          "type": "number",
+          "minimum": -1e+308,
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "createdItems",
+        "completedItems",
+        "terminallyFailedItems",
+        "throughput",
+        "averageWaitingTime",
+        "averageProcessingTime",
+        "averageCycleTime",
+        "p95CycleTime",
+        "maximumQueueLength",
+        "slaAttainment",
+        "totalReworkCount",
+        "eventCount",
+        "arrivalRate",
+        "completionRate",
+        "failureRate",
+        "timeWeightedWip",
+        "timeWeightedQueueLength",
+        "flowEfficiency"
+      ],
+      "title": "SystemMetrics",
+      "type": "object"
+    },
+    "VariantAggregateResult": {
+      "additionalProperties": false,
+      "properties": {
+        "variantId": {
+          "title": "Variantid",
+          "type": "string"
+        },
+        "modelHash": {
+          "title": "Modelhash",
+          "type": "string"
+        },
+        "successfulRunCount": {
+          "minimum": 1,
+          "title": "Successfulruncount",
+          "type": "integer"
+        },
+        "failedRunCount": {
+          "minimum": 0,
+          "title": "Failedruncount",
+          "type": "integer"
+        },
+        "successfulRunRatio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Successfulrunratio",
+          "type": "number"
+        },
+        "systemMetrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AggregateMetric"
+          },
+          "title": "Systemmetrics",
+          "type": "object"
+        },
+        "stageMetrics": {
+          "items": {
+            "$ref": "#/$defs/StageMetricAggregates"
+          },
+          "title": "Stagemetrics",
+          "type": "array"
+        },
+        "resourcePoolMetrics": {
+          "items": {
+            "$ref": "#/$defs/ResourceMetricAggregates"
+          },
+          "title": "Resourcepoolmetrics",
+          "type": "array"
+        },
+        "risks": {
+          "items": {
+            "$ref": "#/$defs/RiskResult"
+          },
+          "title": "Risks",
+          "type": "array"
+        },
+        "convergence": {
+          "items": {
+            "$ref": "#/$defs/ConvergenceCheckpoint"
+          },
+          "title": "Convergence",
+          "type": "array"
+        },
+        "failedRuns": {
+          "items": {
+            "$ref": "#/$defs/FailedRunEvidence"
+          },
+          "title": "Failedruns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "variantId",
+        "modelHash",
+        "successfulRunCount",
+        "failedRunCount",
+        "successfulRunRatio",
+        "systemMetrics",
+        "stageMetrics",
+        "resourcePoolMetrics",
+        "risks",
+        "convergence",
+        "failedRuns"
+      ],
+      "title": "VariantAggregateResult",
+      "type": "object"
+    },
+    "WorkBudgetResult": {
+      "additionalProperties": false,
+      "properties": {
+        "baselineItemCount": {
+          "minimum": 1,
+          "title": "Baselineitemcount",
+          "type": "integer"
+        },
+        "modelVariants": {
+          "maximum": 6,
+          "minimum": 2,
+          "title": "Modelvariants",
+          "type": "integer"
+        },
+        "runCount": {
+          "maximum": 500,
+          "minimum": 2,
+          "title": "Runcount",
+          "type": "integer"
+        },
+        "estimatedTotalItemExecutions": {
+          "minimum": 1,
+          "title": "Estimatedtotalitemexecutions",
+          "type": "integer"
+        },
+        "estimatedWorkUnits": {
+          "minimum": 1,
+          "title": "Estimatedworkunits",
+          "type": "integer"
+        },
+        "maximumWorkUnits": {
+          "minimum": 1,
+          "title": "Maximumworkunits",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "baselineItemCount",
+        "modelVariants",
+        "runCount",
+        "estimatedTotalItemExecutions",
+        "estimatedWorkUnits",
+        "maximumWorkUnits"
+      ],
+      "title": "WorkBudgetResult",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "0.7.0",
+      "default": "0.7.0",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "currency": {
+      "title": "Currency",
+      "type": "string"
+    },
+    "modelTimeUnit": {
+      "const": "minutes",
+      "title": "Modeltimeunit",
+      "type": "string"
+    },
+    "operationalComparison": {
+      "$ref": "#/$defs/ScenarioComparisonResult"
+    },
+    "baselineCost": {
+      "$ref": "#/$defs/CostAggregate"
+    },
+    "scenarios": {
+      "items": {
+        "$ref": "#/$defs/EconomicScenarioResult"
+      },
+      "title": "Scenarios",
+      "type": "array"
+    },
+    "workBudget": {
+      "$ref": "#/$defs/WorkBudgetResult"
+    },
+    "execution": {
+      "$ref": "#/$defs/EconomicExecutionMetadata"
+    },
+    "integrity": {
+      "$ref": "#/$defs/EconomicIntegrityStatus"
+    }
+  },
+  "required": [
+    "currency",
+    "modelTimeUnit",
+    "operationalComparison",
+    "baselineCost",
+    "scenarios",
+    "workBudget",
+    "execution",
+    "integrity"
+  ],
+  "title": "OpsTwin economic comparison result 0.7.0",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/economic-comparison-result.schema.json"
+}

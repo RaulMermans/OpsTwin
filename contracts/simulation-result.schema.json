@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/simulation-result.schema.json",
+  "title": "OpsTwin simulation result 0.3.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "run", "observation", "systemMetrics", "stageMetrics", "resourcePoolMetrics", "integrity", "resultDetail", "events"],
+  "$defs": {
+    "nonNegative": { "type": "number", "minimum": 0 },
+    "nullableNonNegative": { "type": ["number", "null"], "minimum": 0 },
+    "ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "properties": {
+    "schemaVersion": { "const": "0.3.0" },
+    "run": {
+      "type": "object", "additionalProperties": false,
+      "required": ["modelName", "timeUnit", "seed", "startedAt", "completedAt", "deterministic", "runLabel"],
+      "properties": {
+        "modelName": { "type": "string", "minLength": 1 }, "timeUnit": { "const": "minutes" },
+        "seed": { "type": "integer", "minimum": 0 }, "startedAt": { "$ref": "#/$defs/nonNegative" },
+        "completedAt": { "$ref": "#/$defs/nonNegative" }, "deterministic": { "type": "boolean" },
+        "runLabel": { "type": ["string", "null"] }
+      }
+    },
+    "observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["simulationStart", "measurementStart", "measurementEnd", "simulationEnd", "measurementDuration", "createdDuringWindow", "completedDuringWindow", "terminallyFailedDuringWindow", "activeAtMeasurementEnd", "excludedPreWarmupItems", "incompleteAtMeasurementEnd"],
+      "properties": {
+        "simulationStart": { "$ref": "#/$defs/nonNegative" }, "measurementStart": { "$ref": "#/$defs/nonNegative" },
+        "measurementEnd": { "$ref": "#/$defs/nonNegative" }, "simulationEnd": { "$ref": "#/$defs/nonNegative" },
+        "measurementDuration": { "$ref": "#/$defs/nonNegative" },
+        "createdDuringWindow": { "type": "integer", "minimum": 0 }, "completedDuringWindow": { "type": "integer", "minimum": 0 },
+        "terminallyFailedDuringWindow": { "type": "integer", "minimum": 0 }, "activeAtMeasurementEnd": { "type": "integer", "minimum": 0 },
+        "excludedPreWarmupItems": { "type": "integer", "minimum": 0 }, "incompleteAtMeasurementEnd": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "systemMetrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["createdItems", "completedItems", "terminallyFailedItems", "throughput", "averageWaitingTime", "averageProcessingTime", "averageCycleTime", "p95CycleTime", "maximumQueueLength", "slaAttainment", "totalReworkCount", "eventCount", "arrivalRate", "completionRate", "failureRate", "timeWeightedWip", "timeWeightedQueueLength", "flowEfficiency"],
+      "properties": {
+        "createdItems": { "type": "integer", "minimum": 0 }, "completedItems": { "type": "integer", "minimum": 0 },
+        "terminallyFailedItems": { "type": "integer", "minimum": 0 }, "throughput": { "$ref": "#/$defs/nonNegative" },
+        "averageWaitingTime": { "$ref": "#/$defs/nonNegative" }, "averageProcessingTime": { "$ref": "#/$defs/nonNegative" },
+        "averageCycleTime": { "$ref": "#/$defs/nonNegative" }, "p95CycleTime": { "$ref": "#/$defs/nonNegative" },
+        "maximumQueueLength": { "type": "integer", "minimum": 0 }, "slaAttainment": { "$ref": "#/$defs/ratio" },
+        "totalReworkCount": { "type": "integer", "minimum": 0 }, "eventCount": { "type": "integer", "minimum": 0 },
+        "arrivalRate": { "$ref": "#/$defs/nonNegative" }, "completionRate": { "$ref": "#/$defs/nonNegative" },
+        "failureRate": { "$ref": "#/$defs/nonNegative" }, "timeWeightedWip": { "$ref": "#/$defs/nonNegative" },
+        "timeWeightedQueueLength": { "$ref": "#/$defs/nonNegative" }, "flowEfficiency": { "$ref": "#/$defs/ratio" }
+      }
+    },
+    "stageMetrics": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["stageId", "visitCount", "completedProcessingCount", "averageWaitingTime", "averageProcessingTime", "failureCount", "reworkCount", "maximumQueueLength", "timeWeightedQueueLength", "waitingTimeShare", "processingTimeShare"],
+        "properties": {
+          "stageId": { "type": "string" }, "visitCount": { "type": "integer", "minimum": 0 },
+          "completedProcessingCount": { "type": "integer", "minimum": 0 }, "averageWaitingTime": { "$ref": "#/$defs/nonNegative" },
+          "averageProcessingTime": { "$ref": "#/$defs/nonNegative" }, "failureCount": { "type": "integer", "minimum": 0 },
+          "reworkCount": { "type": "integer", "minimum": 0 }, "maximumQueueLength": { "type": "integer", "minimum": 0 },
+          "timeWeightedQueueLength": { "$ref": "#/$defs/nonNegative" }, "waitingTimeShare": { "$ref": "#/$defs/ratio" },
+          "processingTimeShare": { "$ref": "#/$defs/ratio" }
+        }
+      }
+    },
+    "resourcePoolMetrics": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["resourcePoolId", "capacity", "busyTime", "utilization", "maximumConcurrentUsage", "totalRequests", "busyCapacityTime", "availableCapacityTime", "idleCapacityProportion", "meanRequestWait"],
+        "properties": {
+          "resourcePoolId": { "type": "string" }, "capacity": { "type": "integer", "minimum": 1 },
+          "busyTime": { "$ref": "#/$defs/nonNegative" }, "utilization": { "$ref": "#/$defs/ratio" },
+          "maximumConcurrentUsage": { "type": "integer", "minimum": 0 }, "totalRequests": { "type": "integer", "minimum": 0 },
+          "busyCapacityTime": { "$ref": "#/$defs/nonNegative" }, "availableCapacityTime": { "$ref": "#/$defs/nonNegative" },
+          "idleCapacityProportion": { "$ref": "#/$defs/ratio" }, "meanRequestWait": { "$ref": "#/$defs/nonNegative" }
+        }
+      }
+    },
+    "integrity": {
+      "type": "object", "additionalProperties": false, "required": ["status", "checksRun"],
+      "properties": { "status": { "const": "passed" }, "checksRun": { "type": "integer", "minimum": 0 } }
+    },
+    "resultDetail": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "totalEventCount", "includedEventCount", "selectedItemIds"],
+      "properties": {
+        "mode": { "enum": ["summary", "sampled", "full"] },
+        "totalEventCount": { "type": "integer", "minimum": 0 }, "includedEventCount": { "type": "integer", "minimum": 0 },
+        "selectedItemIds": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["simulationTime", "sequence", "eventType", "itemId", "sourceId", "stageId", "resourcePoolId", "routeId", "targetId", "priority", "attempt", "sampledDuration", "reason"],
+        "properties": {
+          "simulationTime": { "$ref": "#/$defs/nonNegative" }, "sequence": { "type": "integer", "minimum": 0 },
+          "eventType": { "enum": ["ITEM_CREATED", "QUEUE_ENTERED", "RESOURCE_REQUESTED", "PROCESS_STARTED", "PROCESS_COMPLETED", "RESOURCE_RELEASED", "ROUTE_SELECTED", "ITEM_FAILED", "ITEM_REWORKED", "ITEM_COMPLETED"] },
+          "itemId": { "type": "string" }, "sourceId": { "type": ["string", "null"] },
+          "stageId": { "type": ["string", "null"] }, "resourcePoolId": { "type": ["string", "null"] },
+          "routeId": { "type": ["string", "null"] }, "targetId": { "type": ["string", "null"] },
+          "priority": { "type": ["integer", "null"], "minimum": 0 }, "attempt": { "type": ["integer", "null"], "minimum": 0 },
+          "sampledDuration": { "$ref": "#/$defs/nullableNonNegative" }, "reason": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

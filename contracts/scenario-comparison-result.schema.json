@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/scenario-comparison-result.schema.json",
+  "title": "OpsTwin scenario comparison result 0.5.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "baselineModelHash", "requestedRunCount", "baseSeed", "seedScheduleAlgorithm", "runSeeds", "confidenceLevel", "workBudget", "baseline", "scenarios", "objective", "rankingLabel", "ranking", "representatives", "execution", "integrity"],
+  "properties": {
+    "schemaVersion": { "const": "0.5.0" },
+    "baselineModelHash": { "$ref": "#/$defs/hash" },
+    "requestedRunCount": { "type": "integer", "minimum": 2, "maximum": 500 },
+    "baseSeed": { "type": "integer", "minimum": 0 },
+    "seedScheduleAlgorithm": { "const": "sha256_first_64_bits" },
+    "runSeeds": { "type": "array", "items": { "$ref": "#/$defs/runSeed" } },
+    "confidenceLevel": { "enum": [0.9, 0.95, 0.99] },
+    "workBudget": { "$ref": "#/$defs/workBudget" },
+    "baseline": { "$ref": "#/$defs/variant" },
+    "scenarios": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "$ref": "#/$defs/scenario" } },
+    "objective": { "type": "object" },
+    "rankingLabel": { "const": "comparative ranking" },
+    "ranking": { "type": "array", "items": { "$ref": "#/$defs/ranking" } },
+    "representatives": { "$ref": "#/$defs/representatives" },
+    "execution": { "$ref": "#/$defs/execution" },
+    "integrity": { "$ref": "#/$defs/integrity" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "runSeed": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runIndex", "seed"],
+      "properties": { "runIndex": { "type": "integer", "minimum": 0 }, "seed": { "type": "integer", "minimum": 0 } }
+    },
+    "workBudget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baselineItemCount", "modelVariants", "runCount", "estimatedTotalItemExecutions", "estimatedWorkUnits", "maximumWorkUnits"],
+      "properties": {
+        "baselineItemCount": { "type": "integer", "minimum": 1 },
+        "modelVariants": { "type": "integer", "minimum": 2, "maximum": 6 },
+        "runCount": { "type": "integer", "minimum": 2, "maximum": 500 },
+        "estimatedTotalItemExecutions": { "type": "integer", "minimum": 1 },
+        "estimatedWorkUnits": { "type": "integer", "minimum": 1 },
+        "maximumWorkUnits": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "variant": {
+      "type": "object", "additionalProperties": false,
+      "required": ["variantId", "modelHash", "successfulRunCount", "failedRunCount", "successfulRunRatio", "systemMetrics", "stageMetrics", "resourcePoolMetrics", "risks", "convergence", "failedRuns"],
+      "properties": {
+        "variantId": { "type": "string" }, "modelHash": { "$ref": "#/$defs/hash" },
+        "successfulRunCount": { "type": "integer", "minimum": 1 }, "failedRunCount": { "type": "integer", "minimum": 0 },
+        "successfulRunRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "systemMetrics": { "type": "object" }, "stageMetrics": { "type": "array" }, "resourcePoolMetrics": { "type": "array" },
+        "risks": { "type": "array" }, "convergence": { "type": "array" }, "failedRuns": { "type": "array" }
+      }
+    },
+    "scenario": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scenarioId", "scenarioName", "status", "failure", "baselineModelHash", "scenarioModelHash", "appliedOverrideCount", "appliedOverrides", "variant", "requestedRunCount", "baselineSuccessfulRunCount", "scenarioSuccessfulRunCount", "pairedRunCount", "pairedRunRatio", "pairedRunIndexes", "baselineOnlySuccessfulIndexes", "scenarioOnlySuccessfulIndexes", "failedIndexes", "pairedMetrics", "resourceUtilizationDeltas", "riskComparisons", "guardrails", "eligible", "evidenceStatements"],
+      "properties": {
+        "scenarioId": { "type": "string" }, "scenarioName": { "type": "string" }, "status": { "enum": ["valid", "failed"] },
+        "failure": { "type": ["object", "null"] }, "baselineModelHash": { "$ref": "#/$defs/hash" }, "scenarioModelHash": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+        "appliedOverrideCount": { "type": "integer", "minimum": 0 }, "appliedOverrides": { "type": "array" }, "variant": { "anyOf": [{ "$ref": "#/$defs/variant" }, { "type": "null" }] },
+        "requestedRunCount": { "type": "integer" }, "baselineSuccessfulRunCount": { "type": "integer" }, "scenarioSuccessfulRunCount": { "type": "integer" },
+        "pairedRunCount": { "type": "integer" }, "pairedRunRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "pairedRunIndexes": { "type": "array", "items": { "type": "integer" } }, "baselineOnlySuccessfulIndexes": { "type": "array", "items": { "type": "integer" } },
+        "scenarioOnlySuccessfulIndexes": { "type": "array", "items": { "type": "integer" } }, "failedIndexes": { "type": "array", "items": { "type": "integer" } },
+        "pairedMetrics": { "type": "object" }, "resourceUtilizationDeltas": { "type": "object" }, "riskComparisons": { "type": "array" }, "guardrails": { "type": "array" }, "eligible": { "type": "boolean" },
+        "evidenceStatements": { "type": "array", "maxItems": 5, "items": { "type": "string" } }
+      }
+    },
+    "ranking": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rank", "scenarioId", "eligible", "guardrailsPassed", "objectiveMetric", "objectiveMeanDelta", "probabilityOfImprovement", "confidenceIntervalWidth", "tieBreakExplanation"],
+      "properties": {
+        "rank": { "type": "integer", "minimum": 1 }, "scenarioId": { "type": "string" }, "eligible": { "const": true }, "guardrailsPassed": { "type": "boolean" },
+        "objectiveMetric": { "type": "string" }, "objectiveMeanDelta": { "type": "number" }, "probabilityOfImprovement": { "type": "number" },
+        "confidenceIntervalWidth": { "type": "number", "minimum": 0 }, "tieBreakExplanation": { "type": "string" }
+      }
+    },
+    "representativeVariant": {
+      "type": "object", "additionalProperties": false,
+      "required": ["variantId", "representative"],
+      "properties": { "variantId": { "type": "string" }, "representative": { "type": "object" } }
+    },
+    "representatives": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseline", "scenario"],
+      "properties": {
+        "baseline": { "anyOf": [{ "$ref": "#/$defs/representativeVariant" }, { "type": "null" }] },
+        "scenario": { "anyOf": [{ "$ref": "#/$defs/representativeVariant" }, { "type": "null" }] }
+      }
+    },
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["executionOrder", "ordinarySimulationExecutions", "representativeReruns", "ordinaryRunIncludedEventCount", "ordinaryRunRetainedEventCount", "maximumSimultaneouslyRetainedEventRichResults", "totalGeneratedEventCount", "returnedEventCount"],
+      "properties": {
+        "executionOrder": { "const": "run_index_then_baseline_then_scenarios" }, "ordinarySimulationExecutions": { "type": "integer", "minimum": 0 },
+        "representativeReruns": { "type": "integer", "minimum": 0, "maximum": 2 }, "ordinaryRunIncludedEventCount": { "const": 0 }, "ordinaryRunRetainedEventCount": { "const": 0 },
+        "maximumSimultaneouslyRetainedEventRichResults": { "type": "integer", "minimum": 0, "maximum": 2 }, "totalGeneratedEventCount": { "type": "integer", "minimum": 0 }, "returnedEventCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "integrity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "checksRun"],
+      "properties": { "status": { "const": "passed" }, "checksRun": { "type": "integer", "minimum": 1 } }
+    }
+  }
+}

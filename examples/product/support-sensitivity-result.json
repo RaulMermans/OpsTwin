@@ -1,0 +1,214 @@
+{
+  "baseSeed": 42,
+  "baselineModelHash": "9be75248c9fc8b8431cae1317a8baf66042c5a905b60bc67f566cd5de6f1dad3",
+  "canonicalValues": [
+    1.0,
+    2.0
+  ],
+  "confidenceLevel": 0.95,
+  "execution": {
+    "executionOrder": "run_index_then_values",
+    "ordinaryRunIncludedEventCount": 0,
+    "ordinaryRunRetainedEventCount": 0,
+    "ordinarySimulationExecutions": 4
+  },
+  "integrity": {
+    "checksRun": 24,
+    "status": "passed"
+  },
+  "originalValues": [
+    1.0,
+    2.0
+  ],
+  "requestedRunCount": 2,
+  "responseCurves": [
+    {
+      "direction": "lower",
+      "finiteDifferences": [
+        {
+          "finiteDifference": -6.0,
+          "lowerParameterValue": 1.0,
+          "metric": "averageCycleTime",
+          "metricDifference": -6.0,
+          "parameterDifference": 1.0,
+          "unit": "minutes",
+          "upperParameterValue": 2.0
+        }
+      ],
+      "metric": "averageCycleTime",
+      "monotonicity": "observed_decreasing",
+      "points": [
+        {
+          "confidenceIntervalLower": 14.0,
+          "confidenceIntervalUpper": 14.0,
+          "isBaselineValue": true,
+          "mean": 14.0,
+          "observedElasticity": null,
+          "parameterValue": 1.0,
+          "status": "valid"
+        },
+        {
+          "confidenceIntervalLower": 8.0,
+          "confidenceIntervalUpper": 8.0,
+          "isBaselineValue": false,
+          "mean": 8.0,
+          "observedElasticity": -0.42857142857142855,
+          "parameterValue": 2.0,
+          "status": "valid"
+        }
+      ],
+      "thresholdCrossings": [],
+      "unit": "minutes"
+    }
+  ],
+  "runSeeds": [
+    {
+      "runIndex": 0,
+      "seed": 6085284259181818738
+    },
+    {
+      "runIndex": 1,
+      "seed": 278651779053087998
+    }
+  ],
+  "schemaVersion": "0.6.0",
+  "seedScheduleAlgorithm": "sha256_first_64_bits",
+  "target": {
+    "baselineValue": 1.0,
+    "entityId": "agents",
+    "entityType": "resourcePool",
+    "field": "capacity",
+    "label": "Resource-pool capacity",
+    "unit": "workers",
+    "valueType": "integer"
+  },
+  "values": [
+    {
+      "failedRunCount": 0,
+      "failure": null,
+      "isBaselineValue": true,
+      "modelHash": "9be75248c9fc8b8431cae1317a8baf66042c5a905b60bc67f566cd5de6f1dad3",
+      "pairedMetrics": {},
+      "pairedRunCount": 2,
+      "pairedRunRatio": 1.0,
+      "parameterValue": 1.0,
+      "status": "valid",
+      "successfulRunCount": 2,
+      "successfulRunRatio": 1.0,
+      "systemMetrics": {
+        "averageCycleTime": {
+          "confidenceInterval": {
+            "level": 0.95,
+            "lower": 14.0,
+            "method": "normal_approximation",
+            "reliableSampleSize": false,
+            "successfulRunCount": 2,
+            "upper": 14.0
+          },
+          "count": 2,
+          "maximum": 14.0,
+          "mean": 14.0,
+          "minimum": 14.0,
+          "p10": 14.0,
+          "p50": 14.0,
+          "p90": 14.0,
+          "sampleVariance": 0.0,
+          "standardDeviation": 0.0
+        }
+      }
+    },
+    {
+      "failedRunCount": 0,
+      "failure": null,
+      "isBaselineValue": false,
+      "modelHash": "41ef1ed7950330e873c76862941d560e6d60ff78b773bbef7e6947a24104a032",
+      "pairedMetrics": {
+        "averageCycleTime": {
+          "absoluteDelta": {
+            "confidenceInterval": {
+              "level": 0.95,
+              "lower": -6.0,
+              "method": "normal_approximation",
+              "reliableSampleSize": false,
+              "successfulRunCount": 2,
+              "upper": -6.0
+            },
+            "count": 2,
+            "maximum": -6.0,
+            "mean": -6.0,
+            "minimum": -6.0,
+            "p10": -6.0,
+            "p50": -6.0,
+            "p90": -6.0,
+            "sampleVariance": 0.0,
+            "standardDeviation": 0.0
+          },
+          "improvement": {
+            "degradedCount": 0,
+            "improvedCount": 2,
+            "probabilityOfDegradation": 0.0,
+            "probabilityOfImprovement": 1.0,
+            "probabilityOfTie": 0.0,
+            "tiedCount": 0,
+            "validPairedRunCount": 2
+          },
+          "metric": "averageCycleTime",
+          "relativeDelta": {
+            "confidenceInterval": {
+              "level": 0.95,
+              "lower": -0.42857142857142855,
+              "method": "normal_approximation",
+              "reliableSampleSize": false,
+              "successfulRunCount": 2,
+              "upper": -0.42857142857142855
+            },
+            "count": 2,
+            "maximum": -0.42857142857142855,
+            "mean": -0.42857142857142855,
+            "minimum": -0.42857142857142855,
+            "p10": -0.42857142857142855,
+            "p50": -0.42857142857142855,
+            "p90": -0.42857142857142855,
+            "sampleVariance": 0.0,
+            "standardDeviation": 0.0
+          },
+          "relativeDeltaUndefinedCount": 0
+        }
+      },
+      "pairedRunCount": 2,
+      "pairedRunRatio": 1.0,
+      "parameterValue": 2.0,
+      "status": "valid",
+      "successfulRunCount": 2,
+      "successfulRunRatio": 1.0,
+      "systemMetrics": {
+        "averageCycleTime": {
+          "confidenceInterval": {
+            "level": 0.95,
+            "lower": 8.0,
+            "method": "normal_approximation",
+            "reliableSampleSize": false,
+            "successfulRunCount": 2,
+            "upper": 8.0
+          },
+          "count": 2,
+          "maximum": 8.0,
+          "mean": 8.0,
+          "minimum": 8.0,
+          "p10": 8.0,
+          "p50": 8.0,
+          "p90": 8.0,
+          "sampleVariance": 0.0,
+          "standardDeviation": 0.0
+        }
+      }
+    }
+  ],
+  "workBudget": {
+    "baselineItemCount": 5,
+    "estimatedWorkUnits": 20,
+    "maximumWorkUnits": 100000,
+    "runCount": 2,
+    "testedValueCount": 2
+  }
+}

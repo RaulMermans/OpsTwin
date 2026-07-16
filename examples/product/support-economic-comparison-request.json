@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "0.7.0",
+  "comparison": {
+    "schemaVersion": "0.5.0",
+    "baselineModel": {
+      "schemaVersion": "0.2.0",
+      "name": "Sensitivity CLI fixture",
+      "timeUnit": "minutes",
+      "runConfig": {
+        "seed": 42
+      },
+      "sources": [
+        {
+          "id": "tickets",
+          "name": "Tickets",
+          "itemCount": 5,
+          "initialArrivalTime": 0,
+          "priority": 0,
+          "firstStageId": "triage",
+          "arrival": {
+            "type": "fixed",
+            "interval": 5
+          }
+        }
+      ],
+      "resourcePools": [
+        {
+          "id": "agents",
+          "name": "Agents",
+          "capacity": 1
+        }
+      ],
+      "stages": [
+        {
+          "id": "triage",
+          "name": "Triage",
+          "resourcePoolId": "agents",
+          "processingTime": {
+            "type": "fixed",
+            "value": 8
+          },
+          "queuePolicy": "fifo"
+        }
+      ],
+      "routes": [
+        {
+          "id": "triage-complete",
+          "kind": "success",
+          "fromStageId": "triage",
+          "options": [
+            {
+              "targetType": "completion",
+              "probability": 1
+            }
+          ]
+        }
+      ],
+      "slaRules": [
+        {
+          "id": "default",
+          "targetDuration": 30
+        }
+      ]
+    },
+    "scenarios": [
+      {
+        "id": "capacity",
+        "name": "Two agents",
+        "overrides": [
+          {
+            "entityType": "resourcePool",
+            "entityId": "agents",
+            "field": "capacity",
+            "value": 2
+          }
+        ]
+      }
+    ],
+    "execution": {
+      "baseSeed": 42,
+      "runCount": 2
+    },
+    "objective": {
+      "metric": "averageCycleTime",
+      "direction": "minimize"
+    },
+    "representativeEvidence": {
+      "baseline": false,
+      "topRankedScenario": false,
+      "detailMode": "summary",
+      "sampledItemLimit": null
+    }
+  },
+  "assumptions": {
+    "schemaVersion": "0.7.0",
+    "currency": "EUR",
+    "modelTimeUnit": "minutes",
+    "resourceProvisioning": [
+      {
+        "resourcePoolId": "agents",
+        "costPerCapacityTimeUnit": 2
+      }
+    ]
+  },
+  "interventions": [
+    {
+      "scenarioId": "capacity",
+      "oneTimeCost": 120,
+      "amortizationPeriods": 12
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "opstwin",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "bootstrap": "\"%npm_node_execpath%\" scripts/tasks.mjs bootstrap || node scripts/tasks.mjs bootstrap",
+    "dev:web": "\"%npm_node_execpath%\" scripts/tasks.mjs dev:web || node scripts/tasks.mjs dev:web",
+    "dev:api": "\"%npm_node_execpath%\" scripts/tasks.mjs dev:api || node scripts/tasks.mjs dev:api",
+    "dev:vercel": "\"%npm_node_execpath%\" scripts/tasks.mjs dev:vercel || node scripts/tasks.mjs dev:vercel",
+    "build:vercel": "\"%npm_node_execpath%\" scripts/tasks.mjs build:vercel || node scripts/tasks.mjs build:vercel",
+    "smoke:vercel-local": "\"%npm_node_execpath%\" scripts/tasks.mjs smoke:vercel-local || node scripts/tasks.mjs smoke:vercel-local",
+    "smoke:preview": "\"%npm_node_execpath%\" scripts/tasks.mjs smoke:preview || node scripts/tasks.mjs smoke:preview",
+    "run-example": "\"%npm_node_execpath%\" scripts/tasks.mjs run-example || node scripts/tasks.mjs run-example",
+    "benchmark:simulation": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:simulation || node scripts/tasks.mjs benchmark:simulation",
+    "benchmark:repeated": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:repeated || node scripts/tasks.mjs benchmark:repeated",
+    "benchmark:comparison": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:comparison || node scripts/tasks.mjs benchmark:comparison",
+    "benchmark:sensitivity": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:sensitivity || node scripts/tasks.mjs benchmark:sensitivity",
+    "benchmark:economics": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:economics || node scripts/tasks.mjs benchmark:economics",
+    "benchmark:economic-sensitivity": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:economic-sensitivity || node scripts/tasks.mjs benchmark:economic-sensitivity",
+    "verify:node-portability": "\"%npm_node_execpath%\" scripts/tasks.mjs verify:node-portability || node scripts/tasks.mjs verify:node-portability",
+    "lint": "\"%npm_node_execpath%\" scripts/tasks.mjs lint || node scripts/tasks.mjs lint",
+    "typecheck": "\"%npm_node_execpath%\" scripts/tasks.mjs typecheck || node scripts/tasks.mjs typecheck",
+    "test": "\"%npm_node_execpath%\" scripts/tasks.mjs test || node scripts/tasks.mjs test",
+    "test:web": "\"%npm_node_execpath%\" scripts/tasks.mjs test:web || node scripts/tasks.mjs test:web",
+    "build": "\"%npm_node_execpath%\" scripts/tasks.mjs build || node scripts/tasks.mjs build",
+    "verify": "\"%npm_node_execpath%\" scripts/tasks.mjs verify || node scripts/tasks.mjs verify"
+  },
+  "devDependencies": {
+    "vercel": "^56.2.0"
+  }
+}

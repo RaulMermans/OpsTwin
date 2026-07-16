@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "0.5.0",
+  "baselineModel": {
+    "schemaVersion": "0.2.0",
+    "name": "Deterministic Support Baseline",
+    "timeUnit": "minutes",
+    "runConfig": { "seed": 42 },
+    "sources": [{
+      "id": "tickets", "name": "Ticket Source", "itemCount": 5,
+      "initialArrivalTime": 0, "priority": 0, "firstStageId": "triage",
+      "arrival": { "type": "fixed", "interval": 5 }
+    }],
+    "resourcePools": [{ "id": "agents", "name": "Agents", "capacity": 1 }],
+    "stages": [{
+      "id": "triage", "name": "Triage", "resourcePoolId": "agents",
+      "processingTime": { "type": "fixed", "value": 8 }, "queuePolicy": "fifo"
+    }],
+    "routes": [{
+      "id": "triage-complete", "kind": "success", "fromStageId": "triage",
+      "options": [{ "targetType": "completion", "probability": 1 }]
+    }],
+    "slaRules": [{ "id": "default", "targetDuration": 30 }]
+  },
+  "scenarios": [{
+    "id": "two-agents", "name": "Two agents",
+    "overrides": [{
+      "entityType": "resourcePool", "entityId": "agents",
+      "field": "capacity", "operation": "replace", "value": 2
+    }]
+  }],
+  "execution": {
+    "baseSeed": 42, "runCount": 10, "confidenceLevel": 0.95,
+    "minimumSuccessfulRunRatio": 1.0, "minimumPairedRunRatio": 1.0,
+    "observation": { "warmupDuration": 0 }, "thresholds": {}
+  },
+  "objective": { "metric": "averageCycleTime", "direction": "minimize" },
+  "guardrails": [{
+    "metric": "resourcePoolUtilization", "operator": "lessThanOrEqual",
+    "value": 1, "resourcePoolId": "agents"
+  }],
+  "representativeEvidence": {
+    "baseline": true, "topRankedScenario": true,
+    "detailMode": "sampled", "sampledItemLimit": 5
+  }
+}

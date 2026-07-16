@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "0.6.0",
+  "baselineModel": {
+    "schemaVersion": "0.2.0",
+    "name": "Sensitivity CLI fixture",
+    "timeUnit": "minutes",
+    "runConfig": { "seed": 42 },
+    "sources": [{ "id": "tickets", "name": "Tickets", "itemCount": 5, "initialArrivalTime": 0, "priority": 0, "firstStageId": "triage", "arrival": { "type": "fixed", "interval": 5 } }],
+    "resourcePools": [{ "id": "agents", "name": "Agents", "capacity": 1 }],
+    "stages": [{ "id": "triage", "name": "Triage", "resourcePoolId": "agents", "processingTime": { "type": "fixed", "value": 8 }, "queuePolicy": "fifo" }],
+    "routes": [{ "id": "triage-complete", "kind": "success", "fromStageId": "triage", "options": [{ "targetType": "completion", "probability": 1 }] }],
+    "slaRules": [{ "id": "default", "targetDuration": 30 }]
+  },
+  "target": { "entityType": "resourcePool", "entityId": "agents", "field": "capacity" },
+  "values": [1, 2],
+  "execution": { "baseSeed": 42, "runCount": 2 },
+  "metrics": ["averageCycleTime"]
+}

@@ -1,0 +1,21 @@
+# Roadmap
+
+- Sprint 00: Foundation and deterministic proof
+- Sprint 01: Seeded stochastic multi-stage kernel
+- Sprint 02: Analytical metrics and mathematical validation (complete)
+- Sprint 03: Repeated-run aggregation core (complete)
+- Sprint 04: Scenario overrides and comparison (complete)
+- Sprint 05: First usable product slice (implemented locally)
+- Sprint 05.1: Local product slice completion (preflight blocked; not implemented as a separate sprint)
+- Sprint 06: Scenario Lab UX and visual analysis (implemented locally; full verification environment-blocked)
+- Sprint 06.1: runtime verification recovery and Scenario Lab hardening (source gates recovered; runtime debt remains environment-blocked)
+- Sprint 07: controlled read-only workflow visualization (implemented locally; executable frontend/browser verification environment-blocked)
+- Sprint 07.1: workflow visualization hardening and verification carryover (implemented locally; frontend runtime gates environment-blocked)
+- Sprint 08: one-factor-at-a-time sensitivity analysis core (implemented locally)
+- Sprint 08.1: sensitivity contract and evidence parity (implemented locally; frontend runtime gate environment-blocked)
+- Sprint 09: explicit recurring-cost comparison and economic sensitivity (implemented locally; deployment intentionally deferred)
+- Future: topology editing only after validation, persistence, and multi-template layout requirements justify a separate product boundary
+- Future: animated playback
+- Future: multi-factor experimentation only after OFAT evidence and asynchronous capacity justify it
+- Future: recommendation research remains outside current product claims
+- Future: flagship polish and deployment only on explicit instruction

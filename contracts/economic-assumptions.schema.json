@@ -1,0 +1,236 @@
+{
+  "$defs": {
+    "HoldingCostAssumption": {
+      "additionalProperties": false,
+      "properties": {
+        "stageId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stageid"
+        },
+        "costPerItemTimeUnit": {
+          "minimum": 0,
+          "title": "Costperitemtimeunit",
+          "type": "number",
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "costPerItemTimeUnit"
+      ],
+      "title": "HoldingCostAssumption",
+      "type": "object"
+    },
+    "ResourceProvisioningAssumption": {
+      "additionalProperties": false,
+      "properties": {
+        "resourcePoolId": {
+          "minLength": 1,
+          "title": "Resourcepoolid",
+          "type": "string"
+        },
+        "costPerCapacityTimeUnit": {
+          "minimum": 0,
+          "title": "Costpercapacitytimeunit",
+          "type": "number",
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "resourcePoolId",
+        "costPerCapacityTimeUnit"
+      ],
+      "title": "ResourceProvisioningAssumption",
+      "type": "object"
+    },
+    "ReworkCostAssumption": {
+      "additionalProperties": false,
+      "properties": {
+        "stageId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stageid"
+        },
+        "costPerRework": {
+          "minimum": 0,
+          "title": "Costperrework",
+          "type": "number",
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "costPerRework"
+      ],
+      "title": "ReworkCostAssumption",
+      "type": "object"
+    },
+    "StageVisitAssumption": {
+      "additionalProperties": false,
+      "properties": {
+        "stageId": {
+          "minLength": 1,
+          "title": "Stageid",
+          "type": "string"
+        },
+        "costPerVisit": {
+          "minimum": 0,
+          "title": "Costpervisit",
+          "type": "number",
+          "maximum": 1e+308
+        }
+      },
+      "required": [
+        "stageId",
+        "costPerVisit"
+      ],
+      "title": "StageVisitAssumption",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "0.7.0",
+      "default": "0.7.0",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "currency": {
+      "title": "Currency",
+      "type": "string"
+    },
+    "modelTimeUnit": {
+      "const": "minutes",
+      "title": "Modeltimeunit",
+      "type": "string"
+    },
+    "resourceProvisioning": {
+      "items": {
+        "$ref": "#/$defs/ResourceProvisioningAssumption"
+      },
+      "title": "Resourceprovisioning",
+      "type": "array"
+    },
+    "stageVisit": {
+      "items": {
+        "$ref": "#/$defs/StageVisitAssumption"
+      },
+      "title": "Stagevisit",
+      "type": "array"
+    },
+    "queueHolding": {
+      "items": {
+        "$ref": "#/$defs/HoldingCostAssumption"
+      },
+      "title": "Queueholding",
+      "type": "array"
+    },
+    "wipHoldingCostPerItemTimeUnit": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number",
+          "maximum": 1e+308
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wipholdingcostperitemtimeunit"
+    },
+    "costPerSlaViolation": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number",
+          "maximum": 1e+308
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Costperslaviolation"
+    },
+    "costPerTerminalFailure": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number",
+          "maximum": 1e+308
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Costperterminalfailure"
+    },
+    "rework": {
+      "items": {
+        "$ref": "#/$defs/ReworkCostAssumption"
+      },
+      "title": "Rework",
+      "type": "array"
+    },
+    "costPerCompletedItem": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number",
+          "maximum": 1e+308
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Costpercompleteditem"
+    },
+    "fixedCostPerAnalysisPeriod": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number",
+          "maximum": 1e+308
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fixedcostperanalysisperiod"
+    },
+    "allowPartialTotals": {
+      "const": false,
+      "default": false,
+      "title": "Allowpartialtotals",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "currency",
+    "modelTimeUnit"
+  ],
+  "title": "OpsTwin economic assumptions 0.7.0",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/economic-assumptions.schema.json"
+}
