@@ -104,3 +104,9 @@ Resolve or explicitly authorize a workspace environment that permits child proce
 - Full serial economic comparison and economic sensitivity benchmark matrices executed locally with 1.0 paired ratios, zero retained events, and passing integrity; measurements are recorded in `docs/ECONOMIC_PERFORMANCE.md`.
 - Root bootstrap, aggregate verify, Python build, Vitest, and global pytest fixture setup remain affected by the documented managed Windows temporary-directory/child-process restrictions. Inaccessible temporary directories remain untouched and no escalation was attempted.
 - Local-only boundary remains active: no staging, commit, push, GitHub action, Vercel link/project, preview, or production deployment.
+
+## Repository publishing and CI — 2026-07-16
+
+- Private GitHub repository `RaulMermans/OpsTwin` now contains the initial project import and the CI repair commit.
+- Web CI repairs make Vitest mocks hoist-safe, clean the document between tests, use canonical route-option identities, restore inspector focus, and avoid delayed timeout rejections.
+- GitHub Actions CI passed in full for commit `1d38a73` after the repair.
