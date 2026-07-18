@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from time import perf_counter
 
 from app.domain.economics import (
@@ -9,6 +10,7 @@ from app.domain.economics import (
     EconomicExecutionMetadata,
     EconomicGuardrailResult,
     EconomicIntegrityStatus,
+    EconomicObserverFailure,
     EconomicScenarioResult,
     InterventionCostEvidence,
 )
@@ -27,6 +29,8 @@ from app.economics.tradeoffs import (
 )
 from app.scenarios.coordinator import run_scenario_comparison
 from app.scenarios.metrics import METRIC_REGISTRY
+
+logger = logging.getLogger(__name__)
 
 
 def _recurring(snapshot: CostSnapshot) -> float:
@@ -112,6 +116,7 @@ def run_economic_comparison(
         "baseline": {},
         **{item.id: {} for item in request.comparison.scenarios},
     }
+    observer_failures: list[EconomicObserverFailure] = []
     evaluation_seconds = 0.0
     evaluation_count = 0
 
@@ -130,9 +135,29 @@ def run_economic_comparison(
             if snapshot.status == "available":
                 snapshots[variant_id][run_index] = snapshot
                 evaluation_count += 1
-        except Exception:
-            # Operational execution remains valid; economic evidence is isolated.
-            pass
+        except Exception as exc:
+            # Operational execution remains valid; economic evidence is isolated,
+            # but the failure is recorded (not silently dropped) so an unexpected
+            # programming error stays observable in logs and result evidence.
+            logger.warning(
+                "economic observer failure variant=%s run_index=%s error_type=%s",
+                variant_id,
+                run_index,
+                type(exc).__name__,
+            )
+            safe_message = (
+                "economic evaluation raised a validation error"
+                if isinstance(exc, ValueError | KeyError | TypeError | ZeroDivisionError)
+                else "economic evaluation raised an unexpected error"
+            )
+            observer_failures.append(
+                EconomicObserverFailure(
+                    variant_id=variant_id,
+                    run_index=run_index,
+                    error_category="economic_snapshot_failure",
+                    message=safe_message,
+                )
+            )
         finally:
             evaluation_seconds += perf_counter() - started
 
@@ -248,6 +273,7 @@ def run_economic_comparison(
         execution=EconomicExecutionMetadata(
             economic_snapshot_evaluations=evaluation_count,
             economic_evaluation_seconds=(evaluation_seconds if record_evaluation_timing else 0),
+            observer_failures=observer_failures,
         ),
         integrity=EconomicIntegrityStatus(checks_run=22),
     )

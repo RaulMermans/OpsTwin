@@ -380,3 +380,31 @@ Golden models use explicit values, nearest-rank p95, and `pytest.approx(abs=1e-9
 - **GM-121 — Economic language restrictions:** API, CLI, UI, exports, and evidence contain no ROI, profit, guarantee, optimum, or prescriptive intervention claim.
 
 Focused evidence lives in `test_sensitivity_models.py`, `test_sensitivity_materializer.py`, `test_sensitivity_analytics.py`, `test_sensitivity_coordinator.py`, `test_sensitivity_api.py`, `test_sensitivity_cli.py`, and `test_sensitivity_benchmark.py`. Frontend adapter and panel cases live in `sensitivity-core.test.ts` and `sensitivity-panel.test.tsx`; environment-blocked collection must be reported as blocked, never passed.
+
+## Sprint 09.1 frontend verification inventory
+
+`apps/web/tests/` contains 17 files (11 pre-existing plus 6 new playback files) and approximately 68 pre-existing cases plus roughly 60 new playback cases (unit and component). Unit-only files (no DOM rendering): `playback-normalize.test.ts`, `playback-timeline.test.ts`, `playback-controller.test.ts`, `playback-journey.test.ts`, `playback-important-events.test.ts`, `playback-export.test.ts`. Component (jsdom + Testing Library) files include `playback-panel.test.tsx` alongside the pre-existing `workflow-visualization.test.tsx`, `workspace-scenario-lab.test.tsx`, `sensitivity-panel.test.tsx`, and `economics-panel.test.tsx`. Native dependency: `jsdom` for component tests; none for the unit-only playback files. No test in this repository is browser-only (all run under Vitest/jsdom). Vitest cases must not be marked passed unless actually executed and observed passing in that session; see the Sprint 09.1/10 session record for the exact executed/blocked status encountered.
+
+## Sprint 10 golden models — GM-122 through GM-140
+
+- **GM-122 — Representative source validation:** `extractRepresentativeSource` returns a complete `PlaybackSource` for a valid `RepresentativeVariantResult` and `null` when the representative, its result, or its events are absent. **Automated by:** `playback-normalize.test.ts`.
+- **GM-123 — Event ordering:** normalized events sort by `simulationTime` then original source index; equal timestamps preserve source order. **Automated by:** `playback-normalize.test.ts`, `playback-timeline.test.ts`.
+- **GM-124 — Arrival and queue reconstruction:** controlled `ITEM_CREATED`/`QUEUE_ENTERED` events produce exact stage waiting counts. **Automated by:** `playback-timeline.test.ts`.
+- **GM-125 — Processing reconstruction:** controlled `PROCESS_STARTED`/`PROCESS_COMPLETED` events produce exact processing counts. **Automated by:** `playback-timeline.test.ts`.
+- **GM-126 — Resource reconstruction:** controlled `PROCESS_STARTED`/`RESOURCE_RELEASED` events produce exact busy counts against configured capacity. **Automated by:** `playback-timeline.test.ts`, `playback-important-events.test.ts`.
+- **GM-127 — Route reconstruction:** a controlled `ROUTE_SELECTED` event is visible in `eventsAtTime` with the correct `routeId`/`targetId`. **Automated by:** `playback-timeline.test.ts`.
+- **GM-128 — Rework reconstruction:** a repeated stage visit after `ITEM_REWORKED` remains a distinct, correctly ordered visit. **Automated by:** `playback-timeline.test.ts`, `playback-journey.test.ts`.
+- **GM-129 — Completion and failure:** controlled sampled items reach exact `completed`/`failed` terminal sets. **Automated by:** `playback-timeline.test.ts`.
+- **GM-130 — Item journey:** a controlled event history produces the exact visit list, route decisions, cycle time, and SLA result. **Automated by:** `playback-journey.test.ts`.
+- **GM-131 — Seek determinism:** `buildFrame(timeline, t)` called twice at the same `t` returns an equal frame. **Automated by:** `playback-timeline.test.ts`.
+- **GM-132 — Step reversibility:** stepping forward then backward across an interior checkpoint returns to the exact prior index. **Automated by:** `playback-controller.test.ts`, `playback-timeline.test.ts`.
+- **GM-133 — Source-switch reset:** switching the representative source resets the controller to the initial (`-1`) checkpoint and pauses. **Automated by:** `playback-panel.test.tsx` (effect on `activeSource` change) and the `restart` action in `playback-controller.test.ts`.
+- **GM-134 — Representative identity disclosure:** paired (equal run index and seed) versus separately selected representatives render the correct exact wording. **Automated by:** `playback-panel.test.tsx`.
+- **GM-135 — Aggregate/playback separation:** the fixed representative-playback disclaimer and the "Aggregate evidence across successful runs" label remain distinct and no aggregate confidence value renders on the playback timeline. **Automated by:** `playback-panel.test.tsx`.
+- **GM-136 — Reduced-motion behavior:** `prefers-reduced-motion` suppresses the automatic playback timer while preserving step/seek and all rendered information. **Reviewed in:** `playback-panel.tsx` (`reducedMotion` gate on the timer effect); executable jsdom `matchMedia` mocking is deferred to when Vitest execution is unblocked.
+- **GM-137 — Event-ledger equivalence:** the ledger table exposes every essential field (time, item, event, stage, resource, details) with a caption and proper headers. **Automated by:** `playback-panel.test.tsx`.
+- **GM-138 — Playback payload boundary:** presentation/export byte sizes are recorded by `pnpm benchmark:playback` against the existing internal product threshold. **Recorded in:** `docs/PLAYBACK_PERFORMANCE.md`.
+- **GM-139 — Playback export safety:** the export payload contains required evidence fields and excludes filesystem paths, stack traces, and browser/timer/React internals. **Automated by:** `playback-export.test.ts`.
+- **GM-140 — Playback language restriction:** rendered playback copy contains none of the restricted causal/recommendation/guarantee/unjustified-typicality phrases. **Automated by:** `playback-panel.test.tsx`.
+
+Focused evidence lives in `apps/web/tests/playback-normalize.test.ts`, `playback-timeline.test.ts`, `playback-controller.test.ts`, `playback-journey.test.ts`, `playback-important-events.test.ts`, `playback-export.test.ts`, and `playback-panel.test.tsx`. `pnpm benchmark:playback` (`scripts/benchmark-playback.mjs`) records `docs/PLAYBACK_PERFORMANCE.md`. Environment-blocked Vitest collection must be reported as blocked, never passed.

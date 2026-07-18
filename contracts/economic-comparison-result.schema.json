@@ -433,6 +433,48 @@
       "title": "CostAggregate",
       "type": "object"
     },
+    "EconomicObserverFailure": {
+      "additionalProperties": false,
+      "properties": {
+        "variantId": {
+          "minLength": 1,
+          "title": "Variantid",
+          "type": "string"
+        },
+        "runIndex": {
+          "minimum": 0,
+          "title": "Runindex",
+          "type": "integer"
+        },
+        "errorCategory": {
+          "enum": [
+            "economic_assumption_validation",
+            "economic_source_metric_missing",
+            "economic_snapshot_failure",
+            "economic_aggregation_failure",
+            "economic_pairing_failure",
+            "economic_guardrail_failure",
+            "economic_serialization_failure"
+          ],
+          "title": "Errorcategory",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "maxLength": 200,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variantId",
+        "runIndex",
+        "errorCategory",
+        "message"
+      ],
+      "title": "EconomicObserverFailure",
+      "type": "object"
+    },
     "EconomicExecutionMetadata": {
       "additionalProperties": false,
       "properties": {
@@ -464,6 +506,14 @@
           "default": 0,
           "title": "Ordinaryrunretainedeventcount",
           "type": "integer"
+        },
+        "observerFailures": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EconomicObserverFailure"
+          },
+          "title": "Observerfailures",
+          "type": "array"
         }
       },
       "required": [

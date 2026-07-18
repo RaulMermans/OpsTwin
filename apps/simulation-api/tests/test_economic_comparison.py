@@ -2,7 +2,14 @@ from typing import Any
 
 import pytest
 
-from app.domain.economics import EconomicComparisonRequest
+from app.domain.economics import (
+    CostSnapshot,
+    EconomicAssumptions,
+    EconomicComparisonRequest,
+    EconomicObserverFailure,
+)
+from app.domain.models import OperationalModel, SimulationResult
+from app.economics import comparison as economics_comparison
 from app.economics.comparison import run_economic_comparison
 from app.economics.tradeoffs import classify_tradeoff, incremental_cost_per_improvement
 
@@ -63,6 +70,45 @@ def test_economic_comparison_reuses_operational_runs_and_pairs_costs(
     assert scenario.intervention.amortized_cost_per_period is None
     assert scenario.intervention.combined_per_period_cost is None
     assert result.execution.ordinary_run_retained_event_count == 0
+    assert result.integrity.checks_run >= 22
+
+
+def test_observer_failure_is_isolated_and_recorded(
+    deterministic_model_data: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    data = request_data(deterministic_model_data)
+    original = economics_comparison.evaluate_cost_snapshot
+    call_count = {"n": 0}
+
+    def flaky(
+        simulation_result: SimulationResult,
+        model: OperationalModel,
+        assumptions: EconomicAssumptions,
+    ) -> CostSnapshot:
+        call_count["n"] += 1
+        if call_count["n"] == 2:
+            raise ValueError("synthetic economic evaluation failure")
+        return original(simulation_result, model, assumptions)
+
+    monkeypatch.setattr(economics_comparison, "evaluate_cost_snapshot", flaky)
+
+    result = run_economic_comparison(EconomicComparisonRequest.model_validate(data))
+
+    assert result.operational_comparison.scenarios[0].status == "valid"
+    assert result.execution.observer_failures == [
+        EconomicObserverFailure(
+            variant_id="capacity",
+            run_index=0,
+            error_category="economic_snapshot_failure",
+            message="economic evaluation raised a validation error",
+        )
+    ]
+    for failure in result.execution.observer_failures:
+        assert "/" not in failure.message
+        assert "\\" not in failure.message
+        assert "Traceback" not in failure.message
+        assert "synthetic" not in failure.message
+    assert result.scenarios[0].paired_run_count == 1
     assert result.integrity.checks_run >= 22
 
 

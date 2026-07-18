@@ -16,4 +16,5 @@ __pycache__/
 !.env.example
 coverage/
 dist/
+artifacts/
 .DS_Store

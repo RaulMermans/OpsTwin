@@ -79,6 +79,14 @@ def validate_economic_integrity(
             for item in result.scenarios
         ),
         all(item.baseline_cost == result.baseline_cost for item in result.scenarios),
+        all(
+            0 <= failure.run_index < request.comparison.execution.run_count
+            for failure in result.execution.observer_failures
+        ),
+        all(
+            failure.variant_id in {"baseline", *(item.id for item in request.comparison.scenarios)}
+            for failure in result.execution.observer_failures
+        ),
     ]
     if not all(checks):
         raise ValueError("economic integrity validation failed")

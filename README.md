@@ -1,6 +1,6 @@
 # OpsTwin
 
-OpsTwin now includes local one-factor-at-a-time sensitivity and explicit-assumption economic evidence. Use the `0.6.0` sensitivity route/CLI or the `0.7.0` economics and economic-sensitivity routes/CLI commands. The Scenario Lab keeps one-time intervention costs separate unless amortization periods are supplied. Run the dedicated serial benchmarks locally; no deployment is required.
+OpsTwin now includes local one-factor-at-a-time sensitivity, explicit-assumption economic evidence, and deterministic client-side playback of one retained representative sampled run. Use the `0.6.0` sensitivity route/CLI or the `0.7.0` economics and economic-sensitivity routes/CLI commands. The Scenario Lab keeps one-time intervention costs separate unless amortization periods are supplied. Playback explains one representative run and is always shown with its aggregate-versus-run disclaimer; see `docs/REPRESENTATIVE_PLAYBACK_SPEC.md`. Run the dedicated serial benchmarks locally; no deployment is required.
 
 OpsTwin is a digital twin-style operational simulation and decision laboratory for testing service-workflow decisions. The local Scenario Lab organizes up to three guided interventions, explains the operational flow through a deterministic read-only map, and presents backend-owned paired comparison, uncertainty, risk, resource, guardrail, ranking, and integrity evidence without prescribing an action.
 
@@ -26,14 +26,20 @@ Bootstrap creates `.venv`, installs Python packages from `requirements.lock`, in
 
 ## Run
 
-Use separate terminals for the applications:
+One command starts both services with the API origin configured automatically:
+
+```sh
+pnpm dev
+```
+
+It prints the Web, API, and Health URLs, fails clearly on a port conflict, and stops both processes on Ctrl+C or when either process exits. Separate-terminal development remains available:
 
 ```sh
 pnpm dev:web
 pnpm dev:api
 ```
 
-The web app uses `http://localhost:3000`; the API uses `http://localhost:8000`. Run the deterministic proof with:
+The web app uses `http://localhost:3000`; the API uses `http://localhost:8000`. `pnpm smoke:local` starts both services and checks the public web/API routes through the same-origin Next.js rewrite with no manual `OPSTWIN_DEV_API_ORIGIN` step. Run the deterministic proof with:
 
 ```sh
 cd apps/simulation-api
@@ -56,13 +62,18 @@ pnpm benchmark:comparison
 pnpm benchmark:sensitivity
 pnpm benchmark:economics
 pnpm benchmark:economic-sensitivity
+pnpm benchmark:playback
+pnpm package:source
+pnpm verify:source-package
 ```
 
-`pnpm verify` is the preferred cross-platform gate. It runs both linters, both type checkers, tests, schemas, both builds, the example, and lightweight single, repeated, and comparison benchmark smokes. Full workload matrices remain separate. Root scripts use pnpm's lifecycle Node executable and child tasks inherit that executable without manual `PATH` repair. Python is required when bootstrap must create `.venv`. `make verify` delegates to the same script when GNU Make is available.
+`pnpm verify` is the preferred cross-platform gate. It runs both linters, both type checkers, tests, schemas, both builds, the example, the lightweight single/repeated/comparison/sensitivity/economics benchmark smokes, and clean deterministic source packaging plus its verification. Full workload matrices and `pnpm benchmark:playback` remain separate. Root scripts use pnpm's lifecycle Node executable and child tasks inherit that executable without manual `PATH` repair. Python is required when bootstrap must create `.venv`. `make verify` delegates to the same script when GNU Make is available.
+
+`pnpm package:source` builds a deterministic, size-bounded `artifacts/opstwin-source.zip` with a SHA-256 manifest, excluding every generated/machine-specific path; `pnpm verify:source-package` re-opens the archive and checks it. Neither command is committed output — `artifacts/` is git-ignored.
 
 ## Local Scenario Lab
 
-`/workspace` maps eight support-operation assumptions and up to three renameable, duplicable, deleteable, and locally ordered guided scenarios into the existing `0.5.0` paired comparison. Flow is available before execution in Structure and Scenario changes modes; Operational pressure and Baseline vs scenario modes require valid returned evidence. The presentation map is frontend-only, deterministic, read-only, keyboard-operable, and paired with a semantic list equivalent. Simulation mathematics, uncertainty, risks, guardrail evaluation, eligibility, and ranking remain in FastAPI. Result analysis is organized into Overview, Metrics, Risk, Resources, and Technical evidence. JSON/CSV exports are sanitized and local; printing uses browser print styles.
+`/workspace` maps eight support-operation assumptions and up to three renameable, duplicable, deleteable, and locally ordered guided scenarios into the existing `0.5.0` paired comparison. Flow is available before execution in Structure and Scenario changes modes; Operational pressure and Baseline vs scenario modes require valid returned evidence. The presentation map is frontend-only, deterministic, read-only, keyboard-operable, and paired with a semantic list equivalent. Simulation mathematics, uncertainty, risks, guardrail evaluation, eligibility, and ranking remain in FastAPI. Result analysis is organized into Overview, Metrics, Risk, Resources, and Technical evidence. When a comparison result includes retained representative evidence, a Playback panel offers deterministic client-side reconstruction of one representative sampled run (see `docs/REPRESENTATIVE_PLAYBACK_SPEC.md`); it never represents aggregate certainty. JSON/CSV exports are sanitized and local; printing uses browser print styles.
 
 Root `vercel.json` defines one proposed Vercel Services project with separate Next.js and FastAPI roots. See `docs/VERCEL_DEPLOYMENT.md`; no Vercel project is linked and preview validation remains intentionally deferred.
 

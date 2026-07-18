@@ -34,3 +34,7 @@ The in-app browser completed landing-to-workspace navigation, health readiness, 
 - Production: not attempted and not authorized.
 
 ADR-014 therefore remains proposed and GM-051 remains deferred.
+
+## 2026-07-18 addendum
+
+Local Vercel configuration was reviewed and prepared (see `docs/VERCEL_DEPLOYMENT.md` — "Deployment preparation status") without attempting `vercel login`, linking, or a new preview. No new evidence was collected in this entry; the prior 2026-07-16 record above remains the last executed evidence.

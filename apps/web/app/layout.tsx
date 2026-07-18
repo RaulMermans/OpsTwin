@@ -7,6 +7,7 @@ import "./scenario-lab.css";
 import "./workflow.css";
 import "./sensitivity.css";
 import "./economics.css";
+import "./playback.css";
 
 export const metadata: Metadata = {
   title: "OpsTwin - Scenario Lab",

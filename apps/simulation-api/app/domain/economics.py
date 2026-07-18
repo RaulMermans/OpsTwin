@@ -258,12 +258,20 @@ class EconomicScenarioResult(ContractModel):
     ] = "Incremental recurring cost per observed unit of objective improvement"
 
 
+class EconomicObserverFailure(ContractModel):
+    variant_id: str = Field(min_length=1)
+    run_index: int = Field(ge=0)
+    error_category: EconomicFailureCategory
+    message: str = Field(min_length=1, max_length=200)
+
+
 class EconomicExecutionMetadata(ContractModel):
     execution_order: Literal["shared_operational_comparison"] = "shared_operational_comparison"
     economic_snapshot_evaluations: int = Field(ge=0)
     economic_evaluation_seconds: float = Field(ge=0)
     ordinary_run_included_event_count: Literal[0] = 0
     ordinary_run_retained_event_count: Literal[0] = 0
+    observer_failures: list[EconomicObserverFailure] = Field(default_factory=list)
 
 
 class EconomicIntegrityStatus(ContractModel):

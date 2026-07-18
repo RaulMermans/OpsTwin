@@ -3,15 +3,11 @@ import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { childEnvironment, nodeExecutable } from "./task-runtime.mjs";
+import { childEnvironment, nodeExecutable, pythonExecutable } from "./task-runtime.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const simulationApi = resolve(root, "apps", "simulation-api");
-const python = resolve(
-  root,
-  ".venv",
-  process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
-);
+const python = pythonExecutable(root);
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 function run(command, args, cwd = root) {
@@ -55,6 +51,10 @@ const tasks = {
     requireEnvironment();
     run(python, ["-m", "uvicorn", "app.main:app", "--reload"], simulationApi);
   },
+  dev() {
+    requireEnvironment();
+    run(nodeExecutable(), ["scripts/dev-local.mjs"]);
+  },
   "dev:vercel"() {
     run(pnpm, ["exec", "vercel", "dev", "-L"]);
   },
@@ -66,6 +66,19 @@ const tasks = {
   },
   "smoke:preview"() {
     run(nodeExecutable(), ["scripts/vercel-smoke.mjs", process.argv[3] ?? process.env.VERCEL_PREVIEW_URL ?? ""]);
+  },
+  "smoke:local"() {
+    requireEnvironment();
+    run(nodeExecutable(), ["scripts/smoke-local.mjs"]);
+  },
+  "package:source"() {
+    run(nodeExecutable(), ["scripts/package-source.mjs"]);
+  },
+  "verify:source-package"() {
+    run(nodeExecutable(), ["scripts/verify-source-package.mjs"]);
+  },
+  "benchmark:playback"() {
+    run(nodeExecutable(), ["scripts/benchmark-playback.mjs"]);
   },
   "run-example"() {
     requireEnvironment();
@@ -158,6 +171,8 @@ const tasks = {
     tasks["benchmark:sensitivity-smoke"]();
     tasks["benchmark:economics-smoke"]();
     tasks["benchmark:economic-sensitivity-smoke"]();
+    tasks["package:source"]();
+    tasks["verify:source-package"]();
   },
 };
 

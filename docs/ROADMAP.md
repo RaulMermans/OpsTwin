@@ -14,8 +14,10 @@
 - Sprint 08: one-factor-at-a-time sensitivity analysis core (implemented locally)
 - Sprint 08.1: sensitivity contract and evidence parity (implemented locally; frontend runtime gate environment-blocked)
 - Sprint 09: explicit recurring-cost comparison and economic sensitivity (implemented locally; deployment intentionally deferred)
+- Sprint 09.1: local consolidation, deterministic source packaging, one-command local development, workspace decomposition, and economics observer hardening (implemented locally; deployment intentionally deferred)
+- Sprint 10: deterministic client-side playback of one retained representative sampled run (implemented locally; deployment intentionally deferred)
 - Future: topology editing only after validation, persistence, and multi-template layout requirements justify a separate product boundary
-- Future: animated playback
+- Future: multi-run animated aggregate visualization remains distinct from single-representative playback and is not planned
 - Future: multi-factor experimentation only after OFAT evidence and asynchronous capacity justify it
 - Future: recommendation research remains outside current product claims
 - Future: flagship polish and deployment only on explicit instruction

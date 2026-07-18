@@ -1,7 +1,15 @@
-import { delimiter, dirname } from "node:path";
+import { delimiter, dirname, resolve } from "node:path";
 
 export function nodeExecutable() {
   return process.execPath;
+}
+
+export function pythonExecutable(root) {
+  return resolve(
+    root,
+    ".venv",
+    process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
+  );
 }
 
 export function childEnvironment(environment = process.env) {

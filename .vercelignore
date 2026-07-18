@@ -1,0 +1,12 @@
+# Deployed function/build bundles do not need dev tooling, docs, or tests.
+# Vercel deploys from the Git source (already respecting .gitignore), so
+# this only trims committed-but-runtime-irrelevant content.
+docs/
+examples/
+.claude/
+.agents/
+scripts/
+artifacts/
+apps/web/tests/
+apps/simulation-api/tests/
+apps/simulation-api/README.md
