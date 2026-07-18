@@ -6,7 +6,9 @@ import type { ImportantEvent, PlaybackTimeline } from "./types";
  */
 export function deriveImportantEvents(timeline: PlaybackTimeline, resourceCapacities: Record<string, number>): ImportantEvent[] {
   const important: ImportantEvent[] = [];
-  let maxQueue = -1;
+  // Starts at 0 (not -1): a run where no queue ever forms should report no
+  // "maximum queue reached" event at all, not a trivial "0 items" one.
+  let maxQueue = 0;
   const wasFullyUtilized = new Set<string>();
 
   for (const checkpoint of timeline.checkpoints) {

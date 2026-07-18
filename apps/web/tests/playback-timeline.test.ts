@@ -13,11 +13,15 @@ function rawEvent(overrides: Record<string, unknown>): Record<string, unknown> {
 }
 
 // One item through triage (agents, capacity 1): arrival -> queue -> process -> complete -> route -> completed.
+// QUEUE_ENTERED and PROCESS_STARTED use different simulationTime values on
+// purpose: checkpoints group by exact simulationTime, so events sharing a
+// timestamp would land in the same checkpoint and "waiting" would never be
+// independently observable from "processing".
 const controlledRaw = [
   rawEvent({ sequence: 0, simulationTime: 0, eventType: "ITEM_CREATED", itemId: "a" }),
   rawEvent({ sequence: 1, simulationTime: 0, eventType: "QUEUE_ENTERED", itemId: "a", stageId: "triage" }),
-  rawEvent({ sequence: 2, simulationTime: 0, eventType: "RESOURCE_REQUESTED", itemId: "a", resourcePoolId: "agents" }),
-  rawEvent({ sequence: 3, simulationTime: 0, eventType: "PROCESS_STARTED", itemId: "a", stageId: "triage", resourcePoolId: "agents" }),
+  rawEvent({ sequence: 2, simulationTime: 2, eventType: "RESOURCE_REQUESTED", itemId: "a", resourcePoolId: "agents" }),
+  rawEvent({ sequence: 3, simulationTime: 2, eventType: "PROCESS_STARTED", itemId: "a", stageId: "triage", resourcePoolId: "agents" }),
   rawEvent({ sequence: 4, simulationTime: 8, eventType: "PROCESS_COMPLETED", itemId: "a", stageId: "triage" }),
   rawEvent({ sequence: 5, simulationTime: 8, eventType: "RESOURCE_RELEASED", itemId: "a", resourcePoolId: "agents" }),
   rawEvent({ sequence: 6, simulationTime: 8, eventType: "ROUTE_SELECTED", itemId: "a", routeId: "triage-complete", targetId: "completion:triage-complete:0" }),
@@ -48,8 +52,7 @@ describe("buildTimeline / buildFrame", () => {
 
   it("processing start moves the item from waiting to processing and marks the resource busy", () => {
     const timeline = buildControlledTimeline();
-    // PROCESS_STARTED is also at time 0 (same group), so query the frame after that group.
-    const frame = buildFrame(timeline, 0);
+    const frame = buildFrame(timeline, 2);
     const triage = frame.stages.find((stage) => stage.stageId === "triage");
     expect(triage?.waitingItemIds).toEqual([]);
     expect(triage?.processingItemIds).toEqual(["a"]);
@@ -130,8 +133,8 @@ describe("buildTimeline / buildFrame", () => {
 
   it("step reversibility: stepping to the previous checkpoint restores the exact prior frame", () => {
     const timeline = buildControlledTimeline();
-    const beforeIndex = 0; // checkpoint at time 0
-    const afterIndex = 1; // checkpoint at time 8
+    const beforeIndex = 0; // checkpoint at time 0 (queue entry)
+    const afterIndex = 1; // checkpoint at time 2 (processing start)
     const before = timeline.checkpoints[beforeIndex].frame;
     const forward = timeline.checkpoints[afterIndex].frame;
     expect(forward).not.toEqual(before);
