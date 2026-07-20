@@ -1,6 +1,6 @@
 # ADR-014: Vercel Services deployment model
 
-- Status: proposed
+- Status: accepted (2026-07-20)
 
 ## Context
 
@@ -43,3 +43,7 @@ Incompatible Services changes, representative workloads exceeding function limit
 ## Validation plan
 
 Run `vercel dev -L`, `vercel build` where linkage permits, preview deployment, same-origin browser flow, preview API replay, and runtime/payload evidence. Mark accepted only after successful preview validation; otherwise record the exact blocker and retain proposed status.
+
+## Acceptance evidence (2026-07-20)
+
+Sprint 11 fixed a packaging defect that broke the `web` service's Turbopack build (see `docs/sprints/SPRINT_11_RUNTIME_AND_FLAGSHIP_POLISH.md`) and then completed one full production deployment of the existing `ops-twin` Vercel project: one project, two services (`web`/Next.js 16.2.10, `simulation`/FastAPI on `python3.12`), one production domain (`https://ops-twin.vercel.app`), routed by the unchanged root `vercel.json` rewrites. `/`, `/workspace`, `/api/simulation/health`, and all six analysis routes (`simulate`, `simulate/repeated`, `compare/scenarios`, `analyze/sensitivity`, `analyze/economics`, `analyze/economic-sensitivity`) returned correct evidence with passing integrity at bounded run counts (10, 25, and the existing 50-run canonical fixture). `pnpm smoke:preview -- https://ops-twin.vercel.app` passed in full. A live browser session exercised the complete product journey (landing → workspace → comparison → Overview/Metrics/Risk/Resources/Technical → Flow → Sensitivity → Economics → Playback → JSON/CSV export) with zero console errors, zero failed network requests, and no `localhost` reference. Full evidence, including timings and response sizes, is recorded in `docs/VERCEL_PREVIEW_EVIDENCE.md`.

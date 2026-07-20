@@ -13,7 +13,7 @@ Sprint 07 controlled workflow visualization is implemented locally over the unch
 
 ## Current sprint
 
-Sprint 07 - Controlled Workflow Visualization.
+Sprint 11 - Vercel Production Recovery, Runtime Verification, and Flagship Product Polish. See the dated checkpoint below for current status; earlier "Current sprint"/"Next action" text below is historical (append-only log convention).
 
 ## Current status
 
@@ -110,6 +110,15 @@ Resolve or explicitly authorize a workspace environment that permits child proce
 - Private GitHub repository `RaulMermans/OpsTwin` now contains the initial project import and the CI repair commit.
 - Web CI repairs make Vitest mocks hoist-safe, clean the document between tests, use canonical route-option identities, restore inspector focus, and avoid delayed timeout rejections.
 - GitHub Actions CI passed in full for commit `1d38a73` after the repair.
+
+## Sprint 11 — Vercel production recovery and flagship verification — 2026-07-20
+
+- Root cause of the failing `ops-twin` production deployment (commit `fd1c3f4`): `apps/web/lib/templates/support.ts` imported `../../../../examples/product/support-operations-baseline.json`, a path `.vercelignore` excludes, so Turbopack failed with `Module not found` once Vercel stripped `examples/`. Fixed by packaging a runtime copy inside `apps/web/lib/templates/` and adding `pnpm verify:vercel-runtime` (wired into `build:vercel`/`verify`). Also fixed a `--`-argument-handling bug in `pnpm smoke:preview`/`smoke:vercel-local`.
+- New environment note: this session ran on a macOS host with Node 22.22.3 (via `nvm`, not the default Node 20 on `PATH`)/pnpm 11.7.0/Python 3.12.13 (via `.local/bin/python3.12`, not the default `python3` 3.11). With those toolchains, the environment blocker recorded against every prior sprint did not reproduce: `pnpm verify` passed completely for the first time in this project's history (ruff, ESLint, mypy, `tsc`, backend pytest 247/247, Vitest 18/18 files and 140/140 tests, both builds, canonical example, all six benchmark smokes, source packaging).
+- Deployed the hotfix to the existing `ops-twin` Vercel project (Services model, `web` + `simulation`, one domain `https://ops-twin.vercel.app`) via the existing GitHub integration — no new project, repo, or architecture. All public routes and six analysis endpoints verified live with passing integrity at bounded run counts; `pnpm smoke:preview` passed; full browser product journey (comparison, Flow, Sensitivity, Economics, Playback, exports) verified with zero console/network errors at 390×844/768×1024/1440×900 with no page-level horizontal scroll and zero accessibility violations found. ADR-014 accepted; GM-051 passes; GM-053–140 reconciled in `docs/VALIDATION_PLAN.md`.
+- Hardened the economic-sensitivity observer (`apps/simulation-api/app/economics/sensitivity.py`) to record safe, categorized `EconomicSensitivityObserverFailure` evidence instead of a bare `except Exception: <count only>`, mirroring the Sprint 09.1 comparison-observer pattern; additive `0.7.0` contract field, focused regression test, schema updated and validated by the existing schema-parity test.
+- One suspected UX defect (economics negative-input validation appearing to lack a visible error) was investigated and found to be a false alarm — the `role="alert"` message exists; no code change was needed. Full detail, remaining limitations (GM-136 reduced-motion, GM-138 payload boundary unchanged), and the Results-panel-at-bottom layout observation (intentionally left unchanged as an architecture-level decision, not a bug) are in `docs/sprints/SPRINT_11_RUNTIME_AND_FLAGSHIP_POLISH.md`.
+- Local-only boundary is now lifted for this sprint by explicit user authorization: commits were pushed to `origin/master` and the existing Vercel project was deployed to and validated.
 
 ## Sprint 09.1 / Sprint 10 local checkpoint — 2026-07-18
 

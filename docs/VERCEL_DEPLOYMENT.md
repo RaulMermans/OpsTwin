@@ -27,16 +27,18 @@ Separate fallback development remains `pnpm dev:web` plus `pnpm dev:api`. The st
 - The backend work guard remains 100,000; the UI stops above 30,000 until preview evidence supports reconsideration.
 - No persistent writable filesystem, background worker, cross-origin API, or secret is required.
 
-## Deployment preparation status (2026-07-18)
+## Deployment status (2026-07-20)
 
-The repository is prepared for a Vercel Services deployment but has not been deployed, linked, or previewed. Prepared:
+The `ops-twin` Vercel project (Services model, two services) is deployed to production at `https://ops-twin.vercel.app`, built from `origin/master`. ADR-014 is accepted; GM-051 passes. See `docs/VERCEL_PREVIEW_EVIDENCE.md` for the full evidence record (routes, smoke, browser QA, timings, payload sizes) and `docs/sprints/SPRINT_11_RUNTIME_AND_FLAGSHIP_POLISH.md` for the sprint narrative.
+
+Sprint 11 fixed one packaging defect before this deployment succeeded: `apps/web/lib/templates/support.ts` imported `../../../../examples/product/support-operations-baseline.json`, a path `.vercelignore` excludes from the deployed bundle, so Turbopack failed with "Module not found" in production. `apps/web` now owns a runtime copy of that JSON directly (`apps/web/lib/templates/support-operations-baseline.json`), and `pnpm verify:vercel-runtime` (wired into `build:vercel` and `verify`) checks the two files stay semantically identical and that `support.ts` never re-imports the ignored `examples/` path.
+
+Configuration that made this deployment possible:
 
 - `vercel.json` (Services model, two services, ordered public rewrites) and `apps/simulation-api/pyproject.toml`'s `[tool.vercel]` entrypoint remain consistent with each other.
 - `apps/web/next.config.ts`'s development-only API rewrite is gated on `OPSTWIN_DEV_API_ORIGIN`, which is never set in a Vercel build; in production, routing is owned entirely by the root `vercel.json` rewrites, not by Next.js.
-- A root `.vercelignore` excludes `docs/`, `examples/`, `.claude/`, `.agents/`, `scripts/`, `artifacts/`, and both services' `tests/` directories from the deployed bundle (dev tooling only; nothing runtime-reachable is excluded).
-- New work added in Sprint 09.1/10 (the packaging/dev-orchestration scripts, the workspace decomposition, the economics observer hardening, and the representative-playback feature) introduces no new environment variable, no new backend route, and no change to `vercel.json`; none of it affects deployability.
-
-Not prepared (requires explicit future authorization): `vercel login`, `vercel link`, any preview or production deployment, and therefore ADR-014 acceptance and GM-051.
+- A root `.vercelignore` excludes `docs/`, `examples/`, `.claude/`, `.agents/`, `scripts/`, `artifacts/`, and both services' `tests/` directories from the deployed bundle (dev tooling only; the web runtime baseline JSON lives inside `apps/web` precisely so it survives this exclusion).
+- Work added in Sprint 09.1/10 (packaging/dev-orchestration scripts, the workspace decomposition, the economics observer hardening, and the representative-playback feature) introduced no new environment variable, no new backend route, and no change to `vercel.json`; none of it affected deployability once the packaging defect above was fixed.
 
 ## Preview procedure
 
