@@ -9,6 +9,7 @@
     "dev:web": "\"%npm_node_execpath%\" scripts/tasks.mjs dev:web || node scripts/tasks.mjs dev:web",
     "dev:api": "\"%npm_node_execpath%\" scripts/tasks.mjs dev:api || node scripts/tasks.mjs dev:api",
     "dev:vercel": "\"%npm_node_execpath%\" scripts/tasks.mjs dev:vercel || node scripts/tasks.mjs dev:vercel",
+    "verify:vercel-runtime": "\"%npm_node_execpath%\" scripts/tasks.mjs verify:vercel-runtime || node scripts/tasks.mjs verify:vercel-runtime",
     "build:vercel": "\"%npm_node_execpath%\" scripts/tasks.mjs build:vercel || node scripts/tasks.mjs build:vercel",
     "smoke:vercel-local": "\"%npm_node_execpath%\" scripts/tasks.mjs smoke:vercel-local || node scripts/tasks.mjs smoke:vercel-local",
     "smoke:preview": "\"%npm_node_execpath%\" scripts/tasks.mjs smoke:preview || node scripts/tasks.mjs smoke:preview",

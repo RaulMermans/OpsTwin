@@ -58,7 +58,11 @@ const tasks = {
   "dev:vercel"() {
     run(pnpm, ["exec", "vercel", "dev", "-L"]);
   },
+  "verify:vercel-runtime"() {
+    run(nodeExecutable(), ["scripts/verify-vercel-runtime.mjs"]);
+  },
   "build:vercel"() {
+    tasks["verify:vercel-runtime"]();
     run(pnpm, ["exec", "vercel", "build"]);
   },
   "smoke:vercel-local"() {
@@ -160,6 +164,7 @@ const tasks = {
   },
   verify() {
     tasks["verify:node-portability"]();
+    tasks["verify:vercel-runtime"]();
     tasks.lint();
     tasks.typecheck();
     tasks.test();

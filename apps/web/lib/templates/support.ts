@@ -1,4 +1,4 @@
-import canonicalBaseline from "../../../../examples/product/support-operations-baseline.json";
+import canonicalBaseline from "./support-operations-baseline.json";
 
 export type BaselineForm = {
   arrivalInterval: number; triageDuration: number; level1Capacity: number; level2Capacity: number;
