@@ -335,12 +335,20 @@ class EconomicSensitivityValueResult(ContractModel):
     undefined_cost_per_completed_item_count: int = Field(ge=0)
 
 
+class EconomicSensitivityObserverFailure(ContractModel):
+    tested_value: float
+    run_index: int = Field(ge=0)
+    error_category: EconomicFailureCategory
+    message: str = Field(min_length=1, max_length=200)
+
+
 class EconomicSensitivityExecutionMetadata(ContractModel):
     execution_order: Literal["shared_operational_sensitivity"] = "shared_operational_sensitivity"
     economic_snapshot_evaluations: int = Field(ge=0)
     economic_evaluation_seconds: float = Field(ge=0)
     ordinary_run_included_event_count: Literal[0] = 0
     ordinary_run_retained_event_count: Literal[0] = 0
+    observer_failures: list[EconomicSensitivityObserverFailure] = Field(default_factory=list)
 
 
 class EconomicSensitivityResult(ContractModel):

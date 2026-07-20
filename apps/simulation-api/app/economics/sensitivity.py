@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from time import perf_counter
 from typing import Literal
 
@@ -7,6 +8,7 @@ from app.domain.economics import (
     CostSnapshot,
     EconomicIntegrityStatus,
     EconomicSensitivityExecutionMetadata,
+    EconomicSensitivityObserverFailure,
     EconomicSensitivityRequest,
     EconomicSensitivityResult,
     EconomicSensitivityValueResult,
@@ -25,6 +27,8 @@ from app.sensitivity.analytics import (
     threshold_crossings,
 )
 from app.sensitivity.coordinator import run_sensitivity_analysis
+
+logger = logging.getLogger(__name__)
 
 CATEGORY_BY_METRIC = {
     "resourceProvisioningCost": "resource_provisioning",
@@ -108,6 +112,7 @@ def run_economic_sensitivity(
 ) -> EconomicSensitivityResult:
     snapshots: dict[float, dict[int, CostSnapshot]] = {}
     failures: dict[float, int] = {}
+    observer_failures: list[EconomicSensitivityObserverFailure] = []
     evaluation_seconds = 0.0
     evaluation_count = 0
 
@@ -128,7 +133,29 @@ def run_economic_sensitivity(
                 evaluation_count += 1
             else:
                 failures[value] = failures.get(value, 0) + 1
-        except Exception:
+        except Exception as exc:
+            # Operational execution remains valid; economic evidence is isolated,
+            # but the failure is recorded (not silently dropped) so an unexpected
+            # programming error stays observable in logs and result evidence.
+            logger.warning(
+                "economic sensitivity observer failure tested_value=%s run_index=%s error_type=%s",
+                value,
+                run_index,
+                type(exc).__name__,
+            )
+            safe_message = (
+                "economic evaluation raised a validation error"
+                if isinstance(exc, ValueError | KeyError | TypeError | ZeroDivisionError)
+                else "economic evaluation raised an unexpected error"
+            )
+            observer_failures.append(
+                EconomicSensitivityObserverFailure(
+                    tested_value=value,
+                    run_index=run_index,
+                    error_category="economic_snapshot_failure",
+                    message=safe_message,
+                )
+            )
             failures[value] = failures.get(value, 0) + 1
         finally:
             evaluation_seconds += perf_counter() - started
@@ -257,6 +284,7 @@ def run_economic_sensitivity(
         execution=EconomicSensitivityExecutionMetadata(
             economic_snapshot_evaluations=evaluation_count,
             economic_evaluation_seconds=(evaluation_seconds if record_evaluation_timing else 0),
+            observer_failures=observer_failures,
         ),
         integrity=EconomicIntegrityStatus(checks_run=22),
     )
