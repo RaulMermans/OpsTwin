@@ -4,6 +4,10 @@
 
 Golden models use explicit values, nearest-rank p95, and `pytest.approx(abs=1e-9)` for floating-point ratios. Fixed fixtures assert exact event/lifecycle arithmetic; seeded fixtures assert exact standard-library samples and stable serialized results.
 
+## Sprint 12 usability presentation regressions
+
+Web tests assert Guided default state, the valid no-edit default request, result-first rendering, response-owned metric direction and paired uncertainty/probability text, non-prescriptive result language, evidence navigation, advanced control availability, orientation dismissal, glossary access, and unchanged comparison request/export boundaries. Participant usability targets and worksheets are documented in `USABILITY_TEST_PLAN.md`; automated checks are not human-study evidence.
+
 ## GM-001 — No queue
 
 **Purpose:** Validate uncongested FIFO flow. **Input:** fixed arrivals slower than fixed service. **Expected/exact:** every wait and maximum queue are zero; utilization is below one. **Failure indicates:** incorrect resource acquisition or horizon math.

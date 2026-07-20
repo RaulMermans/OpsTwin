@@ -1,6 +1,6 @@
 # OpsTwin
 
-OpsTwin now includes local one-factor-at-a-time sensitivity, explicit-assumption economic evidence, and deterministic client-side playback of one retained representative sampled run. Use the `0.6.0` sensitivity route/CLI or the `0.7.0` economics and economic-sensitivity routes/CLI commands. The Scenario Lab keeps one-time intervention costs separate unless amortization periods are supplied. Playback explains one representative run and is always shown with its aggregate-versus-run disclaimer; see `docs/REPRESENTATIVE_PLAYBACK_SPEC.md`. Run the dedicated serial benchmarks locally; no deployment is required.
+OpsTwin now opens the Scenario Lab in a Guided presentation: review the support-operation baseline, compare adding one Level 1 agent with faster triage, then inspect the observed result before deeper evidence. Advanced mode preserves the complete editor and technical workspace. Sensitivity, explicit-assumption economics, and deterministic representative playback remain available without changing their analytical contracts.
 
 OpsTwin is a digital twin-style operational simulation and decision laboratory for testing service-workflow decisions. The local Scenario Lab organizes up to three guided interventions, explains the operational flow through a deterministic read-only map, and presents backend-owned paired comparison, uncertainty, risk, resource, guardrail, ranking, and integrity evidence without prescribing an action.
 

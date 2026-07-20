@@ -88,6 +88,14 @@ Resolve or explicitly authorize a workspace environment that permits child proce
 
 2026-07-16
 
+## Sprint 12 — first-time usability checkpoint — 2026-07-20
+
+- Recorded a simulated/expert first-time-user audit before changes; no human participant testing has been claimed.
+- Guided is now the default session presentation over the unchanged baseline, scenarios, 50-run paired request, response, integrity, and exports. Advanced preserves the prior editing surface.
+- Results render immediately after the run panel with response-direction-aware paired deltas, probabilities, uncertainty, non-prescriptive language, and links to deeper evidence.
+- Added first-run orientation, accessible native glossary, prerequisite copy for unavailable evidence, and a concrete guided landing path.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (247 backend + 142 web tests), `pnpm test:web`, `pnpm build`, and `pnpm verify` all pass after allowing pnpm's managed temporary runtime. `pnpm smoke:preview -- https://ops-twin.vercel.app` passes against the existing deployment; no Sprint 12 deployment was created.
+
 ## Sprint 07.1 / Sprint 08 local checkpoint — 2026-07-16
 
 - Workflow change mapping now matches backend route-option identity and resolves fixed arrivals, processing parameters, failure probability, and rework attempts without layout changes.

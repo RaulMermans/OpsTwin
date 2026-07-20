@@ -94,3 +94,7 @@ Playback adds no backend execution. `apps/web/lib/playback/` is a pure TypeScrip
 ## Local packaging and development boundary (Sprint 09.1)
 
 `scripts/package-source.mjs` and `scripts/verify-source-package.mjs` build and check a deterministic, size-bounded source archive using `git ls-files` plus a defensive forbidden-path filter and a hand-rolled minimal ZIP writer (no external archiver dependency; Node has no built-in ZIP container writer). `scripts/dev-local.mjs` and `scripts/smoke-local.mjs` spawn `apps/simulation-api` (`uvicorn`) and the `next` binary directly, set `OPSTWIN_DEV_API_ORIGIN` automatically, and fail clearly on a port conflict instead of silently choosing another port.
+
+## Guided presentation boundary (Sprint 12)
+
+Guided and Advanced are session-local presentation modes in the same workspace. They share baseline state, scenario state, comparison request, endpoint, response, integrity evidence, and exports. Guided selectively discloses existing controls and renders response-owned objective direction, paired deltas, probabilities, and intervals; it adds no analytics or transport logic.
