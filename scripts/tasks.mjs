@@ -66,10 +66,12 @@ const tasks = {
     run(pnpm, ["exec", "vercel", "build"]);
   },
   "smoke:vercel-local"() {
-    run(nodeExecutable(), ["scripts/vercel-smoke.mjs", process.argv[3] ?? "http://localhost:3000"]);
+    const url = process.argv.slice(3).find((arg) => arg !== "--");
+    run(nodeExecutable(), ["scripts/vercel-smoke.mjs", url ?? "http://localhost:3000"]);
   },
   "smoke:preview"() {
-    run(nodeExecutable(), ["scripts/vercel-smoke.mjs", process.argv[3] ?? process.env.VERCEL_PREVIEW_URL ?? ""]);
+    const url = process.argv.slice(3).find((arg) => arg !== "--");
+    run(nodeExecutable(), ["scripts/vercel-smoke.mjs", url ?? process.env.VERCEL_PREVIEW_URL ?? ""]);
   },
   "smoke:local"() {
     requireEnvironment();
