@@ -6,11 +6,12 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { WorkflowVisualization } from "../../components/workflow/workflow-map";
 import { SensitivityPanel } from "../../components/sensitivity/sensitivity-panel";
 import { EconomicsPanel } from "../../components/economics/economics-panel";
-import { analysisViews, Results, type AnalysisView } from "../../components/results/results-panel";
+import { analysisViews, Results, ResourceView, RiskView, TechnicalView, type AnalysisView } from "../../components/results/results-panel";
 import { PlaybackPanel } from "../../components/playback/playback-panel";
 import { GuidedResultSummary } from "../../components/guided/guided-result-summary";
 import { checkSimulationHealth, runScenarioComparison, type ApiError, type ComparisonResult } from "../../lib/api/simulation";
 import { buildGuardrail, guardrailOptions, validateGuardrail, type GuardrailDraft, type GuardrailMetric } from "../../lib/scenario-lab/guardrails";
+import { guidedEvidenceTargets, guidedEvidenceViews, type GuidedEvidenceView } from "../../lib/scenario-lab/guided-evidence";
 import { finiteNumber, type MetricCategory } from "../../lib/scenario-lab/metrics";
 import { asRecord, asRecords, getScenarioStatus, guardrailCopy, rankingFor } from "../../lib/scenario-lab/result-adapter";
 import { isLatestRequest } from "../../lib/scenario-lab/request-lifecycle";
@@ -41,9 +42,9 @@ const objectiveDirection = (objective: Objective) => objective === "slaAttainmen
 const scenarioResult = (result: ComparisonResult | null, id: string) => result ? asRecords(result.scenarios).find((item) => item.scenarioId === id) ?? null : null;
 const errorTitle = (code: string) => code.toLowerCase().replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 
-export function Workspace() {
-  const [mode, setMode] = useState<"guided" | "advanced">("guided");
-  const [orientationVisible, setOrientationVisible] = useState(() => typeof window === "undefined" ? true : window.sessionStorage.getItem("opstwin-guided-orientation-dismissed") !== "true");
+export function Workspace({ initialMode = "guided" }: { initialMode?: "guided" | "advanced" }) {
+  const [mode, setMode] = useState<"guided" | "advanced">(initialMode);
+  const [orientationVisible, setOrientationVisible] = useState(true);
   const [baseline, setBaseline] = useState<BaselineForm>({ ...DEFAULT_FORM });
   const [scenarios, setScenarios] = useState<ScenarioDraft[]>(defaultScenarios);
   const [runs, setRuns] = useState(50);
@@ -56,6 +57,7 @@ export function Workspace() {
   const [announcement, setAnnouncement] = useState("");
   const [analysisView, setAnalysisView] = useState<AnalysisView>("overview");
   const [metricCategory, setMetricCategory] = useState<MetricCategory>("Service");
+  const [guidedEvidenceView, setGuidedEvidenceView] = useState<GuidedEvidenceView>("summary");
   const controller = useRef<AbortController | null>(null);
   const requestIdentity = useRef(0);
   const resultRegion = useRef<HTMLElement | null>(null);
@@ -75,6 +77,7 @@ export function Workspace() {
     setResult(null);
     setError(null);
     setAnnouncement("");
+    setGuidedEvidenceView("summary");
   }
 
   function updateScenario(id: string, patchValue: Partial<ScenarioDraft>) {
@@ -159,7 +162,27 @@ export function Workspace() {
     document.getElementById(`analysis-tab-${analysisViews[next].id}`)?.focus();
   }
 
+  function selectGuidedView(view: GuidedEvidenceView, event?: KeyboardEvent<HTMLButtonElement>) {
+    if (!event) { setGuidedEvidenceView(view); return; }
+    const current = guidedEvidenceViews.findIndex((item) => item.id === view);
+    const key = event.key;
+    let next = current;
+    if (key === "ArrowRight") next = (current + 1) % guidedEvidenceViews.length;
+    else if (key === "ArrowLeft") next = (current - 1 + guidedEvidenceViews.length) % guidedEvidenceViews.length;
+    else if (key === "Home") next = 0;
+    else if (key === "End") next = guidedEvidenceViews.length - 1;
+    else return;
+    event.preventDefault();
+    setGuidedEvidenceView(guidedEvidenceViews[next].id);
+    document.getElementById(`guided-tab-${guidedEvidenceViews[next].id}`)?.focus();
+  }
+
   function navigateEvidence(target: string) {
+    if (mode === "guided") {
+      const view = guidedEvidenceTargets[target];
+      if (view) setGuidedEvidenceView(view);
+      return;
+    }
     if (target === "risk-evidence") { setAnalysisView("risk"); }
     if (target === "technical-evidence") { setAnalysisView("technical"); }
     window.requestAnimationFrame(() => document.getElementById(target)?.scrollIntoView({ block: "start", behavior: "smooth" }));
@@ -169,7 +192,7 @@ export function Workspace() {
     <header className="masthead"><a className="wordmark" href="/">OpsTwin</a><span className={`service-status ${health}`}>Simulation service: {health}</span></header>
     <div className="workspace-intro"><div><p className="eyebrow">Scenario Lab · Support operations</p><h1>Compare operating changes with the same simulated conditions.</h1></div><p>Start with a support-operation baseline, compare two changes, then inspect the observed effect and supporting evidence.</p></div>
     <div className="mode-switch" role="group" aria-label="Workspace presentation mode"><button type="button" aria-pressed={mode === "guided"} onClick={() => setMode("guided")}>Guided</button><button type="button" aria-pressed={mode === "advanced"} onClick={() => setMode("advanced")}>Advanced</button></div>
-    {orientationVisible && <aside className="orientation" aria-label="First-run orientation"><strong>Start here</strong><ol><li>Review the current operation</li><li>Compare two possible changes</li><li>Read the result and inspect supporting evidence</li></ol><button type="button" className="text-button" onClick={() => { window.sessionStorage.setItem("opstwin-guided-orientation-dismissed", "true"); setOrientationVisible(false); }}>Skip orientation</button></aside>}
+    {orientationVisible && <aside className="orientation" aria-label="First-run orientation"><strong>Start here</strong><ol><li>Review the current operation</li><li>Compare two possible changes</li><li>Read the result and inspect supporting evidence</li></ol><button type="button" className="text-button" onClick={() => setOrientationVisible(false)}>Skip orientation</button></aside>}
     <details className="glossary"><summary>Terminology help</summary><dl><div><dt>Baseline</dt><dd>The current operation used as the reference point.</dd></div><div><dt>Scenario</dt><dd>One possible operating change tested against the baseline.</dd></div><div><dt>Paired comparison</dt><dd>Each change and the baseline use the same simulated conditions for a fairer comparison.</dd></div><div><dt>Objective</dt><dd>The measure used to compare changes.</dd></div><div><dt>Guardrail</dt><dd>A condition a scenario must satisfy to remain eligible.</dd></div><div><dt>Confidence interval</dt><dd>A range describing uncertainty around the estimated average result.</dd></div><div><dt>Improvement probability</dt><dd>The proportion of paired simulations where a scenario performed better for the selected measure.</dd></div><div><dt>Sensitivity</dt><dd>Evidence from varying one assumption across explicit tested values.</dd></div><div><dt>Representative playback</dt><dd>One selected sampled run used to explain timing and flow; it does not represent every run.</dd></div></dl></details>
     <div className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</div>
     <section className="lab-layout" aria-label="Scenario Lab">
@@ -216,13 +239,26 @@ export function Workspace() {
 
       <aside className="run-panel" aria-labelledby="run-title"><span className="step-number">04</span><p className="panel-kicker">Ready to compare</p><h2 id="run-title">Baseline vs. {scenarios.map((item) => item.name).join(" vs. ")}</h2><p>Primary measure: {objectives[objective]}. {runs} paired simulations per scenario. Next, you will see the observed result and supporting evidence.</p><button className="primary" type="button" onClick={submit} disabled={state === "running" || health === "unavailable" || Boolean(baselineError || scenarioError || guardrailError) || work > 30000}>{state === "running" ? "Running comparison…" : mode === "guided" ? "Run guided comparison" : result ? "Run again" : "Run paired comparison"}</button>{state === "running" && <><p className="live-status" aria-live="polite">Running {runs} paired simulations for {scenarios.length} scenarios.</p><button className="secondary full" type="button" onClick={() => controller.current?.abort()}>Stop waiting</button></>}{error && <div className="error-panel" role="alert" tabIndex={-1} ref={errorRegion}><strong>{errorTitle(error.code)}</strong><p>{error.message}</p><button className="secondary full" type="button" onClick={submit}>Retry comparison</button></div>}<dl className="run-facts"><div><dt>Scenarios</dt><dd>{scenarios.length} / 3</dd></div><div><dt>Paired runs</dt><dd>{runs}</dd></div><div><dt>Objective</dt><dd>{objectives[objective]}</dd></div></dl></aside>
     </section>
-    {result && <><GuidedResultSummary result={result} onNavigate={navigateEvidence} /><Results result={result} baseline={baseline} scenarios={scenarios} settings={{ runs, objective, guardrail }} view={analysisView} setView={selectAnalysisView} metricCategory={metricCategory} setMetricCategory={setMetricCategory} regionRef={resultRegion} /></>}
-    <section id="flow-evidence"><WorkflowVisualization model={buildBaseline(baseline)} baseline={baseline} scenarios={scenarios} result={result} /></section>
-    <section id="risk-evidence" className="evidence-anchor"><h2>Risk evidence</h2><p>{result ? "Select Risk in the comparison evidence above to inspect paired uncertainty and thresholds." : "Run the comparison first to inspect uncertainty and risk evidence."}</p></section>
-    <section id="sensitivity-evidence"><SensitivityPanel baseline={baseline} health={health} /></section>
-    <section id="economics-evidence"><EconomicsPanel baseline={baseline} scenarios={scenarios} runs={runs} objective={objective} health={health} /></section>
-    <section id="playback-evidence">{result ? <PlaybackPanel result={result} model={buildBaseline(baseline)} /> : <div className="empty-state"><h2>Representative playback</h2><p>Run a completed repeated comparison first to inspect one selected run. Playback does not represent every simulated run.</p></div>}</section>
-    <section id="technical-evidence" className="evidence-anchor"><h2>Technical evidence</h2><p>{result ? "Select Technical evidence in the comparison result above to inspect applied overrides, seeds, integrity checks and raw response details." : "Run the comparison first to inspect technical evidence."}</p></section>
+    {mode === "guided" && <section className="guided-evidence" aria-label="Guided evidence" ref={resultRegion} tabIndex={-1}>
+      <div className="analysis-tabs guided-evidence-tabs" role="tablist" aria-label="Guided evidence sections">{guidedEvidenceViews.map((item) => <button key={item.id} id={`guided-tab-${item.id}`} type="button" role="tab" aria-selected={guidedEvidenceView === item.id} aria-controls={`guided-panel-${item.id}`} tabIndex={guidedEvidenceView === item.id ? 0 : -1} onClick={() => selectGuidedView(item.id)} onKeyDown={(event) => selectGuidedView(item.id, event)}>{item.label}</button>)}</div>
+      <div id="guided-panel-summary" role="tabpanel" aria-labelledby="guided-tab-summary" hidden={guidedEvidenceView !== "summary"}>{result ? <GuidedResultSummary result={result} onNavigate={navigateEvidence} /> : <p className="empty-state">Run the guided comparison to see the result summary.</p>}</div>
+      <div id="guided-panel-flow" role="tabpanel" aria-labelledby="guided-tab-flow" hidden={guidedEvidenceView !== "flow"}><WorkflowVisualization model={buildBaseline(baseline)} baseline={baseline} scenarios={scenarios} result={result} /></div>
+      <div id="guided-panel-risk" role="tabpanel" aria-labelledby="guided-tab-risk" hidden={guidedEvidenceView !== "risk"}>{result ? <RiskView result={result} /> : <p className="empty-state">Run the comparison first to inspect uncertainty and risk evidence.</p>}</div>
+      <div id="guided-panel-resources" role="tabpanel" aria-labelledby="guided-tab-resources" hidden={guidedEvidenceView !== "resources"}>{result ? <ResourceView result={result} /> : <p className="empty-state">Run the comparison first to inspect resource evidence.</p>}</div>
+      <div id="guided-panel-sensitivity" role="tabpanel" aria-labelledby="guided-tab-sensitivity" hidden={guidedEvidenceView !== "sensitivity"}><SensitivityPanel baseline={baseline} health={health} /></div>
+      <div id="guided-panel-economics" role="tabpanel" aria-labelledby="guided-tab-economics" hidden={guidedEvidenceView !== "economics"}><EconomicsPanel baseline={baseline} scenarios={scenarios} runs={runs} objective={objective} health={health} /></div>
+      <div id="guided-panel-playback" role="tabpanel" aria-labelledby="guided-tab-playback" hidden={guidedEvidenceView !== "playback"}>{result ? <PlaybackPanel result={result} model={buildBaseline(baseline)} /> : <p className="empty-state">Run a completed repeated comparison first to inspect one selected run. Playback does not represent every simulated run.</p>}</div>
+      <div id="guided-panel-technical" role="tabpanel" aria-labelledby="guided-tab-technical" hidden={guidedEvidenceView !== "technical"}>{result ? <TechnicalView result={result} scenarioDrafts={scenarios} /> : <p className="empty-state">Run the comparison first to inspect technical evidence.</p>}</div>
+    </section>}
+    {mode === "advanced" && <>
+      {result && <><GuidedResultSummary result={result} onNavigate={navigateEvidence} /><Results result={result} baseline={baseline} scenarios={scenarios} settings={{ runs, objective, guardrail }} view={analysisView} setView={selectAnalysisView} metricCategory={metricCategory} setMetricCategory={setMetricCategory} regionRef={resultRegion} /></>}
+      <section id="flow-evidence"><WorkflowVisualization model={buildBaseline(baseline)} baseline={baseline} scenarios={scenarios} result={result} /></section>
+      <section id="risk-evidence" className="evidence-anchor"><h2>Risk evidence</h2><p>{result ? "Select Risk in the comparison evidence above to inspect paired uncertainty and thresholds." : "Run the comparison first to inspect uncertainty and risk evidence."}</p></section>
+      <section id="sensitivity-evidence"><SensitivityPanel baseline={baseline} health={health} /></section>
+      <section id="economics-evidence"><EconomicsPanel baseline={baseline} scenarios={scenarios} runs={runs} objective={objective} health={health} /></section>
+      <section id="playback-evidence">{result ? <PlaybackPanel result={result} model={buildBaseline(baseline)} /> : <div className="empty-state"><h2>Representative playback</h2><p>Run a completed repeated comparison first to inspect one selected run. Playback does not represent every simulated run.</p></div>}</section>
+      <section id="technical-evidence" className="evidence-anchor"><h2>Technical evidence</h2><p>{result ? "Select Technical evidence in the comparison result above to inspect applied overrides, seeds, integrity checks and raw response details." : "Run the comparison first to inspect technical evidence."}</p></section>
+    </>}
   </main>;
 }
 

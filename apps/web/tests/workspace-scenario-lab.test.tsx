@@ -72,20 +72,20 @@ describe("Scenario Lab workspace", () => {
     expect(runScenarioComparison.mock.calls[1][0].guardrails).toEqual([{ metric: "slaAttainment", operator: "greaterThanOrEqual", value: 0.75 }]);
   });
 
-  it("renders factual overview and keyboard-operable analysis tabs", async () => {
-    const user = userEvent.setup(); render(<Workspace />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+  it("renders factual overview and keyboard-operable analysis tabs in Advanced mode", async () => {
+    const user = userEvent.setup(); render(<Workspace />); await user.click(screen.getByRole("button", { name: "Advanced" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run paired comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run paired comparison" }));
     expect(await screen.findByRole("heading", { name: "Ranked first under the selected objective" })).toBeInTheDocument();
     const overview = screen.getByRole("tab", { name: "Overview" }); overview.focus(); await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "Metrics" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("table", { name: /service metric comparison/i })).toBeInTheDocument();
   });
 
-  it("renders confidence, probability, risk, resource, and textual status evidence", async () => {
-    const user = userEvent.setup(); render(<Workspace />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+  it("renders confidence, probability, risk, resource, and textual status evidence in Advanced mode", async () => {
+    const user = userEvent.setup(); render(<Workspace />); await user.click(screen.getByRole("button", { name: "Advanced" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run paired comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run paired comparison" }));
     expect(await screen.findByLabelText(/paired mean confidence interval/i)).toHaveTextContent(/lower.*mean.*upper/i);
     expect(screen.getByLabelText(/improved 80.0%.*degraded 10.0%.*tied 10.0%/i)).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Risk" }));
@@ -105,17 +105,17 @@ describe("Scenario Lab workspace", () => {
   });
 
   it("keeps generated product output free of prescriptive language", async () => {
-    const user = userEvent.setup(); const { container } = render(<Workspace />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+    const user = userEvent.setup(); const { container } = render(<Workspace />); await user.click(screen.getByRole("button", { name: "Advanced" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run paired comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run paired comparison" }));
     await screen.findByRole("heading", { name: "Analysis" });
     expect(container.textContent).not.toMatch(/recommended option|best action|optimal|winning scenario|you should/i);
   });
 
   it("uses accessible table headers and explicit export actions", async () => {
-    const user = userEvent.setup(); render(<Workspace />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+    const user = userEvent.setup(); render(<Workspace />); await user.click(screen.getByRole("button", { name: "Advanced" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run paired comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run paired comparison" }));
     await user.click(screen.getByRole("tab", { name: "Metrics" }));
     const table = screen.getByRole("table", { name: /metric comparison/i });
     expect(within(table).getAllByRole("columnheader").length).toBeGreaterThan(6);

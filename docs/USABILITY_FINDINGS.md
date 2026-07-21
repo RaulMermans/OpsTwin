@@ -25,3 +25,7 @@ The retest is automated/expert review only. Required participant metrics remain 
 - The session-local orientation intentionally returns on a full reload; it does not persist beyond the active session.
 - Deep evidence panels remain feature-rich by design; their prerequisite messages and result-first navigation should be validated with participants.
 - The production smoke check passed against the existing deployment, which predates these uncommitted Sprint 12 changes; deployment-specific Guided UI QA is therefore pending an authorized deployment.
+
+## Sprint 12.1 update — 2026-07-21
+
+The findings and retest above describe the Sprint 12 point-in-time state and are left unchanged as a historical record. Sprint 12.1 (`docs/sprints/SPRINT_12_1_GUIDED_USABILITY_CLOSURE.md`) subsequently closed the remaining implementation defects it identified: the "long page" evidence layout referenced in "Interpret result" and "Remaining issues" is replaced by a single-active-panel Guided evidence tablist (Summary/Flow/Risk/Resources/Sensitivity/Economics/Playback/Technical); the orientation behavior described above is now implemented without any storage access (previously it used `sessionStorage`, which did not actually match the documented reload behavior); and the Guided result summary now includes a direction-aware comparative interpretation sentence. Real participant validation remains unmeasured; see that sprint document for full verification evidence.
