@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a defect in OpsTwin's simulation, UI, or deployment
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please read
+        `docs/VALIDATION_PLAN.md` and the relevant spec in `docs/` first —
+        some behavior that looks like a bug is an intentional, documented
+        boundary (e.g. "improvement probability" is not certainty).
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: A clear description of the observed behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include request/response payloads if the issue is API-related.
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where did you observe this?
+      options:
+        - Production (https://ops-twin.vercel.app)
+        - Local development
+        - Source inspection only
+    validations:
+      required: true
+  - type: input
+    id: contract-version
+    attributes:
+      label: Affected contract version (if known)
+      placeholder: "e.g. scenario comparison 0.5.0"
