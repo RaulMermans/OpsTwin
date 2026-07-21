@@ -141,6 +141,9 @@ const tasks = {
   "verify:node-portability"() {
     run(nodeExecutable(), ["scripts/verify-node-portability.mjs"]);
   },
+  "verify:public-release"() {
+    run(nodeExecutable(), ["scripts/verify-public-release.mjs"]);
+  },
   lint() {
     requireEnvironment();
     run(python, ["-m", "ruff", "check", "apps/simulation-api"]);
@@ -180,6 +183,7 @@ const tasks = {
     tasks["benchmark:economic-sensitivity-smoke"]();
     tasks["package:source"]();
     tasks["verify:source-package"]();
+    tasks["verify:public-release"]();
   },
 };
 

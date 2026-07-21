@@ -25,6 +25,7 @@
     "benchmark:economic-sensitivity": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:economic-sensitivity || node scripts/tasks.mjs benchmark:economic-sensitivity",
     "benchmark:playback": "\"%npm_node_execpath%\" scripts/tasks.mjs benchmark:playback || node scripts/tasks.mjs benchmark:playback",
     "verify:node-portability": "\"%npm_node_execpath%\" scripts/tasks.mjs verify:node-portability || node scripts/tasks.mjs verify:node-portability",
+    "verify:public-release": "\"%npm_node_execpath%\" scripts/tasks.mjs verify:public-release || node scripts/tasks.mjs verify:public-release",
     "lint": "\"%npm_node_execpath%\" scripts/tasks.mjs lint || node scripts/tasks.mjs lint",
     "typecheck": "\"%npm_node_execpath%\" scripts/tasks.mjs typecheck || node scripts/tasks.mjs typecheck",
     "test": "\"%npm_node_execpath%\" scripts/tasks.mjs test || node scripts/tasks.mjs test",
