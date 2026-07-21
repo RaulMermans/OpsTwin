@@ -16,7 +16,10 @@
 - Sprint 09: explicit recurring-cost comparison and economic sensitivity (implemented locally; deployment intentionally deferred)
 - Sprint 09.1: local consolidation, deterministic source packaging, one-command local development, workspace decomposition, and economics observer hardening (implemented locally; deployment intentionally deferred)
 - Sprint 10: deterministic client-side playback of one retained representative sampled run (implemented locally; deployment intentionally deferred)
+- Sprint 11: Vercel production recovery and flagship verification (deployed; production live at `https://ops-twin.vercel.app`, ADR-014 accepted 2026-07-20)
 - Sprint 12: first-time usability and guided decision flow (implemented locally; participant study pending)
+- Sprint 12.1: guided usability closure (deployed to production 2026-07-21; four Sprint 12 defects closed, no human-participant study yet)
+- Sprint 13: public release, case-study README, and portfolio handoff (documentation and release-readiness only; repository remains private, no license selected, no release tag)
 - Future: topology editing only after validation, persistence, and multi-template layout requirements justify a separate product boundary
 - Future: multi-run animated aggregate visualization remains distinct from single-representative playback and is not planned
 - Future: multi-factor experimentation only after OFAT evidence and asynchronous capacity justify it

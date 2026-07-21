@@ -40,7 +40,7 @@ The web app provides a landing page and a client-side Scenario Lab. A narrow Typ
 
 ## Deployment architecture
 
-Root `vercel.json` defines one current Vercel Services project containing the Next.js interface and bounded FastAPI simulation function behind one public boundary. `/api/simulation/(.*)` routes to FastAPI while the catch-all routes to Next.js; the original path is preserved. ADR-014 remains proposed until an authenticated preview validates this configuration. PostgreSQL remains a future direction only.
+Root `vercel.json` defines one current Vercel Services project containing the Next.js interface and bounded FastAPI simulation function behind one public boundary. `/api/simulation/(.*)` routes to FastAPI while the catch-all routes to Next.js; the original path is preserved. ADR-014 was accepted on 2026-07-20 after Sprint 11's production deployment validated this configuration at `https://ops-twin.vercel.app` (see `docs/VERCEL_DEPLOYMENT.md` and `docs/VERCEL_PREVIEW_EVIDENCE.md`). PostgreSQL remains a future direction only.
 
 ## Component responsibilities
 
