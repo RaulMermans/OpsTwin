@@ -89,10 +89,10 @@ describe("Scenario Lab workspace", () => {
     expect(await screen.findByLabelText(/paired mean confidence interval/i)).toHaveTextContent(/lower.*mean.*upper/i);
     expect(screen.getByLabelText(/improved 80.0%.*degraded 10.0%.*tied 10.0%/i)).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Risk" }));
-    expect(screen.getByRole("group", { name: /paired transition counts/i })).toHaveTextContent(/Violation to compliance/);
+    expect(screen.getByRole("group", { name: /paired transition counts/i })).toHaveTextContent(/Changed from missing to meeting the threshold/);
     await user.click(screen.getByRole("tab", { name: "Resources" }));
-    expect(screen.getAllByText("Baseline utilization").length).toBeGreaterThan(0);
-    expect(screen.getByText("Higher utilization is not interpreted as automatically better or worse.")).toBeInTheDocument();
+    expect(screen.getAllByText("Current-operation utilization").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Utilization shows how much of a team’s available capacity was in use/i)).toBeInTheDocument();
   });
 
   it("invalidates stale evidence after a scenario edit", async () => {

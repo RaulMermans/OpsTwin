@@ -53,7 +53,7 @@ describe("Guided evidence navigation", () => {
     await user.click(screen.getByRole("tab", { name: "Uncertainty" }));
     expect(screen.getByRole("group", { name: /paired transition counts/i })).toBeVisible();
     await user.click(screen.getByRole("tab", { name: "Team workload" }));
-    expect(screen.getByText("Higher utilization is not interpreted as automatically better or worse.")).toBeVisible();
+    expect(screen.getByText(/Utilization shows how much of a team’s available capacity was in use/i)).toBeVisible();
     await user.click(screen.getByRole("tab", { name: "Technical details" }));
     expect(screen.getByText("Reproducible evidence")).toBeVisible();
     expect(screen.queryByRole("tablist", { name: "Analysis sections" })).not.toBeInTheDocument();
