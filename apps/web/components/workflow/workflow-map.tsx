@@ -70,7 +70,7 @@ export function WorkflowVisualization({ model, baseline, scenarios, result, guid
           </button>;
         })}</div>
       </div>}
-      <WorkflowTextSummary presentation={presentation} changes={mode === "changes" ? mappedChanges.changes : []} overlay={mode === "pressure" ? rawOverlay : {}} metric={metric} visible={listMode} />
+      <WorkflowTextSummary presentation={presentation} changes={mode === "changes" ? mappedChanges.changes : []} overlay={mode === "pressure" ? rawOverlay : {}} metric={metric} visible={listMode} guided={guided} reworkProbability={baseline.reworkProbability} />
       {selected && <WorkflowInspector node={selected} model={model} presentation={presentation} change={mappedChanges.changes.find((item) => item.targetIds.includes(selected.id)) ?? null} mode={mode} result={result} scenario={resultScenario} onClose={closeInspector} />}
     </div>
   </section>;
@@ -106,8 +106,18 @@ function formatEvidence(metric: string, value: number | null) {
   return value.toFixed(2);
 }
 
-function WorkflowTextSummary({ presentation, changes, overlay, metric, visible }: { presentation: WorkflowPresentation; changes: WorkflowChange[]; overlay: Record<string, number | null>; metric: WorkflowOverlayMetric; visible: boolean }) {
-  const content = <><ol aria-label="Workflow entities">{presentation.nodes.filter((node) => node.kind !== "resource").map((node) => <li key={node.id}><strong>{node.label}</strong> — {node.description}{changes.find((item) => item.targetIds.includes(node.id)) ? ` Change: ${changeLabel(changes.find((item) => item.targetIds.includes(node.id))!)}` : ""}{Object.hasOwn(overlay, node.id) ? ` ${overlayOptions.find((item) => item.id === metric)?.label}: ${formatEvidence(metric, overlay[node.id])}` : ""}</li>)}</ol><ul aria-label="Workflow relationships">{presentation.edges.map((edge) => <li key={edge.id}>{edge.description}</li>)}{presentation.resourceLinks.map((link) => <li key={link.id}>{presentation.nodes.find((node) => node.id === link.resourceId)?.label} supports {presentation.nodes.find((node) => node.id === link.stageId)?.label}.</li>)}</ul>{changes.length > 0 && <table><caption>Selected scenario changes</caption><thead><tr><th>Entity</th><th>Field</th><th>Baseline</th><th>Scenario</th><th>Direction</th></tr></thead><tbody>{changes.map((change) => <tr key={change.id}><th>{change.entityId}</th><td>{fieldLabel(change.field)}</td><td>{displayValue(change.baselineValue)}</td><td>{displayValue(change.scenarioValue)}</td><td>{change.direction}</td></tr>)}</tbody></table>}</>;
+function WorkflowTextSummary({ presentation, changes, overlay, metric, visible, guided, reworkProbability }: { presentation: WorkflowPresentation; changes: WorkflowChange[]; overlay: Record<string, number | null>; metric: WorkflowOverlayMetric; visible: boolean; guided: boolean; reworkProbability: number }) {
+  const businessName = (node: WorkflowNode) => ({ "incoming-tickets": "New customer requests", triage: "Review and assign each request", "level-1": "General support", "level-2": "Specialist support", "quality-check": "Verify the response" }[node.id] ?? node.label);
+  const relationship = (edge: WorkflowPresentation["edges"][number]) => {
+    if (!guided) return edge.description;
+    if (edge.rework) return `About ${reworkProbability}% of tickets require additional work. Tickets selected for rework return to the specialist support team.`;
+    if (edge.fromId === "incoming-tickets") return "New customer requests enter the review step.";
+    if (edge.fromId === "triage" && edge.toId === "level-1") return "80% are sent to the general support team.";
+    if (edge.fromId === "triage" && edge.toId === "level-2") return "20% are sent to the specialist support team.";
+    if (edge.fromId === "quality-check") return "After support, the response is checked. Most requests are completed.";
+    return `${businessName(presentation.nodes.find((node) => node.id === edge.fromId) ?? { id: "", label: edge.fromId } as WorkflowNode)} moves to ${businessName(presentation.nodes.find((node) => node.id === edge.toId) ?? { id: "", label: edge.toId } as WorkflowNode)}.`;
+  };
+  const content = <><ol aria-label="Workflow entities">{presentation.nodes.filter((node) => node.kind !== "resource").map((node) => <li key={node.id}><strong>{guided ? businessName(node) : node.label}</strong>{guided ? "" : ` — ${node.description}`}{changes.find((item) => item.targetIds.includes(node.id)) ? ` Change: ${changeLabel(changes.find((item) => item.targetIds.includes(node.id))!)}` : ""}{Object.hasOwn(overlay, node.id) ? ` ${overlayOptions.find((item) => item.id === metric)?.label}: ${formatEvidence(metric, overlay[node.id])}` : ""}</li>)}</ol><ul aria-label="Workflow relationships">{presentation.edges.map((edge) => <li key={edge.id}>{relationship(edge)}</li>)}{!guided && presentation.resourceLinks.map((link) => <li key={link.id}>{presentation.nodes.find((node) => node.id === link.resourceId)?.label} supports {presentation.nodes.find((node) => node.id === link.stageId)?.label}.</li>)}</ul>{changes.length > 0 && <table><caption>Selected scenario changes</caption><thead><tr><th>Entity</th><th>Field</th><th>Baseline</th><th>Scenario</th><th>Direction</th></tr></thead><tbody>{changes.map((change) => <tr key={change.id}><th>{guided ? changeLabel(change) : change.entityId}</th><td>{fieldLabel(change.field)}</td><td>{displayValue(change.baselineValue)}</td><td>{displayValue(change.scenarioValue)}</td><td>{change.direction}</td></tr>)}</tbody></table>}</>;
   if (visible) return <div className="workflow-list" role="region" aria-label="Workflow list view">{content}</div>;
   return <div className="sr-only">{content}</div>;
 }

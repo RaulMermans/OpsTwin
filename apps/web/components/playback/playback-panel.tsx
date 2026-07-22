@@ -154,9 +154,9 @@ export function PlaybackPanel({ result, model }: { result: ComparisonResult | nu
       <button type="button" onClick={() => { const prev = previousImportantEventIndex(importantEvents, frame.eventIndex); if (prev !== null) { const target = timeline.checkpoints.findIndex((c) => c.eventIndex >= prev); dispatch({ type: "seek", checkpointIndex: target === -1 ? 0 : target }); } }}>Previous important event</button>
     </div>
     <label className="playback-slider">
-      Simulation time
+      Current playback time
       <input type="range" aria-valuetext={`Simulation time ${currentTime}`} min={timeline.minTime} max={timeline.maxTime || timeline.minTime} step="any" value={currentTime} onChange={(event) => seekToTime(Number(event.target.value))} />
-      <span>{currentTime} of {timeline.maxTime} (min {timeline.minTime})</span>
+      <span>{formatMinutes(currentTime)} of {formatMinutes(timeline.maxTime)} (starts at {formatMinutes(timeline.minTime)})</span>
     </label>
     {reducedMotion && <p className="playback-hint">Reduced motion is enabled: playback defaults to paused, step-based interaction.</p>}
 
@@ -166,7 +166,7 @@ export function PlaybackPanel({ result, model }: { result: ComparisonResult | nu
     </div>
 
     <div className="playback-frame-text" aria-label="Current stage and resource state">
-      <h3>Stage and resource state at time {currentTime}</h3>
+      <h3>Stage and resource state at {formatMinutes(currentTime)}</h3>
       <table><caption>Waiting and processing counts by stage, and busy/capacity by resource pool.</caption>
         <thead><tr><th scope="col">Stage</th><th scope="col">Waiting</th><th scope="col">Processing</th></tr></thead>
         <tbody>{frame.stages.map((stage) => <tr key={stage.stageId}><th scope="row">{stage.stageId}</th><td>{stage.waitingItemIds.length}</td><td>{stage.processingItemIds.length}</td></tr>)}</tbody>
@@ -179,9 +179,8 @@ export function PlaybackPanel({ result, model }: { result: ComparisonResult | nu
       {frame.integrityWarnings.length > 0 && <p className="inline-error" role="alert">{frame.integrityWarnings.join(" ")}</p>}
     </div>
 
-    <EventLedger events={filteredEvents} currentEventIndex={frame.eventIndex} onSeekToEvent={(event) => seekToTime(event.simulationTime)} filter={ledgerFilter} setFilter={setLedgerFilter} filterActive={filterActive} allStageIds={[...new Set(timeline.events.map((e) => e.stageId).filter((v): v is string => v !== null))]} allResourceIds={[...new Set(timeline.events.map((e) => e.resourcePoolId).filter((v): v is string => v !== null))]} allItemIds={selection.selectedItemIds} />
-
-    <ItemJourneyView selectedItemId={selectedItemId} setSelectedItemId={setSelectedItemId} selectedItemIds={selection.selectedItemIds} journey={journey} />
+    <details className="playback-technical"><summary>Show technical run details</summary><p>Exact event times, event IDs, and the full retained event ledger are shown here.</p><EventLedger events={filteredEvents} currentEventIndex={frame.eventIndex} onSeekToEvent={(event) => seekToTime(event.simulationTime)} filter={ledgerFilter} setFilter={setLedgerFilter} filterActive={filterActive} allStageIds={[...new Set(timeline.events.map((e) => e.stageId).filter((v): v is string => v !== null))]} allResourceIds={[...new Set(timeline.events.map((e) => e.resourcePoolId).filter((v): v is string => v !== null))]} allItemIds={selection.selectedItemIds} />
+    <ItemJourneyView selectedItemId={selectedItemId} setSelectedItemId={setSelectedItemId} selectedItemIds={selection.selectedItemIds} journey={journey} /></details>
   </section>;
 }
 
@@ -197,8 +196,10 @@ function buildTemporalSummary(timeline: ReturnType<typeof buildTimeline>, import
   const failures = importantEvents.filter((item) => item.category === "item_failed");
   if (failures.length > 0) lines.push(`${failures.length} sampled item${failures.length === 1 ? "" : "s"} reached terminal failure.`);
   if (lines.length === 0) lines.push("No run-level temporal events were derived from the retained sampled evidence.");
-  return lines.map((line) => `Run-level: ${line}`);
+  return lines.slice(0, 6).map((line) => `Run-level: ${line.replaceAll(/time (\d+(?:\.\d+)?)/g, (_, value: string) => formatMinutes(Number(value)))}`);
 }
+
+const formatMinutes = (value: number) => `${value.toFixed(1)} minutes`;
 
 function EventLedger({ events, currentEventIndex, onSeekToEvent, filter, setFilter, filterActive, allStageIds, allResourceIds, allItemIds }: {
   events: ReturnType<typeof buildTimeline>["events"];
@@ -224,7 +225,7 @@ function EventLedger({ events, currentEventIndex, onSeekToEvent, filter, setFilt
         <caption>Ordered representative event ledger. Selecting a row seeks playback to that event&apos;s time.</caption>
         <thead><tr><th scope="col">Time</th><th scope="col">Item</th><th scope="col">Event</th><th scope="col">Stage</th><th scope="col">Resource</th><th scope="col">Details</th></tr></thead>
         <tbody>{events.map((event) => <tr key={event.id} aria-current={event.index === currentEventIndex ? "true" : undefined} className={event.index === currentEventIndex ? "playback-current-row" : undefined} tabIndex={0} onClick={() => onSeekToEvent(event)} onKeyDown={(keyEvent) => { if (keyEvent.key === "Enter" || keyEvent.key === " ") { keyEvent.preventDefault(); onSeekToEvent(event); } }}>
-          <td>{event.simulationTime}</td><td>{event.itemId ?? "Not available"}</td><td>{event.eventType}</td><td>{event.stageId ?? "Not available"}</td><td>{event.resourcePoolId ?? "Not available"}</td><td>{event.summary}</td>
+          <td>{formatMinutes(event.simulationTime)}</td><td>{event.itemId ?? "Not available"}</td><td>{event.eventType}</td><td>{event.stageId ?? "Not available"}</td><td>{event.resourcePoolId ?? "Not available"}</td><td>{event.summary}</td>
         </tr>)}</tbody>
       </table>
     </div>

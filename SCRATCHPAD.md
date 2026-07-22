@@ -189,3 +189,22 @@ Resolve or explicitly authorize a workspace environment that permits child proce
 - Fixed a stale `.venv` editable install (`import app` failed despite `pip show` reporting it installed) by reinstalling with `--force-reinstall` before any test could run — recorded as environment drift, not a code defect.
 - Full `pnpm verify` passed fresh on this session (not inherited from Sprint 12.1): 247 backend tests, 172 web tests (22 files), ESLint/mypy/Ruff/TypeScript clean, both builds, canonical example, all benchmark smokes, source packaging (336 files), and the new public-release verifier. `git diff --check` passed. A clean-clone check (extracting `artifacts/opstwin-source.zip` into an isolated directory and re-running bootstrap/lint/typecheck/test/build) passed identically, confirming no undocumented local state is required.
 - `pnpm smoke:preview -- https://ops-twin.vercel.app` passed all eight checks; a full browser walkthrough (Guided run, Sensitivity sweep, Economics, Playback JSON export, Advanced workspace) at 390×844/768×1024/1440×900 found zero console errors and zero horizontal overflow. A handful of Next.js RSC-prefetch `?_rsc=` requests returned 404 during the walkthrough with no visible user impact (noted, not treated as a blocker).
+
+## Sprint 15 implementation checkpoint — 2026-07-22
+
+- Began the final beginner-comprehension repair without changing simulation,
+  comparison, ranking, seed, API, or export behavior.
+- Source validation confirms that `failure.probability` selects a ticket for
+  quality rework and the configured failure route returns a selected ticket
+  to Level 2; Guided wording now states that distinction explicitly.
+- Guided presentation now leads with the fictional support problem, uses
+  business-first process labels and scenario motivations, hides evidence tabs
+  until a comparison completes, labels the paired relative field accurately,
+  and uses direction-aware result wording with counts and percentages.
+- The Process canvas now declares a full-width stretchable content/canvas
+  chain, with intentional internal map scrolling above the mobile list
+  fallback. Rendered width measurements are still pending browser execution.
+- Node 22.22.3 direct web `tsc --noEmit` and ESLint completed cleanly.
+  Vitest started but the managed runner did not return a completion summary;
+  no browser QA, screenshots, deployment, commit, push, or production claim
+  has been made from this checkpoint.

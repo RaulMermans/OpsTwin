@@ -20,3 +20,11 @@ export function intervalInterpretationCopy(kind: IntervalInterpretation): string
   if (kind === "unfavorable") return "The reported plausible range indicates worse performance for this result.";
   return "A plausible range was not available for this result.";
 }
+
+/** Uses the metric direction already returned by the comparison service. */
+export function directionAwareComparisonCopy(scenarioName: string, metricLabel: string, direction: string): string {
+  const metric = metricLabel.charAt(0).toLowerCase() + metricLabel.slice(1);
+  return direction === "minimize"
+    ? `${scenarioName} reduced ${metric} more on average.`
+    : `${scenarioName} increased ${metric} more on average.`;
+}

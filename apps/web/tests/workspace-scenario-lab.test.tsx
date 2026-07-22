@@ -20,7 +20,7 @@ describe("Scenario Lab workspace", () => {
     expect(screen.getByRole("heading", { name: "Current operation" })).toBeInTheDocument();
     expect(screen.getByLabelText("Ticket arrival interval")).toHaveAccessibleDescription(/new ticket arrives/i);
     expect(screen.getByRole("heading", { name: "What would you like to compare?" })).toBeInTheDocument();
-    expect(screen.getAllByText("Standard").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "The situation" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("button", { name: "Run comparison" })).toBeEnabled());
   });
 
@@ -54,8 +54,8 @@ describe("Scenario Lab workspace", () => {
     await user.click(screen.getByRole("button", { name: "Run comparison" }));
     expect(await screen.findByRole("heading", { name: "Comparison complete" })).toBeInTheDocument();
     expect(screen.getByText(/This is comparative simulation evidence, not a recommendation/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "See where queues changed" })).toBeInTheDocument();
-    expect(screen.getAllByText(/Plausible range of the average result/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "See where the process changed" })).toBeInTheDocument();
+    expect(screen.getAllByText(/Plausible range of the average change/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Skip orientation" }));
     expect(screen.queryByRole("button", { name: "Skip orientation" })).not.toBeInTheDocument();
     await user.click(screen.getByText("Terminology help"));
@@ -76,7 +76,7 @@ describe("Scenario Lab workspace", () => {
     const user = userEvent.setup(); render(<Workspace />); await user.click(screen.getByRole("button", { name: "Advanced" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Run paired comparison" })).toBeEnabled());
     await user.click(screen.getByRole("button", { name: "Run paired comparison" }));
-    expect(await screen.findByRole("heading", { name: "Ranked first under the selected objective" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "First in the returned observed ranking" })).toBeInTheDocument();
     const overview = screen.getByRole("tab", { name: "Overview" }); overview.focus(); await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "Metrics" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("table", { name: /service metric comparison/i })).toBeInTheDocument();

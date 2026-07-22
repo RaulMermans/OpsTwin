@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { intervalInterpretationCopy, interpretReturnedInterval } from "../lib/scenario-lab/guided-result-copy";
+import { directionAwareComparisonCopy, intervalInterpretationCopy, interpretReturnedInterval } from "../lib/scenario-lab/guided-result-copy";
 import { formatMetricDelta, formatPercentagePointChange, guidedMetricLabel } from "../lib/scenario-lab/metrics";
 
 describe("Guided result wording helpers", () => {
@@ -23,5 +23,10 @@ describe("Guided result wording helpers", () => {
     expect(formatMetricDelta("averageCycleTime", -2)).toBe("-2.00 min");
     expect(guidedMetricLabel("slaAttainment", 60)).toBe("Tickets resolved within 60 minutes");
     expect(guidedMetricLabel("slaAttainment", 90)).toBe("Tickets resolved within 90 minutes");
+  });
+
+  it("uses returned metric direction instead of assuming that higher is better", () => {
+    expect(directionAwareComparisonCopy("Faster triage", "Average time to resolve a ticket", "minimize")).toBe("Faster triage reduced average time to resolve a ticket more on average.");
+    expect(directionAwareComparisonCopy("Faster triage", "Tickets resolved within the target time", "maximize")).toBe("Faster triage increased tickets resolved within the target time more on average.");
   });
 });

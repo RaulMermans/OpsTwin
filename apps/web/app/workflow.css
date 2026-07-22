@@ -16,10 +16,10 @@
 
 /* Sprint 14: reserve real map space instead of allowing the grid track to collapse. */
 .workflow-change-summary{align-self:start;margin:0;border-left:4px solid #b76814}.workflow-change-summary ul{display:block;margin:7px 0 0;padding-left:18px;line-height:1.45}
-.workflow-content{grid-template-columns:minmax(640px,1fr);max-width:100%;overflow-x:auto}
+.workflow-content{grid-template-columns:minmax(0,1fr);width:100%;min-width:0;max-width:100%;overflow:visible}
 .workflow-content.has-changes{grid-template-columns:minmax(220px,280px) minmax(640px,1fr)}
 .workflow-content.has-inspector{grid-template-columns:minmax(640px,1fr) minmax(260px,340px)}
 .workflow-content.has-changes.has-inspector{grid-template-columns:minmax(220px,280px) minmax(640px,1fr) minmax(260px,340px)}
-.workflow-canvas{min-width:0;overflow:auto}.workflow-grid{min-width:640px}
-@media(max-width:1300px){.workflow-content,.workflow-content.has-changes,.workflow-content.has-inspector,.workflow-content.has-changes.has-inspector{grid-template-columns:1fr;overflow:visible}.workflow-canvas{min-width:0}.workflow-change-summary{max-width:420px}.workflow-inspector{position:static}}
+.workflow-canvas{width:100%;min-width:0;max-width:none;justify-self:stretch;box-sizing:border-box;overflow:auto}.workflow-grid{width:100%;min-width:640px;box-sizing:border-box}
+@media(max-width:1300px){.workflow-content,.workflow-content.has-changes,.workflow-content.has-inspector,.workflow-content.has-changes.has-inspector{grid-template-columns:minmax(0,1fr);width:100%;overflow:visible}.workflow-canvas{width:100%;justify-self:stretch}.workflow-change-summary{max-width:420px}.workflow-inspector{position:static}}
 @media(max-width:760px){.workflow-content{overflow:visible}.workflow-canvas{overflow:visible}.workflow-grid{min-width:0}}

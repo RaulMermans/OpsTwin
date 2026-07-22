@@ -86,6 +86,15 @@ describe("workflow visualization", () => {
     expect(screen.getByRole("button", { name: "Current process" })).toBeInTheDocument();
     expect(screen.getByLabelText("Process views")).toBeInTheDocument();
   });
+
+  it("uses a selected-ticket rework explanation in the Guided list", async () => {
+    const user = userEvent.setup();
+    render(<WorkflowVisualization model={buildBaseline({ ...DEFAULT_FORM })} baseline={DEFAULT_FORM} scenarios={scenarios} result={null} guided />);
+    await user.click(screen.getByRole("button", { name: "View as list" }));
+    expect(screen.getByRole("region", { name: "Workflow list view" })).toHaveTextContent(/About 10% of tickets require additional work/i);
+    expect(screen.getByRole("region", { name: "Workflow list view" })).toHaveTextContent(/Tickets selected for rework return to the specialist support team/i);
+    expect(screen.getByRole("region", { name: "Workflow list view" }).textContent).not.toMatch(/100% probability/i);
+  });
 });
 
 describe("workflow scenario change mapping", () => {
