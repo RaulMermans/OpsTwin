@@ -20,7 +20,7 @@ describe("sensitivity panel", () => {
 
     expect(screen.getByRole("heading", { name: "Test different assumptions" })).toBeInTheDocument();
     expect(screen.getByLabelText("Type of assumption")).toBeInTheDocument();
-    expect(screen.getByText("Did the result move consistently?")).toBeInTheDocument();
-    expect(screen.getByText(/Shows how responsive the selected result/i)).toBeInTheDocument();
+    expect(screen.getByText("Plain conclusion")).toBeInTheDocument();
+    expect(screen.getByText(/Available in technical sensitivity evidence/i)).toBeInTheDocument();
   });
 });

@@ -16,6 +16,6 @@ describe("economics panel", () => {
     render(<EconomicsPanel baseline={{ ...DEFAULT_FORM }} scenarios={[{ id: "scenario-1", name: "Capacity", type: "level1Staffing", value: 1 }]} runs={10} objective="averageCycleTime" health="ready" guided />);
     expect(screen.getByRole("heading", { name: "Costs" })).toBeInTheDocument();
     expect(screen.getByText(/will not treat a missing value as zero/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Cost of one agent being available/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/General-support availability cost/i)).toBeInTheDocument();
   });
 });

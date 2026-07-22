@@ -21,12 +21,10 @@ describe("Guided evidence navigation", () => {
     await screen.findByRole("heading", { name: "Comparison complete" });
   }
 
-  it("defaults to the Result panel and explains prerequisites for panels that need a result", async () => {
+  it("hides evidence navigation until a result exists and explains the prerequisite", async () => {
     render(<Workspace />);
-    const flowTab = screen.getByRole("tab", { name: "Process" });
-    expect(screen.getByRole("tab", { name: "Result" })).toHaveAttribute("aria-selected", "true");
-    expect(flowTab).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByText("Run the comparison to see the result.")).toBeVisible();
+    expect(screen.queryByRole("tablist", { name: "Guided evidence sections" })).not.toBeInTheDocument();
+    expect(screen.getByText("Your result will appear here after the comparison.")).toBeVisible();
   });
 
   it("shows exactly one evidence panel at a time and hides the rest from the accessibility tree", async () => {
@@ -59,12 +57,13 @@ describe("Guided evidence navigation", () => {
     expect(screen.queryByRole("tablist", { name: "Analysis sections" })).not.toBeInTheDocument();
   });
 
-  it("resets the Guided evidence view to Summary when the result becomes stale", async () => {
+  it("hides Guided evidence navigation when the result becomes stale", async () => {
     const user = userEvent.setup(); render(<Workspace />); await runComparison(user);
     await user.click(screen.getByRole("tab", { name: "Process" }));
     expect(screen.getByRole("tab", { name: "Process" })).toHaveAttribute("aria-selected", "true");
     await user.type(screen.getByLabelText("Ticket arrival interval"), "1");
-    expect(screen.getByRole("tab", { name: "Result" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("tablist", { name: "Guided evidence sections" })).not.toBeInTheDocument();
+    expect(screen.getByText("Your result will appear here after the comparison.")).toBeVisible();
   });
 
   it("navigates from the summary's evidence links directly to the corresponding Guided panel", async () => {
