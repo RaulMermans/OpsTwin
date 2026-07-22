@@ -32,10 +32,10 @@ describe("Guided evidence navigation", () => {
   it("shows exactly one evidence panel at a time and hides the rest from the accessibility tree", async () => {
     const user = userEvent.setup(); render(<Workspace />); await runComparison(user);
     expect(screen.getByRole("heading", { name: "Comparison complete" })).toBeVisible();
-    expect(screen.queryByRole("heading", { name: "Flow" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Process" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Process" }));
-    expect(screen.getByRole("heading", { name: "Flow" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Process" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Comparison complete" })).not.toBeInTheDocument();
   });
 
