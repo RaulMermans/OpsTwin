@@ -1,5 +1,7 @@
 import type { ComparisonResult } from "../api/simulation";
-import { asRecord, asRecords, type UnknownRecord } from "./result-adapter";
+import { interpretReturnedInterval, type IntervalInterpretation } from "./guided-result-copy";
+import type { MetricKey } from "./metrics";
+import { asRecord, asRecords, confidence, pairedMetric, type UnknownRecord } from "./result-adapter";
 
 // Mirrors the centralized comparison tolerance documented in docs/SCENARIO_COMPARISON_SPEC.md
 // (apps/simulation-api/app/scenarios/metrics.py FLOAT_COMPARISON_TOLERANCE). Used only to describe
@@ -17,6 +19,7 @@ export type ComparativeInterpretation =
       scenarioName: string;
       objectiveMeanDelta: number;
       probabilityOfImprovement: number;
+      intervalKind: IntervalInterpretation;
     }
   | {
       kind: "tie";
@@ -37,11 +40,20 @@ export type ComparativeInterpretation =
       scenarioName: string;
       objectiveMeanDelta: number;
       probabilityOfImprovement: number;
+      intervalKind: IntervalInterpretation;
     };
 
 function scenarioNameFor(scenarios: UnknownRecord[], id: string): string {
   const match = scenarios.find((item) => item.scenarioId === id);
   return match ? String(match.scenarioName ?? match.scenarioId) : id;
+}
+
+function intervalKindFor(scenarios: UnknownRecord[], scenarioId: string, objectiveMetric: string, direction: string): IntervalInterpretation {
+  const scenario = scenarios.find((item) => item.scenarioId === scenarioId);
+  if (!scenario) return "unavailable";
+  const paired = pairedMetric(scenario, objectiveMetric as MetricKey);
+  const interval = confidence(paired);
+  return interpretReturnedInterval(interval && typeof interval.lower === "number" && typeof interval.upper === "number" ? interval : null, direction);
 }
 
 /**
@@ -51,6 +63,7 @@ function scenarioNameFor(scenarios: UnknownRecord[], id: string): string {
  */
 export function buildComparativeInterpretation(result: ComparisonResult): ComparativeInterpretation {
   const objectiveMetric = String(asRecord(result.objective)?.metric ?? "");
+  const direction = String(asRecord(result.objective)?.direction ?? "minimize");
   const scenarios = asRecords(result.scenarios);
   const totalCount = scenarios.length;
   const ranking = asRecords(result.ranking)
@@ -74,6 +87,7 @@ export function buildComparativeInterpretation(result: ComparisonResult): Compar
       scenarioName: scenarioNameFor(scenarios, scenarioId),
       objectiveMeanDelta: Number(only.objectiveMeanDelta),
       probabilityOfImprovement: Number(only.probabilityOfImprovement),
+      intervalKind: intervalKindFor(scenarios, scenarioId, objectiveMetric, direction),
     };
   }
 
@@ -106,5 +120,6 @@ export function buildComparativeInterpretation(result: ComparisonResult): Compar
     scenarioName: scenarioNameFor(scenarios, scenarioId),
     objectiveMeanDelta: firstDelta,
     probabilityOfImprovement: Number(first.probabilityOfImprovement),
+    intervalKind: intervalKindFor(scenarios, scenarioId, objectiveMetric, direction),
   };
 }

@@ -1,7 +1,7 @@
 import type { ComparisonResult } from "../../lib/api/simulation";
 import { buildComparativeInterpretation, type ComparativeInterpretation } from "../../lib/scenario-lab/comparative-interpretation";
 import { intervalInterpretationCopy, interpretReturnedInterval } from "../../lib/scenario-lab/guided-result-copy";
-import { formatMetric, formatPercentagePointChange, guidedMetricLabel, type MetricKey } from "../../lib/scenario-lab/metrics";
+import { formatMetricDelta, guidedMetricLabel, type MetricKey } from "../../lib/scenario-lab/metrics";
 import { asRecord, asRecords, confidence, pairedMetric } from "../../lib/scenario-lab/result-adapter";
 
 type Props = { result: ComparisonResult; onNavigate: (target: string) => void };
@@ -31,14 +31,14 @@ function InterpretationStatement({ interpretation }: { interpretation: Comparati
   }
 
   if (interpretation.kind === "singleEligibleScenario") {
-    return <p className="comparative-interpretation"><strong>{interpretation.scenarioName}</strong> was the only tested scenario with eligible paired evidence for {metricPhrase} in this experiment (observed mean change {formatMetric(objective, interpretation.objectiveMeanDelta)}, improved in {(interpretation.probabilityOfImprovement * 100).toFixed(0)}% of paired simulations); there is no second eligible scenario to compare it against. {note}</p>;
+    return <p className="comparative-interpretation"><strong>{interpretation.scenarioName}</strong> was the only change with enough completed matched tests for {metricPhrase}, so there is no second change to compare. {intervalInterpretationCopy(interpretation.intervalKind)} {note}</p>;
   }
 
   if (interpretation.kind === "tie") {
     return <p className="comparative-interpretation">Among the tested scenarios, {interpretation.scenarioNames.join(" and ")} had the same observed average result for {metricPhrase} in this experiment. The displayed order uses the returned comparison order. {note}</p>;
   }
 
-  return <p className="comparative-interpretation">Among the tested scenarios, <strong>{interpretation.scenarioName}</strong> produced the larger observed improvement in {metricPhrase} in this experiment (observed mean change {formatMetric(objective, interpretation.objectiveMeanDelta)}, improved in {(interpretation.probabilityOfImprovement * 100).toFixed(0)}% of paired simulations). {note}</p>;
+  return <p className="comparative-interpretation"><strong>{interpretation.scenarioName}</strong> had the higher average result for {metricPhrase}. {intervalInterpretationCopy(interpretation.intervalKind)} {note}</p>;
 }
 
 export function GuidedResultSummary({ result, onNavigate }: Props) {
@@ -55,8 +55,8 @@ export function GuidedResultSummary({ result, onNavigate }: Props) {
       const interval = confidence(paired);
       const intervalEvidence = interval && typeof interval.lower === "number" && typeof interval.upper === "number" ? { lower: interval.lower, upper: interval.upper } : null;
       const intervalKind = interpretReturnedInterval(intervalEvidence, direction);
-      const averageDifference = objective === "slaAttainment" ? formatPercentagePointChange(delta) : formatMetric(objective, delta);
-      return <article key={String(scenario.scenarioId)}><h3>{String(scenario.scenarioName ?? scenario.scenarioId)}</h3><p>Average difference: <strong>{averageDifference}</strong>.</p><p>It performed better than the current operation in <strong>{typeof improvement === "number" ? `${(improvement * 100).toFixed(0)}%` : "an unavailable proportion"}</strong> of matched simulated operating days.</p><p className="hint">Plausible range of the average result: {intervalEvidence ? `${objective === "slaAttainment" ? formatPercentagePointChange(intervalEvidence.lower) : formatMetric(objective, intervalEvidence.lower)} to ${objective === "slaAttainment" ? formatPercentagePointChange(intervalEvidence.upper) : formatMetric(objective, intervalEvidence.upper)}` : "not available"}.</p><p className="hint">{intervalInterpretationCopy(intervalKind)}</p></article>;
+      const averageDifference = formatMetricDelta(objective, delta);
+      return <article key={String(scenario.scenarioId)}><h3>{String(scenario.scenarioName ?? scenario.scenarioId)}</h3><p>Average difference: <strong>{averageDifference}</strong>.</p><p>It performed better than the current operation in <strong>{typeof improvement === "number" ? `${(improvement * 100).toFixed(0)}%` : "an unavailable proportion"}</strong> of matched simulated operating days.</p><p className="hint">Plausible range of the average result: {intervalEvidence ? `${formatMetricDelta(objective, intervalEvidence.lower)} to ${formatMetricDelta(objective, intervalEvidence.upper)}` : "not available"}.</p><p className="hint">{intervalInterpretationCopy(intervalKind)}</p></article>;
     })}</div>
     <InterpretationStatement interpretation={interpretation} />
     <p className="guided-disclaimer">{NON_PRESCRIPTIVE_DISCLAIMER}</p>

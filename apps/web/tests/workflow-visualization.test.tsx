@@ -79,6 +79,13 @@ describe("workflow visualization", () => {
     expect(screen.getByRole("region", { name: "Workflow list view" })).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/recommended|recommendation|best action|optimal|winning scenario|you should|root cause|definitive bottleneck/i);
   });
+
+  it("uses process-first wording in Guided mode", () => {
+    render(<WorkflowVisualization model={buildBaseline({ ...DEFAULT_FORM })} baseline={DEFAULT_FORM} scenarios={scenarios} result={null} guided />);
+    expect(screen.getByRole("heading", { name: "Process" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Current process" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Process views")).toBeInTheDocument();
+  });
 });
 
 describe("workflow scenario change mapping", () => {

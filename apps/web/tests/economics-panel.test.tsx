@@ -11,4 +11,11 @@ describe("economics panel", () => {
     expect(screen.getByLabelText(/one-time cost/i)).toBeInTheDocument();
     expect(screen.getByText(/does not infer costs or make a prescriptive/i)).toBeInTheDocument();
   });
+
+  it("explains missing values in Guided mode", () => {
+    render(<EconomicsPanel baseline={{ ...DEFAULT_FORM }} scenarios={[{ id: "scenario-1", name: "Capacity", type: "level1Staffing", value: 1 }]} runs={10} objective="averageCycleTime" health="ready" guided />);
+    expect(screen.getByRole("heading", { name: "Costs" })).toBeInTheDocument();
+    expect(screen.getByText(/will not treat a missing value as zero/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Cost of one agent being available/i)).toBeInTheDocument();
+  });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ComparisonResult } from "../lib/api/simulation";
 import { buildComparativeInterpretation } from "../lib/scenario-lab/comparative-interpretation";
+import { comparisonFixture } from "./fixtures/comparison";
 
 function fixture(objectiveMetric: string, direction: "minimize" | "maximize", scenarios: Record<string, unknown>[], ranking: Record<string, unknown>[]): ComparisonResult {
   return { objective: { metric: objectiveMetric, direction }, scenarios, ranking } as unknown as ComparisonResult;
@@ -66,5 +67,14 @@ describe("buildComparativeInterpretation", () => {
     const result = fixture("averageCycleTime", "minimize", [scenario("s1", "Add one Level 1 agent")], [rankingRow("s1", 1, -5)]);
     const interpretation = buildComparativeInterpretation(result);
     expect(interpretation).toMatchObject({ kind: "singleEligibleScenario", scenarioId: "s1", excludedCount: 0, totalCount: 1 });
+  });
+
+  it("uses the returned interval to distinguish an inconclusive higher average", () => {
+    const result = structuredClone(comparisonFixture);
+    result.ranking = [{ scenarioId: "scenario-1", rank: 1, objectiveMeanDelta: -2, probabilityOfImprovement: 0.8 }];
+    const paired = (result.scenarios[0] as Record<string, Record<string, Record<string, Record<string, unknown>>>>).pairedMetrics.averageCycleTime.absoluteDelta;
+    paired.confidenceInterval = { lower: -4, upper: 1 };
+
+    expect(buildComparativeInterpretation(result).intervalKind).toBe("inconclusive");
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { intervalInterpretationCopy, interpretReturnedInterval } from "../lib/scenario-lab/guided-result-copy";
-import { formatPercentagePointChange, guidedMetricLabel } from "../lib/scenario-lab/metrics";
+import { formatMetricDelta, formatPercentagePointChange, guidedMetricLabel } from "../lib/scenario-lab/metrics";
 
 describe("Guided result wording helpers", () => {
   it("interprets returned ranges using the existing objective direction", () => {
@@ -18,6 +18,9 @@ describe("Guided result wording helpers", () => {
     expect(formatPercentagePointChange(-0.023)).toBe("-2.3 percentage points");
     expect(formatPercentagePointChange(0)).toBe("+0.0 percentage points");
     expect(formatPercentagePointChange(0.0004)).toBe("+0.0 percentage points");
+    expect(formatMetricDelta("slaAttainment", 0.023)).toBe("+2.3 percentage points");
+    expect(formatMetricDelta("slaAttainment", -0.023)).not.toMatch(/%/);
+    expect(formatMetricDelta("averageCycleTime", -2)).toBe("-2.00 min");
     expect(guidedMetricLabel("slaAttainment", 60)).toBe("Tickets resolved within 60 minutes");
     expect(guidedMetricLabel("slaAttainment", 90)).toBe("Tickets resolved within 90 minutes");
   });

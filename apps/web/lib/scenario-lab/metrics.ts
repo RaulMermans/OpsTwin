@@ -51,3 +51,8 @@ export function formatPercentagePointChange(value: unknown): string {
   const number = finiteNumber(value);
   return number === null ? "Not available" : `${number >= 0 ? "+" : ""}${(number * 100).toFixed(1)} percentage points`;
 }
+
+/** Formats a returned paired difference using the metric's established unit. */
+export function formatMetricDelta(key: MetricKey, value: unknown): string {
+  return metricRegistry[key].percentage ? formatPercentagePointChange(value) : formatMetric(key, value);
+}

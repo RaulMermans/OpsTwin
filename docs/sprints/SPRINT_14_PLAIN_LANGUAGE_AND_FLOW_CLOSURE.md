@@ -24,3 +24,16 @@ responses, ranking, exports, or analytical capabilities.
 reported 100 passing tests but exited non-zero because nine fork workers
 timed out at startup; it is not recorded as a passing gate. Browser, manual,
 production, screenshot, commit, push, and deployment checks remain pending.
+
+## Sprint 14.1 closure attempt — 2026-07-22
+
+- Guided settings, Process, Test assumptions, Costs, and the glossary now use
+  business-first labels while Advanced keeps the existing technical labels.
+- Paired deltas now route through the central metric formatter, including
+  percentage points for proportion deltas. The Guided conclusion distinguishes
+  a higher average from the returned plausible-range interpretation.
+- Local acceptance is blocked before Vitest collection: Vite's installed
+  `picomatch@4.0.5` throws `TypeError: parse.fastpaths is not a function`.
+  A frozen, forced `pnpm install` reported the lockfile up to date and did not
+  repair the installed parser. Consequently no browser, owner QA, deployment,
+  screenshot, package, or production claim is recorded for this attempt.

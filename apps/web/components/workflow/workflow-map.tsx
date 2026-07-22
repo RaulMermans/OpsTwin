@@ -16,9 +16,9 @@ const modes: { id: Mode; label: string }[] = [
   { id: "pressure", label: "Operational pressure" }, { id: "comparison", label: "Baseline vs scenario" },
 ];
 
-type Props = { model: WorkflowOperationalModel | null; baseline: BaselineForm; scenarios: ScenarioDraft[]; result: ComparisonResult | null };
+type Props = { model: WorkflowOperationalModel | null; baseline: BaselineForm; scenarios: ScenarioDraft[]; result: ComparisonResult | null; guided?: boolean };
 
-export function WorkflowVisualization({ model, baseline, scenarios, result }: Props) {
+export function WorkflowVisualization({ model, baseline, scenarios, result, guided = false }: Props) {
   const presentation = useMemo(() => buildWorkflowPresentation(model), [model]);
   const [mode, setMode] = useState<Mode>("structure");
   const [scenarioId, setScenarioId] = useState(scenarios[0]?.id ?? "");
@@ -43,10 +43,10 @@ export function WorkflowVisualization({ model, baseline, scenarios, result }: Pr
   const handleKey = (event: KeyboardEvent<HTMLElement>) => { if (event.key === "Escape" && selectedId) { event.preventDefault(); closeInspector(); } };
 
   return <section className="workflow-section" aria-labelledby="workflow-title" onKeyDown={handleKey}>
-    <div className="workflow-heading"><div><p className="eyebrow">Operational model</p><h2 id="workflow-title">Flow</h2><p>Trace structure, explicit changes, and returned evidence without changing the simulation model.</p></div><button type="button" className="secondary" onClick={() => setListMode((value) => !value)}>{listMode ? "View as map" : "View as list"}</button></div>
-    <div className="workflow-controls" aria-label="Flow display controls">
-      <div className="workflow-modes" aria-label="Flow modes">{modes.map((item) => <button type="button" key={item.id} aria-pressed={mode === item.id} disabled={(item.id === "pressure" || item.id === "comparison") && !hasEvidence} onClick={() => setMode(item.id)}>{item.label}</button>)}</div>
-      {scenarios.length > 0 && <label>Scenario<select aria-label="Flow scenario" value={selectedScenario?.id ?? ""} onChange={(event) => setScenarioId(event.target.value)}>{scenarios.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select></label>}
+    <div className="workflow-heading"><div><p className="eyebrow">{guided ? "Process being simulated" : "Operational model"}</p><h2 id="workflow-title">{guided ? "Process" : "Flow"}</h2><p>{guided ? "See the current process, proposed changes, and where queues build up." : "Trace structure, explicit changes, and returned evidence without changing the simulation model."}</p></div><button type="button" className="secondary" onClick={() => setListMode((value) => !value)}>{listMode ? "View as map" : "View as list"}</button></div>
+    <div className="workflow-controls" aria-label={guided ? "Process display controls" : "Flow display controls"}>
+      <div className="workflow-modes" aria-label={guided ? "Process views" : "Flow modes"}>{modes.map((item) => <button type="button" key={item.id} aria-pressed={mode === item.id} disabled={(item.id === "pressure" || item.id === "comparison") && !hasEvidence} onClick={() => setMode(item.id)}>{guided ? ({ structure: "Current process", changes: "Proposed changes", pressure: "Where queues build up", comparison: "Current operation vs change" }[item.id]) : item.label}</button>)}</div>
+      {scenarios.length > 0 && <label>{guided ? "Change to inspect" : "Scenario"}<select aria-label={guided ? "Change to inspect" : "Flow scenario"} value={selectedScenario?.id ?? ""} onChange={(event) => setScenarioId(event.target.value)}>{scenarios.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select></label>}
       {mode === "pressure" && <label>Evidence<select aria-label="Pressure evidence" value={metric} onChange={(event) => setMetric(event.target.value as WorkflowOverlayMetric)}>{overlayOptions.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label>}
     </div>
     {!presentation.valid && <div className="workflow-warning" role="status"><strong>Some workflow relationships are unavailable.</strong><ul>{presentation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
@@ -55,7 +55,7 @@ export function WorkflowVisualization({ model, baseline, scenarios, result }: Pr
     {(mode === "pressure" || mode === "comparison") && !hasEvidence && <p className="empty-state">Run a valid comparison to inspect returned entity evidence.</p>}
     {mode === "pressure" && hasEvidence && <p className="workflow-scale-note">Relative intensity within the current result</p>}
     <div className={`workflow-content ${listMode ? "show-list" : "show-map"} ${mode === "changes" && mappedChanges.changes.length > 0 ? "has-changes" : ""} ${selected ? "has-inspector" : ""}`}>
-      {mode === "changes" && mappedChanges.changes.length > 0 && <div className="workflow-change-summary" aria-label="Selected scenario changes"><strong>Explicit changes in {selectedScenario?.name}</strong><ul>{mappedChanges.changes.map((change) => <li key={change.id}>{change.entityId} — {changeLabel(change)} ({change.direction})</li>)}</ul></div>}
+      {mode === "changes" && mappedChanges.changes.length > 0 && <div className="workflow-change-summary" aria-label="Selected scenario changes"><strong>{guided ? "What this change modifies" : "Explicit changes"} in {selectedScenario?.name}</strong><ul>{mappedChanges.changes.map((change) => <li key={change.id}>{change.entityId} — {changeLabel(change)} ({change.direction})</li>)}</ul></div>}
       {!listMode && <div className="workflow-canvas" aria-label="Support workflow map">
         <svg className="workflow-connectors" viewBox="0 0 1000 600" aria-hidden="true" focusable="false">{presentation.edges.map((edge) => { const changed = mode === "changes" && mappedChanges.changes.some((item) => item.targetIds.includes(edge.id)); return <g key={edge.id} className={changed ? "changed" : ""}><path d={edge.path} className={edge.rework ? "rework" : "standard"} /><text><textPath href={`#${edge.id}`}>{changed ? `${edge.label} · changed` : edge.label}</textPath></text><path id={edge.id} d={edge.path} className="label-path" /></g>; })}</svg>
         <div className="workflow-grid">{presentation.nodes.map((node) => {

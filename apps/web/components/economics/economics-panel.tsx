@@ -11,7 +11,7 @@ import { buildBaseline, type BaselineForm } from "../../lib/templates/support";
 
 type Objective = "averageCycleTime" | "p95CycleTime" | "slaAttainment" | "timeWeightedQueueLength";
 
-export function EconomicsPanel({ baseline, scenarios, runs, objective, health }: { baseline: BaselineForm; scenarios: ScenarioDraft[]; runs: number; objective: Objective; health: "checking" | "ready" | "unavailable" }) {
+export function EconomicsPanel({ baseline, scenarios, runs, objective, health, guided = false }: { baseline: BaselineForm; scenarios: ScenarioDraft[]; runs: number; objective: Objective; health: "checking" | "ready" | "unavailable"; guided?: boolean }) {
   const [draft, setDraft] = useState<EconomicDraft>({ ...DEFAULT_ECONOMIC_DRAFT });
   const [oneTime, setOneTime] = useState<Record<string, string>>({});
   const [periods, setPeriods] = useState<Record<string, string>>({});
@@ -38,19 +38,19 @@ export function EconomicsPanel({ baseline, scenarios, runs, objective, health }:
   }
 
   return <section className="economics-section" aria-labelledby="economics-title">
-    <div className="economics-heading"><div><p className="section-eyebrow">Explicit supplied assumptions</p><h2 id="economics-title">Economics</h2><p>Compare recurring operating cost evidence alongside the selected operational objective. This view does not infer costs or make a prescriptive intervention claim.</p></div><span className="sensitivity-work">{work.toLocaleString()} work units</span></div>
+    <div className="economics-heading"><div><p className="section-eyebrow">{guided ? "Costs you provide" : "Explicit supplied assumptions"}</p><h2 id="economics-title">{guided ? "Costs" : "Economics"}</h2><p>{guided ? "Add costs you know alongside the result to measure. OpsTwin does not infer costs or make a recommendation." : "Compare recurring operating cost evidence alongside the selected operational objective. This view does not infer costs or make a prescriptive intervention claim."}</p></div><span className="sensitivity-work">{work.toLocaleString()} {guided ? "estimated simulation workload" : "work units"}</span></div>
     <div className="economics-grid"><div className="economics-editor"><h3>Cost assumptions</h3><div className="economics-fields">
       <EconomicInput label="Currency" value={draft.currency} onChange={(value) => update("currency", value.toUpperCase())} />
-      <EconomicInput label="Level 1 capacity / agent-minute" value={draft.level1CapacityRate} onChange={(value) => update("level1CapacityRate", value)} />
-      <EconomicInput label="Level 2 capacity / agent-minute" value={draft.level2CapacityRate} onChange={(value) => update("level2CapacityRate", value)} />
-      <EconomicInput label="Triage visit" value={draft.stageVisitRate} onChange={(value) => update("stageVisitRate", value)} />
-      <EconomicInput label="Queue item-minute" value={draft.queueHoldingRate} onChange={(value) => update("queueHoldingRate", value)} />
-      <EconomicInput label="SLA violation" value={draft.slaViolationRate} onChange={(value) => update("slaViolationRate", value)} />
-      <EconomicInput label="Terminal failure" value={draft.terminalFailureRate} onChange={(value) => update("terminalFailureRate", value)} />
-      <EconomicInput label="Rework" value={draft.reworkRate} onChange={(value) => update("reworkRate", value)} />
-      <EconomicInput label="Fixed analysis period" value={draft.fixedPeriodCost} onChange={(value) => update("fixedPeriodCost", value)} />
-    </div>{draftError && <p className="inline-error" role="alert">{draftError}</p>}<p className="economics-hint">Blank means not configured. An explicit zero remains configured.</p></div>
-    <div className="economics-editor"><h3>Intervention costs</h3>{scenarios.map((item) => <fieldset key={item.id}><legend>{item.name}</legend><EconomicInput label="One-time cost" value={oneTime[item.id] ?? ""} onChange={(value) => { setOneTime({ ...oneTime, [item.id]: value }); setResult(null); }} /><EconomicInput label="Amortization periods" value={periods[item.id] ?? ""} onChange={(value) => { setPeriods({ ...periods, [item.id]: value }); setResult(null); }} /></fieldset>)}{interventionError && <p className="inline-error" role="alert">Use a nonnegative one-time cost and a positive whole number of periods. Periods require a cost.</p>}<p className="economics-hint">One-time cost remains separate unless periods are explicit.</p></div></div>
+      <EconomicInput label={guided ? "Cost of one agent being available for one minute" : "Level 1 capacity / agent-minute"} value={draft.level1CapacityRate} onChange={(value) => update("level1CapacityRate", value)} />
+      <EconomicInput label={guided ? "Cost of one Level 2 agent being available for one minute" : "Level 2 capacity / agent-minute"} value={draft.level2CapacityRate} onChange={(value) => update("level2CapacityRate", value)} />
+      <EconomicInput label={guided ? "Cost each time a ticket is reviewed at triage" : "Triage visit"} value={draft.stageVisitRate} onChange={(value) => update("stageVisitRate", value)} />
+      <EconomicInput label={guided ? "Cost of one ticket waiting for one minute" : "Queue item-minute"} value={draft.queueHoldingRate} onChange={(value) => update("queueHoldingRate", value)} />
+      <EconomicInput label={guided ? "Cost assigned when a ticket misses the resolution target" : "SLA violation"} value={draft.slaViolationRate} onChange={(value) => update("slaViolationRate", value)} />
+      <EconomicInput label={guided ? "Cost assigned when a ticket does not complete successfully" : "Terminal failure"} value={draft.terminalFailureRate} onChange={(value) => update("terminalFailureRate", value)} />
+      <EconomicInput label={guided ? "Cost each time a ticket must be handled again" : "Rework"} value={draft.reworkRate} onChange={(value) => update("reworkRate", value)} />
+      <EconomicInput label={guided ? "Time period used for the comparison" : "Fixed analysis period"} value={draft.fixedPeriodCost} onChange={(value) => update("fixedPeriodCost", value)} />
+    </div>{draftError && <p className="inline-error" role="alert">{draftError}</p>}<p className="economics-hint">{guided ? "Leave a field blank when the cost is unknown. OpsTwin will not treat a missing value as zero." : "Blank means not configured. An explicit zero remains configured."}</p></div>
+    <div className="economics-editor"><h3>{guided ? "Cost of making the change" : "Intervention costs"}</h3>{scenarios.map((item) => <fieldset key={item.id}><legend>{item.name}</legend><EconomicInput label={guided ? "Upfront cost" : "One-time cost"} value={oneTime[item.id] ?? ""} onChange={(value) => { setOneTime({ ...oneTime, [item.id]: value }); setResult(null); }} /><EconomicInput label={guided ? "Number of periods used to spread the upfront cost" : "Amortization periods"} value={periods[item.id] ?? ""} onChange={(value) => { setPeriods({ ...periods, [item.id]: value }); setResult(null); }} /></fieldset>)}{interventionError && <p className="inline-error" role="alert">Use a nonnegative one-time cost and a positive whole number of periods. Periods require a cost.</p>}<p className="economics-hint">One-time cost remains separate unless periods are explicit.</p></div></div>
     <button className="primary sensitivity-run" type="button" disabled={health !== "ready" || state === "running" || Boolean(draftError || interventionError) || work > 100000} onClick={submit}>{state === "running" ? "Running economic comparison…" : result ? "Run again" : "Run economic comparison"}</button>
     {error && <div className="sensitivity-error" role="alert"><strong>{error.code}</strong><p>{error.message}</p></div>}
     {result ? <EconomicEvidence result={result} /> : <div className="sensitivity-empty">Run with explicit assumptions to inspect recurring costs and operational trade-offs.</div>}

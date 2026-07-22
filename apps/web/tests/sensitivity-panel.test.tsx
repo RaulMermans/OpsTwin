@@ -14,4 +14,13 @@ describe("sensitivity panel", () => {
     expect(screen.getByText(/20,000 work units/i)).toBeInTheDocument();
     expect(screen.getByRole("table", { name: /sensitivity response values/i })).toBeInTheDocument();
   });
+
+  it("uses business-first labels in Guided mode", () => {
+    render(<SensitivityPanel baseline={{ ...DEFAULT_FORM }} health="ready" guided />);
+
+    expect(screen.getByRole("heading", { name: "Test different assumptions" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Type of assumption")).toBeInTheDocument();
+    expect(screen.getByText("Did the result move consistently?")).toBeInTheDocument();
+    expect(screen.getByText(/Shows how responsive the selected result/i)).toBeInTheDocument();
+  });
 });

@@ -103,6 +103,23 @@ Resolve or explicitly authorize a workspace environment that permits child proce
   production, and full verification work remain pending; no deploy or
   participant study has been claimed.
 
+## Sprint 14.1 closure attempt — 2026-07-22
+
+- Guided nested panels now have business-first labels for comparison settings,
+  Process, Test assumptions, Costs, and glossary entries; Advanced retains the
+  technical vocabulary.
+- Guided paired deltas use the central metric formatter, so proportion deltas
+  are shown as percentage points. The comparative sentence now says which
+  change had the higher average separately from whether its returned plausible
+  range is favorable, inconclusive, unfavorable, or unavailable.
+- Focused Vitest cannot collect tests on this host: Vite fails while loading
+  installed `picomatch@4.0.5` with `TypeError: parse.fastpaths is not a
+  function`. `pnpm install --frozen-lockfile` and `--force` both completed but
+  did not repair the package. The subsequent typecheck invocation produced
+  only its startup line before the managed runner stopped returning completion
+  output. Browser measurements, rendered regression, owner QA, screenshots,
+  deployment, production QA, and commits/pushes are intentionally pending.
+
 ## Sprint 12 — first-time usability checkpoint — 2026-07-20
 
 - Recorded a simulated/expert first-time-user audit before changes; no human participant testing has been claimed.
