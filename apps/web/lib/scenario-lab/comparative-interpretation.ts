@@ -53,7 +53,8 @@ function intervalKindFor(scenarios: UnknownRecord[], scenarioId: string, objecti
   if (!scenario) return "unavailable";
   const paired = pairedMetric(scenario, objectiveMetric as MetricKey);
   const interval = confidence(paired);
-  return interpretReturnedInterval(interval && typeof interval.lower === "number" && typeof interval.upper === "number" ? interval : null, direction);
+  const evidence = interval && typeof interval.lower === "number" && typeof interval.upper === "number" ? { lower: interval.lower, upper: interval.upper } : null;
+  return interpretReturnedInterval(evidence, direction);
 }
 
 /**

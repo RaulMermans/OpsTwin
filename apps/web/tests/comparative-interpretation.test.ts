@@ -75,6 +75,9 @@ describe("buildComparativeInterpretation", () => {
     const paired = (result.scenarios[0] as Record<string, Record<string, Record<string, Record<string, unknown>>>>).pairedMetrics.averageCycleTime.absoluteDelta;
     paired.confidenceInterval = { lower: -4, upper: 1 };
 
-    expect(buildComparativeInterpretation(result).intervalKind).toBe("inconclusive");
+    const interpretation = buildComparativeInterpretation(result);
+    expect(interpretation.kind).toBe("singleEligibleScenario");
+    if (interpretation.kind !== "singleEligibleScenario") throw new Error("Expected a single eligible scenario");
+    expect(interpretation.intervalKind).toBe("inconclusive");
   });
 });
