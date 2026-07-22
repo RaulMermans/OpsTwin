@@ -26,6 +26,7 @@ describe("workflow visualization", () => {
     await user.click(screen.getByRole("button", { name: "Scenario changes" }));
     expect(screen.getByText("Capacity: 4 → 5")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Level 1 agents, resource.*changed/i })).toBeInTheDocument();
+    expect(document.querySelector(".workflow-content")).toHaveClass("has-changes");
   });
 
   it("keeps result-dependent modes unavailable without evidence", () => {
@@ -43,6 +44,16 @@ describe("workflow visualization", () => {
     await user.click(within(inspector).getByRole("button", { name: "Close inspector" }));
     expect(screen.queryByRole("complementary", { name: "Triage evidence" })).not.toBeInTheDocument();
     expect(node).toHaveFocus();
+  });
+
+  it("keeps a rendered map canvas meaningful when the inspector is open", async () => {
+    const user = userEvent.setup(); const { container } = renderFlow();
+    const canvas = container.querySelector<HTMLElement>(".workflow-canvas");
+    expect(canvas).not.toBeNull();
+    Object.defineProperty(canvas!, "getBoundingClientRect", { configurable: true, value: () => ({ width: 640, height: 600 }) });
+    await user.click(screen.getByRole("button", { name: /Incoming tickets, source/i }));
+    expect(container.querySelector(".workflow-content")).toHaveClass("has-inspector");
+    expect(canvas!.getBoundingClientRect().width).toBeGreaterThanOrEqual(640);
   });
 
   it("renders returned pressure values and relative-intensity label", async () => {

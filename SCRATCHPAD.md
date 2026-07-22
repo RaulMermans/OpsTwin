@@ -88,6 +88,21 @@ Resolve or explicitly authorize a workspace environment that permits child proce
 
 2026-07-16
 
+## Sprint 14 local checkpoint — 2026-07-21
+
+- Began the plain-language and Flow repair over the unchanged simulation and
+  comparison contracts.
+- Identified the Flow collapse as a CSS grid minimum-track/hidden-overflow
+  issue; the in-progress repair moves the change summary into the layout
+  grid, protects canvas width, and stacks the layout below desktop widths.
+- Added centralized Guided metric labels, percentage-point formatting,
+  returned-interval interpretation, input help, evidence-tab wording, and
+  local regression tests. `pnpm typecheck` passed using Node 22.22.3.
+- The focused Vitest command reported 100 passing tests but exited non-zero
+  because nine fork workers timed out at startup. Browser, manual, screenshot,
+  production, and full verification work remain pending; no deploy or
+  participant study has been claimed.
+
 ## Sprint 12 — first-time usability checkpoint — 2026-07-20
 
 - Recorded a simulated/expert first-time-user audit before changes; no human participant testing has been claimed.

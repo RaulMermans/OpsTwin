@@ -17,11 +17,11 @@ describe("Scenario Lab workspace", () => {
 
   it("exposes labelled baseline, scenario, guardrail, and execution controls", async () => {
     render(<Workspace />);
-    expect(screen.getByRole("heading", { name: "Baseline" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Mean arrival interval")).toHaveAccessibleDescription(/minutes/i);
+    expect(screen.getByRole("heading", { name: "Current operation" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Ticket arrival interval")).toHaveAccessibleDescription(/new ticket arrives/i);
     expect(screen.getByRole("heading", { name: "What would you like to compare?" })).toBeInTheDocument();
     expect(screen.getAllByText("Standard").length).toBeGreaterThan(0);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run comparison" })).toBeEnabled());
   });
 
   it("renames, duplicates, orders, and deletes with explicit keyboard actions", async () => {
@@ -41,8 +41,8 @@ describe("Scenario Lab workspace", () => {
     const user = userEvent.setup(); render(<Workspace />);
     expect(screen.getByRole("button", { name: "Guided" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("heading", { name: "Add one Level 1 agent" })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run comparison" }));
     expect(runScenarioComparison.mock.calls[0][0]).toMatchObject({ objective: { metric: "averageCycleTime", direction: "minimize" }, execution: { runCount: 50 } });
     await user.click(screen.getByRole("button", { name: "Advanced" }));
     expect(screen.getByRole("group", { name: "Optional guardrail" })).toBeInTheDocument();
@@ -50,12 +50,12 @@ describe("Scenario Lab workspace", () => {
 
   it("renders the result before deeper evidence, with uncertainty, disclaimer, navigation, orientation and glossary", async () => {
     const user = userEvent.setup(); render(<Workspace />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run comparison" }));
     expect(await screen.findByRole("heading", { name: "Comparison complete" })).toBeInTheDocument();
     expect(screen.getByText(/This is comparative simulation evidence, not a recommendation/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "See where queues changed" })).toBeInTheDocument();
-    expect(screen.getAllByText(/Uncertainty around the estimated average/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Plausible range of the average result/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Skip orientation" }));
     expect(screen.queryByRole("button", { name: "Skip orientation" })).not.toBeInTheDocument();
     await user.click(screen.getByText("Terminology help"));
@@ -64,11 +64,11 @@ describe("Scenario Lab workspace", () => {
 
   it("omits a disabled guardrail and maps an enabled threshold", async () => {
     const user = userEvent.setup(); render(<Workspace />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run comparison" }));
     expect(runScenarioComparison.mock.calls[0][0].guardrails).toEqual([]);
-    await user.click(screen.getByRole("checkbox", { name: /evaluate one eligibility guardrail/i }));
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+    await user.click(screen.getByRole("checkbox", { name: /check one required condition/i }));
+    await user.click(screen.getByRole("button", { name: "Run comparison" }));
     expect(runScenarioComparison.mock.calls[1][0].guardrails).toEqual([{ metric: "slaAttainment", operator: "greaterThanOrEqual", value: 0.75 }]);
   });
 

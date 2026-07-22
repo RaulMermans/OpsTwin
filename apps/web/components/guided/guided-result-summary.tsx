@@ -1,6 +1,7 @@
 import type { ComparisonResult } from "../../lib/api/simulation";
 import { buildComparativeInterpretation, type ComparativeInterpretation } from "../../lib/scenario-lab/comparative-interpretation";
-import { formatMetric, metricRegistry, type MetricKey } from "../../lib/scenario-lab/metrics";
+import { intervalInterpretationCopy, interpretReturnedInterval } from "../../lib/scenario-lab/guided-result-copy";
+import { formatMetric, formatPercentagePointChange, guidedMetricLabel, type MetricKey } from "../../lib/scenario-lab/metrics";
 import { asRecord, asRecords, confidence, pairedMetric } from "../../lib/scenario-lab/result-adapter";
 
 type Props = { result: ComparisonResult; onNavigate: (target: string) => void };
@@ -21,7 +22,7 @@ function excludedNote(excludedCount: number, totalCount: number): string | null 
 
 function InterpretationStatement({ interpretation }: { interpretation: ComparativeInterpretation }) {
   const objective = interpretation.objectiveMetric as MetricKey;
-  const label = metricRegistry[objective]?.label ?? interpretation.objectiveMetric;
+  const label = guidedMetricLabel(objective);
   const metricPhrase = lowerLead(label);
   const note = excludedNote(interpretation.excludedCount, interpretation.totalCount);
 
@@ -34,7 +35,7 @@ function InterpretationStatement({ interpretation }: { interpretation: Comparati
   }
 
   if (interpretation.kind === "tie") {
-    return <p className="comparative-interpretation">Among the tested scenarios, {interpretation.scenarioNames.join(" and ")} produced a statistically equivalent observed change in {metricPhrase} in this experiment (observed mean change {formatMetric(objective, interpretation.objectiveMeanDelta)}; tie-broken deterministically by {interpretation.tieBreakExplanation}). {note}</p>;
+    return <p className="comparative-interpretation">Among the tested scenarios, {interpretation.scenarioNames.join(" and ")} had the same observed average result for {metricPhrase} in this experiment. The displayed order uses the returned comparison order. {note}</p>;
   }
 
   return <p className="comparative-interpretation">Among the tested scenarios, <strong>{interpretation.scenarioName}</strong> produced the larger observed improvement in {metricPhrase} in this experiment (observed mean change {formatMetric(objective, interpretation.objectiveMeanDelta)}, improved in {(interpretation.probabilityOfImprovement * 100).toFixed(0)}% of paired simulations). {note}</p>;
@@ -43,7 +44,7 @@ function InterpretationStatement({ interpretation }: { interpretation: Comparati
 export function GuidedResultSummary({ result, onNavigate }: Props) {
   const objective = String(asRecord(result.objective)?.metric ?? "averageCycleTime") as MetricKey;
   const direction = String(asRecord(result.objective)?.direction ?? "minimize");
-  const label = metricRegistry[objective]?.label ?? objective;
+  const label = guidedMetricLabel(objective);
   const interpretation = buildComparativeInterpretation(result);
   return <section className="guided-result" aria-labelledby="guided-result-title">
     <p className="eyebrow">Observed result</p><h2 id="guided-result-title">Comparison complete</h2>
@@ -52,10 +53,14 @@ export function GuidedResultSummary({ result, onNavigate }: Props) {
       const paired = pairedMetric(scenario, objective); const delta = asRecord(paired?.absoluteDelta)?.mean;
       const improvement = asRecord(paired?.improvement)?.probabilityOfImprovement;
       const interval = confidence(paired);
-      return <article key={String(scenario.scenarioId)}><h3>{String(scenario.scenarioName ?? scenario.scenarioId)}</h3><p>{label} changed by <strong>{formatMetric(objective, delta)}</strong>.</p><p>It improved against the baseline in <strong>{typeof improvement === "number" ? `${(improvement * 100).toFixed(0)}%` : "an unavailable proportion"}</strong> of paired simulations.</p><p className="hint">Uncertainty around the estimated average: {interval ? `${formatMetric(objective, interval.lower)} to ${formatMetric(objective, interval.upper)}` : "not available"}.</p></article>;
+      const intervalEvidence = interval && typeof interval.lower === "number" && typeof interval.upper === "number" ? { lower: interval.lower, upper: interval.upper } : null;
+      const intervalKind = interpretReturnedInterval(intervalEvidence, direction);
+      const averageDifference = objective === "slaAttainment" ? formatPercentagePointChange(delta) : formatMetric(objective, delta);
+      return <article key={String(scenario.scenarioId)}><h3>{String(scenario.scenarioName ?? scenario.scenarioId)}</h3><p>Average difference: <strong>{averageDifference}</strong>.</p><p>It performed better than the current operation in <strong>{typeof improvement === "number" ? `${(improvement * 100).toFixed(0)}%` : "an unavailable proportion"}</strong> of matched simulated operating days.</p><p className="hint">Plausible range of the average result: {intervalEvidence ? `${objective === "slaAttainment" ? formatPercentagePointChange(intervalEvidence.lower) : formatMetric(objective, intervalEvidence.lower)} to ${objective === "slaAttainment" ? formatPercentagePointChange(intervalEvidence.upper) : formatMetric(objective, intervalEvidence.upper)}` : "not available"}.</p><p className="hint">{intervalInterpretationCopy(intervalKind)}</p></article>;
     })}</div>
     <InterpretationStatement interpretation={interpretation} />
     <p className="guided-disclaimer">{NON_PRESCRIPTIVE_DISCLAIMER}</p>
+    <details className="guided-result-help"><summary>How to read this result</summary><dl><div><dt>Average difference</dt><dd>The average difference across all matched simulated operating days.</dd></div><div><dt>How often it performed better</dt><dd>The percentage of matched simulations where the proposed change beat the current operation.</dd></div><div><dt>Plausible range</dt><dd>The range of average effects supported by this experiment.</dd></div><div><dt>Inconclusive</dt><dd>The experiment did not show a stable direction because the plausible range includes no improvement or a worse result.</dd></div></dl></details>
     <nav className="guided-evidence-nav" aria-label="Evidence navigation">
       <button type="button" onClick={() => onNavigate("flow-evidence")}>See where queues changed</button>
       <button type="button" onClick={() => onNavigate("risk-evidence")}>Inspect uncertainty and risk</button>

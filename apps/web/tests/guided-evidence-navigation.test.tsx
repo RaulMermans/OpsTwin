@@ -16,17 +16,17 @@ describe("Guided evidence navigation", () => {
   beforeEach(() => { runScenarioComparison.mockReset(); runScenarioComparison.mockResolvedValue(comparisonFixture); });
 
   async function runComparison(user: ReturnType<typeof userEvent.setup>) {
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run guided comparison" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Run guided comparison" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Run comparison" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Run comparison" }));
     await screen.findByRole("heading", { name: "Comparison complete" });
   }
 
-  it("defaults to the Summary panel and explains prerequisites for panels that need a result", async () => {
+  it("defaults to the Result panel and explains prerequisites for panels that need a result", async () => {
     render(<Workspace />);
-    const flowTab = screen.getByRole("tab", { name: "Flow" });
-    expect(screen.getByRole("tab", { name: "Summary" })).toHaveAttribute("aria-selected", "true");
+    const flowTab = screen.getByRole("tab", { name: "Process" });
+    expect(screen.getByRole("tab", { name: "Result" })).toHaveAttribute("aria-selected", "true");
     expect(flowTab).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByText("Run the guided comparison to see the result summary.")).toBeVisible();
+    expect(screen.getByText("Run the comparison to see the result.")).toBeVisible();
   });
 
   it("shows exactly one evidence panel at a time and hides the rest from the accessibility tree", async () => {
@@ -34,43 +34,43 @@ describe("Guided evidence navigation", () => {
     expect(screen.getByRole("heading", { name: "Comparison complete" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Flow" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "Flow" }));
+    await user.click(screen.getByRole("tab", { name: "Process" }));
     expect(screen.getByRole("heading", { name: "Flow" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Comparison complete" })).not.toBeInTheDocument();
   });
 
   it("moves the active panel with arrow-key navigation", async () => {
     const user = userEvent.setup(); render(<Workspace />); await runComparison(user);
-    const summaryTab = screen.getByRole("tab", { name: "Summary" });
+    const summaryTab = screen.getByRole("tab", { name: "Result" });
     summaryTab.focus();
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: "Flow" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Flow" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Process" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Process" })).toHaveFocus();
   });
 
-  it("reaches Risk, Resources, and Technical evidence through the Guided tabs without duplicating Advanced's tablist", async () => {
+  it("reaches plain-language evidence views through the Guided tabs without duplicating Advanced's tablist", async () => {
     const user = userEvent.setup(); render(<Workspace />); await runComparison(user);
-    await user.click(screen.getByRole("tab", { name: "Risk" }));
+    await user.click(screen.getByRole("tab", { name: "Uncertainty" }));
     expect(screen.getByRole("group", { name: /paired transition counts/i })).toBeVisible();
-    await user.click(screen.getByRole("tab", { name: "Resources" }));
+    await user.click(screen.getByRole("tab", { name: "Team workload" }));
     expect(screen.getByText("Higher utilization is not interpreted as automatically better or worse.")).toBeVisible();
-    await user.click(screen.getByRole("tab", { name: "Technical" }));
+    await user.click(screen.getByRole("tab", { name: "Technical details" }));
     expect(screen.getByText("Reproducible evidence")).toBeVisible();
     expect(screen.queryByRole("tablist", { name: "Analysis sections" })).not.toBeInTheDocument();
   });
 
   it("resets the Guided evidence view to Summary when the result becomes stale", async () => {
     const user = userEvent.setup(); render(<Workspace />); await runComparison(user);
-    await user.click(screen.getByRole("tab", { name: "Flow" }));
-    expect(screen.getByRole("tab", { name: "Flow" })).toHaveAttribute("aria-selected", "true");
-    await user.type(screen.getByLabelText("Mean arrival interval"), "1");
-    expect(screen.getByRole("tab", { name: "Summary" })).toHaveAttribute("aria-selected", "true");
+    await user.click(screen.getByRole("tab", { name: "Process" }));
+    expect(screen.getByRole("tab", { name: "Process" })).toHaveAttribute("aria-selected", "true");
+    await user.type(screen.getByLabelText("Ticket arrival interval"), "1");
+    expect(screen.getByRole("tab", { name: "Result" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("navigates from the summary's evidence links directly to the corresponding Guided panel", async () => {
     const user = userEvent.setup(); render(<Workspace />); await runComparison(user);
     await user.click(screen.getByRole("button", { name: "Watch a representative run" }));
-    expect(screen.getByRole("tab", { name: "Playback" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Example run" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("preserves Advanced mode's full detailed workspace unchanged", async () => {
