@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { EconomicsPanel } from "../components/economics/economics-panel";
@@ -24,14 +24,16 @@ describe("economics panel", () => {
     const user = userEvent.setup();
     render(<EconomicsPanel baseline={{ ...DEFAULT_FORM }} scenarios={[]} runs={10} objective="averageCycleTime" health="ready" guided />);
     const input = screen.getByLabelText(/General-support availability cost/i);
+    const rateRow = input.parentElement?.parentElement;
+    expect(rateRow).not.toBeNull();
     await user.type(input, "1");
-    expect(screen.getByText("Equivalent to EUR 60.00 per agent-hour")).toBeInTheDocument();
+    expect(within(rateRow!).getByText("Equivalent to EUR 60.00 per agent-hour")).toBeInTheDocument();
     await user.clear(input);
     await user.type(input, "0.5");
-    expect(screen.getByText("Equivalent to EUR 30.00 per agent-hour")).toBeInTheDocument();
+    expect(within(rateRow!).getByText("Equivalent to EUR 30.00 per agent-hour")).toBeInTheDocument();
     await user.clear(input);
-    await waitFor(() => expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument());
+    await waitFor(() => expect(within(rateRow!).queryByText(/Equivalent to EUR/)).not.toBeInTheDocument());
     await user.type(input, "invalid");
-    await waitFor(() => expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument());
+    await waitFor(() => expect(within(rateRow!).queryByText(/Equivalent to EUR/)).not.toBeInTheDocument());
   });
 });
