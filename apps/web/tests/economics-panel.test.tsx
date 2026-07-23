@@ -26,6 +26,7 @@ describe("economics panel", () => {
     const input = screen.getByLabelText(/General-support availability cost/i);
     const rateRow = input.parentElement?.parentElement;
     expect(rateRow).not.toBeNull();
+    await user.clear(input);
     await user.type(input, "1");
     expect(within(rateRow!).getByText("Equivalent to EUR 60.00 per agent-hour")).toBeInTheDocument();
     await user.clear(input);
