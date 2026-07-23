@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { EconomicsPanel } from "../components/economics/economics-panel";
@@ -30,8 +30,8 @@ describe("economics panel", () => {
     await user.type(input, "0.5");
     expect(screen.getByText("Equivalent to EUR 30.00 per agent-hour")).toBeInTheDocument();
     await user.clear(input);
-    expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument());
     await user.type(input, "invalid");
-    expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument());
   });
 });

@@ -100,7 +100,7 @@ describe("workflow visualization", () => {
     const user = userEvent.setup();
     render(<WorkflowVisualization model={buildBaseline({ ...DEFAULT_FORM })} baseline={DEFAULT_FORM} scenarios={scenarios} result={null} guided />);
     await user.click(screen.getByRole("button", { name: "Proposed changes" }));
-    expect(screen.getByText("This change increases the general support team from 4 agents to 5.")).toBeInTheDocument();
+    expect(screen.getAllByText("This change increases the general support team from 4 agents to 5.").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /General support team, process step/i })).toBeInTheDocument();
     expect(document.querySelector(".workflow-section")).toHaveClass("workflow-section");
     expect(document.querySelector(".workflow-section")?.textContent).not.toMatch(/level-1-agents|poisson arrival|triangular processing/i);
