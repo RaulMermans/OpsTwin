@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { EconomicsPanel } from "../components/economics/economics-panel";
 import { DEFAULT_FORM } from "../lib/templates/support";
@@ -17,5 +18,20 @@ describe("economics panel", () => {
     expect(screen.getByRole("heading", { name: "Costs" })).toBeInTheDocument();
     expect(screen.getByText(/will not treat a missing value as zero/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/General-support availability cost/i)).toBeInTheDocument();
+  });
+
+  it("shows a dynamic per-hour equivalent only for valid supplied rates", async () => {
+    const user = userEvent.setup();
+    render(<EconomicsPanel baseline={{ ...DEFAULT_FORM }} scenarios={[]} runs={10} objective="averageCycleTime" health="ready" guided />);
+    const input = screen.getByLabelText(/General-support availability cost/i);
+    await user.type(input, "1");
+    expect(screen.getByText("Equivalent to EUR 60.00 per agent-hour")).toBeInTheDocument();
+    await user.clear(input);
+    await user.type(input, "0.5");
+    expect(screen.getByText("Equivalent to EUR 30.00 per agent-hour")).toBeInTheDocument();
+    await user.clear(input);
+    expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument();
+    await user.type(input, "invalid");
+    expect(screen.queryByText(/Equivalent to EUR/)).not.toBeInTheDocument();
   });
 });

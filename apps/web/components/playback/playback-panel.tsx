@@ -136,13 +136,7 @@ export function PlaybackPanel({ result, model }: { result: ComparisonResult | nu
       <button type="button" aria-pressed={mode === "baseline"} onClick={() => setMode("baseline")}>Baseline representative</button>
       <button type="button" aria-pressed={mode === "scenario"} disabled={!scenarioSource} onClick={() => setMode("scenario")}>Selected scenario representative{!scenarioSource ? " (unavailable)" : ""}</button>
     </div>
-    <p className="playback-identity">
-      Run index {selection.runIndex} · seed {selection.seed} · selection method {selection.selectionMethod}
-      {selection.modelHash && <> · model hash <code>{selection.modelHash.slice(0, 12)}</code></>}
-    </p>
-    {mode === "scenario" && scenarioSource && baselineSource && (
-      <p className="playback-identity">{bothPaired ? "Both playbacks use the same paired run index and seed." : "These are separately selected representative runs and should not be interpreted as event-level paired equivalents."}</p>
-    )}
+    <p className="playback-hint">This view summarizes one sampled run with business labels. Exact run metadata remains available in technical details.</p>
 
     <div className="playback-controls" role="group" aria-label="Playback controls">
       <button type="button" onClick={() => dispatch({ type: "restart" })} aria-label="Restart playback">Restart</button>
@@ -169,17 +163,17 @@ export function PlaybackPanel({ result, model }: { result: ComparisonResult | nu
       <h3>Stage and resource state at {formatMinutes(currentTime)}</h3>
       <table><caption>Waiting and processing counts by stage, and busy/capacity by resource pool.</caption>
         <thead><tr><th scope="col">Stage</th><th scope="col">Waiting</th><th scope="col">Processing</th></tr></thead>
-        <tbody>{frame.stages.map((stage) => <tr key={stage.stageId}><th scope="row">{stage.stageId}</th><td>{stage.waitingItemIds.length}</td><td>{stage.processingItemIds.length}</td></tr>)}</tbody>
+        <tbody>{frame.stages.map((stage) => <tr key={stage.stageId}><th scope="row">{businessLabel(stage.stageId)}</th><td>{stage.waitingItemIds.length}</td><td>{stage.processingItemIds.length}</td></tr>)}</tbody>
       </table>
       <table><caption>Resource pool busy count against configured capacity.</caption>
         <thead><tr><th scope="col">Resource pool</th><th scope="col">Busy</th><th scope="col">Capacity</th></tr></thead>
-        <tbody>{frame.resources.map((resource) => <tr key={resource.resourcePoolId}><th scope="row">{resource.resourcePoolId}</th><td>{resource.busyItemIds.length}</td><td>{resourceCapacities[resource.resourcePoolId] ?? "Not available"}</td></tr>)}</tbody>
+        <tbody>{frame.resources.map((resource) => <tr key={resource.resourcePoolId}><th scope="row">{businessLabel(resource.resourcePoolId)}</th><td>{resource.busyItemIds.length}</td><td>{resourceCapacities[resource.resourcePoolId] ?? "Not available"}</td></tr>)}</tbody>
       </table>
       <p>Completed: {frame.completedItemIds.length} · Failed: {frame.failedItemIds.length} · In rework: {frame.reworkingItemIds.length}</p>
       {frame.integrityWarnings.length > 0 && <p className="inline-error" role="alert">{frame.integrityWarnings.join(" ")}</p>}
     </div>
 
-    <details className="playback-technical"><summary>Show technical run details</summary><p>Exact event times, event IDs, and the full retained event ledger are shown here.</p><EventLedger events={filteredEvents} currentEventIndex={frame.eventIndex} onSeekToEvent={(event) => seekToTime(event.simulationTime)} filter={ledgerFilter} setFilter={setLedgerFilter} filterActive={filterActive} allStageIds={[...new Set(timeline.events.map((e) => e.stageId).filter((v): v is string => v !== null))]} allResourceIds={[...new Set(timeline.events.map((e) => e.resourcePoolId).filter((v): v is string => v !== null))]} allItemIds={selection.selectedItemIds} />
+    <details className="playback-technical"><summary>Show technical run details</summary><p>Run index {selection.runIndex} · seed {selection.seed} · selection method {selection.selectionMethod}{selection.modelHash && <> · model hash <code>{selection.modelHash.slice(0, 12)}</code></>}</p>{mode === "scenario" && scenarioSource && baselineSource && <p>{bothPaired ? "Both playbacks use the same paired run index and seed." : "These are separately selected representative runs and should not be interpreted as event-level paired equivalents."}</p>}<p>Exact event times, event IDs, and the full retained event ledger are shown here.</p><EventLedger events={filteredEvents} currentEventIndex={frame.eventIndex} onSeekToEvent={(event) => seekToTime(event.simulationTime)} filter={ledgerFilter} setFilter={setLedgerFilter} filterActive={filterActive} allStageIds={[...new Set(timeline.events.map((e) => e.stageId).filter((v): v is string => v !== null))]} allResourceIds={[...new Set(timeline.events.map((e) => e.resourcePoolId).filter((v): v is string => v !== null))]} allItemIds={selection.selectedItemIds} />
     <ItemJourneyView selectedItemId={selectedItemId} setSelectedItemId={setSelectedItemId} selectedItemIds={selection.selectedItemIds} journey={journey} /></details>
   </section>;
 }
@@ -188,7 +182,12 @@ function buildTemporalSummary(timeline: ReturnType<typeof buildTimeline>, import
   const lines: string[] = [];
   const maxQueue = [...importantEvents].reverse().find((item) => item.category === "maximum_sampled_queue_reached");
   if (maxQueue) lines.push(maxQueue.summary);
-  for (const item of importantEvents.filter((event) => event.category === "resource_fully_utilized")) lines.push(item.summary);
+  const fullCapacity = new Map<string, number>();
+  for (const item of importantEvents.filter((event) => event.category === "resource_fully_utilized")) {
+    const id = item.resourcePoolId ?? "team";
+    fullCapacity.set(id, (fullCapacity.get(id) ?? 0) + 1);
+  }
+  for (const [id, count] of fullCapacity) lines.push(`${businessLabel(id)} reached full capacity ${count} time${count === 1 ? "" : "s"}.`);
   const reworkCount = importantEvents.filter((item) => item.category === "rework_started").length;
   if (reworkCount > 0) lines.push(`${reworkCount} sampled item${reworkCount === 1 ? "" : "s"} entered rework.`);
   const completions = importantEvents.filter((item) => item.category === "item_completed");
@@ -200,6 +199,7 @@ function buildTemporalSummary(timeline: ReturnType<typeof buildTimeline>, import
 }
 
 const formatMinutes = (value: number) => `${value.toFixed(1)} minutes`;
+const businessLabel = (id: string) => ({ triage: "Review and assign", "level-1": "General support", "level-2": "Specialist support", "quality-check": "Quality checking", "triage-team": "Review and assignment", "level-1-agents": "General support", "level-2-agents": "Specialist support", "quality-team": "Quality checking" }[id] ?? id);
 
 function EventLedger({ events, currentEventIndex, onSeekToEvent, filter, setFilter, filterActive, allStageIds, allResourceIds, allItemIds }: {
   events: ReturnType<typeof buildTimeline>["events"];

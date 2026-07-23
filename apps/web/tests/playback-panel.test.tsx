@@ -67,11 +67,12 @@ describe("PlaybackPanel", () => {
     expect(screen.getByText(/Representative playback is unavailable/)).toBeInTheDocument();
   });
 
-  it("shows the fixed disclaimer and representative identity", () => {
+  it("keeps representative identity inside collapsed technical details", () => {
     render(<PlaybackPanel result={makeResult(false)} model={buildBaseline({ ...DEFAULT_FORM })} />);
     expect(screen.getByText(/This playback illustrates one representative sampled run/)).toBeInTheDocument();
-    expect(screen.getByText(/Run index 3/)).toBeInTheDocument();
-    expect(screen.getByText(/seed 42/)).toBeInTheDocument();
+    const technical = screen.getByText("Show technical run details").closest("details");
+    expect(technical).not.toHaveAttribute("open");
+    expect(technical).toHaveTextContent(/Run index 3.*seed 42/i);
   });
 
   it("disables the scenario toggle when no scenario representative was retained", () => {
@@ -83,7 +84,7 @@ describe("PlaybackPanel", () => {
     const user = userEvent.setup();
     render(<PlaybackPanel result={makeResult(true)} model={buildBaseline({ ...DEFAULT_FORM })} />);
     await user.click(screen.getByRole("button", { name: /Selected scenario representative/ }));
-    expect(screen.getByText("Both playbacks use the same paired run index and seed.")).toBeInTheDocument();
+    expect(screen.getByText("Show technical run details").closest("details")).toHaveTextContent("Both playbacks use the same paired run index and seed.");
   });
 
   it("renders the event ledger with a caption and current-row identification", () => {

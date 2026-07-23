@@ -208,3 +208,23 @@ Resolve or explicitly authorize a workspace environment that permits child proce
   Vitest started but the managed runner did not return a completion summary;
   no browser QA, screenshots, deployment, commit, push, or production claim
   has been made from this checkpoint.
+
+## Sprint 15.1 Process hotfix checkpoint — 2026-07-23
+
+- Production browser measurement isolated the Process width defect: the
+  1168 px `.workflow-section` inherited the landing page's two-column grid
+  (`321.047px 650.555px`), auto-placing `.workflow-content` and the canvas
+  into the 321 px first track while the internal map retained a 640 px
+  minimum. The local CSS repair makes the Process section block-level and
+  stacks change summary content above the map; the inspector remains beside
+  the map only where its minimum width fits.
+- Local Guided presentation changes add business-first Process labels and
+  summaries, Advanced-only change detail, cross-scenario workload wording and
+  capacity formatting, collapsed sensitivity technical evidence, dynamic
+  per-minute to per-hour rate display, and playback primary-view cleanup with
+  per-team full-capacity aggregation. No simulation or API behavior changed.
+- Direct web ESLint, TypeScript, and `git diff --check` pass via the bundled
+  Node runtime. Focused Vitest is blocked before collection: its JSDOM worker
+  fails to start while reading a dependency with `ETIMEDOUT`. Rendered local
+  regression, full verification, production deployment/smoke, screenshots,
+  and manual desktop QA remain pending. Manual mobile QA was not performed.

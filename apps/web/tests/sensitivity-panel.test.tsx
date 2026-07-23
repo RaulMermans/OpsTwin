@@ -22,5 +22,7 @@ describe("sensitivity panel", () => {
     expect(screen.getByLabelText("Type of assumption")).toBeInTheDocument();
     expect(screen.getByText("Plain conclusion")).toBeInTheDocument();
     expect(screen.getByText(/Available in technical sensitivity evidence/i)).toBeInTheDocument();
+    expect(screen.queryByText(/estimated simulation workload/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Show technical sensitivity evidence")).toBeInTheDocument();
   });
 });

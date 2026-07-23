@@ -111,6 +111,7 @@ export interface ImportantEvent {
   simulationTime: number;
   eventIndex: number;
   summary: string;
+  resourcePoolId?: string;
 }
 
 export interface JourneyVisit {

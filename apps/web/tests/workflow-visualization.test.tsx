@@ -95,6 +95,16 @@ describe("workflow visualization", () => {
     expect(screen.getByRole("region", { name: "Workflow list view" })).toHaveTextContent(/Tickets selected for rework return to the specialist support team/i);
     expect(screen.getByRole("region", { name: "Workflow list view" }).textContent).not.toMatch(/100% probability/i);
   });
+
+  it("uses business language for Guided map nodes and change summaries", async () => {
+    const user = userEvent.setup();
+    render(<WorkflowVisualization model={buildBaseline({ ...DEFAULT_FORM })} baseline={DEFAULT_FORM} scenarios={scenarios} result={null} guided />);
+    await user.click(screen.getByRole("button", { name: "Proposed changes" }));
+    expect(screen.getByText("This change increases the general support team from 4 agents to 5.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /General support team, process step/i })).toBeInTheDocument();
+    expect(document.querySelector(".workflow-section")).toHaveClass("workflow-section");
+    expect(document.querySelector(".workflow-section")?.textContent).not.toMatch(/level-1-agents|poisson arrival|triangular processing/i);
+  });
 });
 
 describe("workflow scenario change mapping", () => {

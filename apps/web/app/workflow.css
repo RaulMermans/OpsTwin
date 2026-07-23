@@ -1,4 +1,4 @@
-.workflow-section{margin:42px 0;background:#f8faf9;border:1px solid var(--rule);border-top:5px solid var(--graphite);padding:clamp(24px,4vw,46px)}
+.workflow-section{display:block;margin:42px 0;background:#f8faf9;border:1px solid var(--rule);border-top:5px solid var(--graphite);padding:clamp(24px,4vw,46px)}
 .workflow-heading{display:flex;justify-content:space-between;align-items:end;gap:32px}.workflow-heading h2{font-size:clamp(2.5rem,5vw,4.6rem);margin:.1em 0}.workflow-heading p:last-child{max-width:720px;color:var(--muted);line-height:1.55}
 .workflow-controls{display:flex;justify-content:space-between;align-items:end;gap:18px;margin:30px 0 18px;padding:14px;border:1px solid var(--rule);background:#fff}.workflow-controls label{min-width:180px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.workflow-controls select{display:block;width:100%;margin-top:5px}
 .workflow-modes{display:flex;gap:6px;flex:1;flex-wrap:wrap}.workflow-modes button{border:1px solid var(--rule);background:#fff;color:var(--muted);padding:10px 14px;font-weight:800;cursor:pointer}.workflow-modes button[aria-pressed=true]{background:var(--graphite);border-color:var(--graphite);color:#fff}.workflow-modes button:disabled{cursor:not-allowed;opacity:.42}
@@ -14,12 +14,12 @@
 @media(prefers-contrast:more){.workflow-node,.workflow-inspector,.workflow-canvas{border-width:3px}.workflow-node.changed{outline:3px dashed #000}}
 @media print{.workflow-section{margin:20px 0;padding:18px}.workflow-controls,.workflow-canvas,.workflow-inspector,.workflow-heading .secondary{display:none!important}.workflow-content{display:block}.workflow-list{display:block!important;border:1px solid #000}.workflow-content.show-map>.sr-only{position:static!important;width:auto!important;height:auto!important;margin:0!important;clip:auto!important;overflow:visible!important;white-space:normal!important}}
 
-/* Sprint 14: reserve real map space instead of allowing the grid track to collapse. */
+/* Keep this standalone component out of the landing page's two-column grid. */
 .workflow-change-summary{align-self:start;margin:0;border-left:4px solid #b76814}.workflow-change-summary ul{display:block;margin:7px 0 0;padding-left:18px;line-height:1.45}
 .workflow-content{grid-template-columns:minmax(0,1fr);width:100%;min-width:0;max-width:100%;overflow:visible}
-.workflow-content.has-changes{grid-template-columns:minmax(220px,280px) minmax(640px,1fr)}
 .workflow-content.has-inspector{grid-template-columns:minmax(640px,1fr) minmax(260px,340px)}
-.workflow-content.has-changes.has-inspector{grid-template-columns:minmax(220px,280px) minmax(640px,1fr) minmax(260px,340px)}
+.workflow-change-summary{grid-column:1/-1}.workflow-canvas{grid-column:1}.workflow-inspector{grid-column:2}
+.workflow-content.show-list,.workflow-content.show-list.has-inspector{grid-template-columns:minmax(0,1fr)}.workflow-content.show-list .workflow-inspector{grid-column:1}
 .workflow-canvas{width:100%;min-width:0;max-width:none;justify-self:stretch;box-sizing:border-box;overflow:auto}.workflow-grid{width:100%;min-width:640px;box-sizing:border-box}
-@media(max-width:1300px){.workflow-content,.workflow-content.has-changes,.workflow-content.has-inspector,.workflow-content.has-changes.has-inspector{grid-template-columns:minmax(0,1fr);width:100%;overflow:visible}.workflow-canvas{width:100%;justify-self:stretch}.workflow-change-summary{max-width:420px}.workflow-inspector{position:static}}
+@media(max-width:1100px){.workflow-content,.workflow-content.has-inspector{grid-template-columns:minmax(0,1fr);width:100%;overflow:visible}.workflow-canvas,.workflow-inspector{grid-column:1}.workflow-canvas{width:100%;justify-self:stretch}.workflow-change-summary{max-width:420px}.workflow-inspector{position:static}}
 @media(max-width:760px){.workflow-content{overflow:visible}.workflow-canvas{overflow:visible}.workflow-grid{min-width:0}}

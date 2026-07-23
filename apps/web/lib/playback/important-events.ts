@@ -34,6 +34,7 @@ export function deriveImportantEvents(timeline: PlaybackTimeline, resourceCapaci
           category: "resource_fully_utilized",
           simulationTime: checkpoint.simulationTime,
           eventIndex: checkpoint.eventIndex,
+          resourcePoolId: resource.resourcePoolId,
           summary: `${resource.resourcePoolId} reached full utilization at time ${checkpoint.simulationTime}.`,
         });
       } else if (!isFull && wasFull) {
@@ -42,6 +43,7 @@ export function deriveImportantEvents(timeline: PlaybackTimeline, resourceCapaci
           category: "resource_no_longer_fully_utilized",
           simulationTime: checkpoint.simulationTime,
           eventIndex: checkpoint.eventIndex,
+          resourcePoolId: resource.resourcePoolId,
           summary: `${resource.resourcePoolId} stopped being fully utilized at time ${checkpoint.simulationTime}.`,
         });
       }
