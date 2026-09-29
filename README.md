@@ -3,6 +3,10 @@
 Operational simulation and decision lab for testing service-workflow
 changes before implementing them.
 
+[![CI](https://github.com/RaulMermans/OpsTwin/actions/workflows/ci.yml/badge.svg)](https://github.com/RaulMermans/OpsTwin/actions/workflows/ci.yml)
+![Status: V1 complete](https://img.shields.io/badge/status-V1%20complete-2f6f4f)
+![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)
+
 **[Live demo](https://ops-twin.vercel.app)** ·
 **[Guided workspace](https://ops-twin.vercel.app/workspace)** ·
 **[Advanced workspace](https://ops-twin.vercel.app/workspace?mode=advanced)** ·
@@ -28,10 +32,7 @@ changes before implementing them.
 > product scope, architecture, acceptance criteria, verification and final
 > decisions remained human-directed.
 
-No software license has been granted yet. Source visibility does not
-automatically grant permission to copy, modify, or redistribute this work.
-Repository visibility and software licensing are separate decisions — see
-[Security, contributions and license](#security-contributions-and-license).
+OpsTwin is open source under the [MIT License](LICENSE).
 
 ## The problem
 
@@ -295,7 +296,7 @@ same class of mistake was otherwise free to reappear.
 | Gate | Current evidence |
 | --- | ---: |
 | Backend tests | 247 passed |
-| Frontend tests | 172 passed (22 test files) |
+| Frontend tests | 183 passed (23 test files) |
 | ESLint | Passed (51 source files) |
 | TypeScript | Passed |
 | Ruff | Passed |
@@ -448,9 +449,8 @@ Production deployment: live
 Active phase: maintenance and portfolio presentation
 ```
 
-Remaining work: an optional five-participant usability study, an owner
-decision on software license, an owner decision on repository visibility,
-and ordinary maintenance fixes. No major new capability is planned — see
+Remaining work: an optional five-participant usability study and ordinary
+maintenance fixes. No major new capability is planned — see
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Security, contributions and license
@@ -459,16 +459,12 @@ See [`SECURITY.md`](SECURITY.md) for how to report a vulnerability,
 [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution process and
 required reading, and [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
-**License status:** no software license has been granted yet. Source
-visibility does not automatically grant permission to copy, modify, or
-redistribute this work. Repository visibility and licensing are tracked as
-separate, still-pending owner decisions — see
-[`docs/PUBLIC_RELEASE_CHECKLIST.md`](docs/PUBLIC_RELEASE_CHECKLIST.md).
+**License:** [MIT](LICENSE).
 
 ## Maintainer
 
 Maintained by [RaulMermans](https://github.com/RaulMermans) on GitHub. Use
-GitHub issues (once the repository is public) or the private
+GitHub issues or the private
 vulnerability-reporting channel in [`SECURITY.md`](SECURITY.md) rather than
 a personal email address.
 

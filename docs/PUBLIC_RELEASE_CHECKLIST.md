@@ -24,7 +24,7 @@ for `.env`, build artifacts, and virtual environments.
 | `docs/VERCEL_PREVIEW_EVIDENCE.md` references a `-git-master-` Vercel alias hostname | Safe to retain | This is a production-deployment alias, not a temporary share link — no share-link marker exists anywhere in the repository |
 | README stated Vercel deployment as "proposed" with "no Vercel project linked" | **Fixed this sprint** | Was stale against the live Sprint 11 production deployment; corrected in the README rewrite |
 | `docs/ARCHITECTURE.md` stated "ADR-014 remains proposed" | **Fixed this sprint** | ADR-014 was accepted 2026-07-20; corrected in place |
-| No license file | Requires owner decision | See License gate below |
+| License | MIT (`LICENSE`) | Resolved |
 | Repository visibility | Requires owner decision | See Visibility gate below |
 
 ## Code
@@ -57,7 +57,7 @@ for `.env`, build artifacts, and virtual environments.
 - [x] `CONTRIBUTING.md`
 - [x] `CHANGELOG.md`
 - [x] Limitations stated explicitly (README + this checklist + claim register)
-- [x] License state disclosed explicitly (no license, disclosure sentence in README)
+- [x] License state disclosed explicitly (MIT, stated in README)
 - [x] `docs/PUBLIC_CLAIM_REGISTER.md`
 
 ## Assets
@@ -82,7 +82,7 @@ public and starts receiving external contributions.
 
 ## License gate
 
-No `LICENSE` file exists (confirmed by audit). None was added this sprint.
+Resolved: the owner chose MIT. `LICENSE` added (repository is fully the owner's own work; dependencies are permissively licensed).
 **Owner action required:** select a license before encouraging reuse, or
 explicitly decide to keep the project source-visible-only. Repository
 visibility and software licensing are separate decisions — making the
@@ -108,7 +108,7 @@ made):
 | Push protection | Not confirmed (same API limitation) | Recommend enabling alongside secret scanning |
 | Branch protection on `master` | Not queryable on this plan while private (`403: Upgrade to GitHub Pro or make this repository public`) | Recommend a required-status-checks rule (CI passing) before merge, once feasible to configure |
 | Repository visibility | **Private** | Owner decision — not changed by this sprint |
-| License | **None** | Owner decision — not changed by this sprint |
+| License | **MIT** | Owner decision: open source under MIT |
 
 No `gh repo edit`, `gh api` write call, or GitHub settings change was
 executed by this sprint. Every row above was read, not written.
