@@ -1,38 +1,68 @@
-# OpsTwin
+<div align="center">
 
-Operational simulation and decision lab for testing service-workflow
-changes before implementing them.
+# OPSTWIN
+
+### Test the change before the queue feels it.
+
+**An operational decision lab for comparing service-workflow changes with simulation, uncertainty, and evidence.**
 
 [![CI](https://github.com/RaulMermans/OpsTwin/actions/workflows/ci.yml/badge.svg)](https://github.com/RaulMermans/OpsTwin/actions/workflows/ci.yml)
-![Status: V1 complete](https://img.shields.io/badge/status-V1%20complete-2f6f4f)
-![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)
+![Status](https://img.shields.io/badge/status-V1%20deployed-2f6f4f)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![SimPy](https://img.shields.io/badge/simulation-SimPy-52668a)
 
-**[Live demo](https://ops-twin.vercel.app)** ·
-**[Guided workspace](https://ops-twin.vercel.app/workspace)** ·
-**[Advanced workspace](https://ops-twin.vercel.app/workspace?mode=advanced)** ·
-**[Architecture](docs/ARCHITECTURE.md)** ·
-**[Run locally](#run-locally)**
+**[Live app](https://ops-twin.vercel.app)** · **[Guided experience](https://ops-twin.vercel.app/workspace)** · **[Advanced workspace](https://ops-twin.vercel.app/workspace?mode=advanced)** · **[Engineering architecture](docs/ARCHITECTURE.md)** · **[Run locally](#run-locally)**
 
-![OpsTwin landing page: "Test an operating change before the queue feels it," with links to try the guided comparison or open the advanced workspace.](docs/assets/opstwin/01-landing.png)
+<img src="docs/assets/opstwin/01-landing.png" alt="OpsTwin landing page introducing a decision-first operational simulation experience" width="900" />
 
-## At a glance
+<sub>Real product screenshot · Next.js + FastAPI + SimPy · One deployed Vercel Services project</sub>
 
-| Field | Value |
-| --- | --- |
-| Product | Operational simulation and decision-support application |
-| Domain | Support and service operations |
-| Role | Product design, architecture, implementation and verification |
-| Status | Core product complete and deployed |
-| Frontend | Next.js, React, TypeScript |
-| Simulation | FastAPI, Python, SimPy |
-| Deployment | One Vercel Services project |
-| Live | `https://ops-twin.vercel.app` |
+</div>
 
-> The project was built through AI-assisted software development, while
-> product scope, architecture, acceptance criteria, verification and final
-> decisions remained human-directed.
+---
 
-OpsTwin is open source under the [MIT License](LICENSE).
+## From operational question to tested evidence
+
+**What if we added one support agent instead of accelerating triage?**
+
+OpsTwin models a support operation, runs a baseline alongside explicit changes under **matched simulated conditions**, and shows how the observed results differ. You can explore cycle time, SLA performance, queues, resource pressure, sensitivity, and costs — without presenting a simulated result as a guaranteed real-world outcome.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<strong>01 / Set up the comparison</strong><br/><br/>
+<img src="docs/assets/opstwin/02-guided-setup.png" alt="OpsTwin guided comparison setup with a baseline and two operational changes" width="100%" /><br/>
+<sub>Configure a baseline and two candidate changes using the guided workflow.</sub>
+</td>
+<td width="50%" valign="top">
+<strong>02 / Inspect the result</strong><br/><br/>
+<img src="docs/assets/opstwin/03-guided-result.png" alt="OpsTwin guided comparison result with paired changes and uncertainty" width="100%" /><br/>
+<sub>Compare observed improvement, paired-run outcomes, and uncertainty before diving deeper.</sub>
+</td>
+</tr>
+</table>
+
+| MODEL | COMPARE | VERIFY |
+|:--|:--|:--|
+| Explicit staffing, arrival, service-time and routing assumptions | Repeated baseline/scenario simulations sharing the same seed schedule | Contract checks, uncertainty ranges, evidence views and inspectable results |
+
+> **What OpsTwin is — and is not:** A deployed decision-support prototype using a bounded support-operations model, not a live operational optimizer. Results are comparative simulation evidence, **not causal proof, a forecast guarantee, or an automatic recommendation**. There are no customer accounts, database, or persistent user records.
+
+### Engineering at a glance
+
+| Layer | Implementation |
+|---|---|
+| **Web application** | Next.js, React, TypeScript; Guided and Advanced workspaces |
+| **Simulation service** | Python, FastAPI, Pydantic, SimPy discrete-event engine |
+| **Evaluation** | Common random numbers, repeated paired runs, confidence intervals and integrity validation |
+| **Deployment** | One Vercel Services project, shared domain and same-origin API routes |
+| **Verification** | Pytest, Vitest, TypeScript, ESLint, mypy and release evidence in [the public claim register](docs/PUBLIC_CLAIM_REGISTER.md) |
+
+Product architecture, acceptance criteria, testing, and final engineering decisions were human-directed, with AI-assisted implementation. OpsTwin is open source under the [MIT License](LICENSE).
+
+---
 
 ## The problem
 
