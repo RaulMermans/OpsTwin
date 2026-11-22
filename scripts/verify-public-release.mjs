@@ -133,7 +133,24 @@ function checkReadmeImagePaths() {
   for (const match of matches) {
     const imagePath = match[1];
     if (/^https?:\/\//.test(imagePath)) {
-      fail(`README.md image path is not relative: ${imagePath}`);
+      // Status badges are intentionally remote; product imagery must remain local.
+      let url;
+      try {
+        url = new URL(imagePath);
+      } catch {
+        fail(`README.md contains an invalid image URL: ${imagePath}`);
+        continue;
+      }
+      const approvedShieldsBadge = url.protocol === "https:" &&
+        url.hostname === "img.shields.io" && url.pathname.startsWith("/badge/");
+      const approvedOwnCiBadge = url.protocol === "https:" &&
+        url.hostname === "github.com" &&
+        url.pathname === "/RaulMermans/OpsTwin/actions/workflows/ci.yml/badge.svg";
+      if (approvedShieldsBadge || approvedOwnCiBadge) {
+        ok(`README approved external status badge: ${url.hostname}`);
+      } else {
+        fail(`README.md contains an unapproved external image: ${imagePath}`);
+      }
       continue;
     }
     try {
@@ -173,7 +190,16 @@ function checkLicenseWording() {
   const readme = readTracked("README.md") ?? "";
   const hasDisclosure = readme.includes("No software license has been granted yet");
   if (hasLicenseFile) {
-    fail("a LICENSE file exists but this sprint's process assumes none — re-check the license gate manually before shipping");
+    // The repository was subsequently released under MIT; verify the actual
+    // license and public disclosure instead of rejecting legitimate licensing.
+    const license = readTracked("LICENSE") ?? "";
+    if (!license.startsWith("MIT License") ||
+        !license.includes("Permission is hereby granted, free of charge") ||
+        !readme.includes("MIT License") || !readme.includes("](LICENSE)")) {
+      fail("LICENSE exists but MIT license text or README disclosure is inconsistent");
+    } else {
+      ok("LICENSE text and README agree on MIT licensing");
+    }
   } else if (!hasDisclosure) {
     fail("no LICENSE file exists, but README.md is missing the required no-license disclosure sentence");
   } else {
