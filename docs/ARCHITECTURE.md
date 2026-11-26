@@ -36,6 +36,8 @@ Economic sensitivity -> existing 0.6.0 sensitivity coordinator + per-run observe
 
 ## Current local architecture
 
+The Atlassian Forge application (`apps/atlassian-forge`) is an optional product surface for Codegeist. It depends on Core contracts and must not be imported by Core (ADR-023).
+
 The web app provides a landing page and a client-side Scenario Lab. A narrow TypeScript mapper creates approved model copies and guided identity overrides; session state manages stable scenario identities and invalidates stale evidence. A separate immutable workflow presentation adapter maps stable model IDs to deterministic frontend-only nodes, edges, terminals, resource links, changes, and evidence overlays. Presentation adapters format and organize runtime-checked, server-owned comparison evidence. Sanitized JSON/CSV and print output are browser-local. The Python application validates a collection-based operational model and creates an isolated seeded SimPy run context. Each emitted event updates a compact audit ledger and streaming observation collector; only requested evidence is retained. There is no database, worker, graph engine, or external service.
 
 ## Deployment architecture

@@ -25,7 +25,9 @@ OpsTwin is a digital twin-style environment for simulating business operations a
 - Every behavior change requires an executable verification path.
 - Do not build UI ahead of validated engine capabilities.
 
-See `docs/sprints/SPRINT_04_SCENARIO_COMPARISON.md`, `docs/SCENARIO_COMPARISON_SPEC.md`, and `docs/METRIC_DEFINITIONS.md` for current scope and semantics.
+See `docs/sprints/SPRINT_04_SCENARIO_COMPARISON.md`, `docs/SCENARIO_COMPARISON_SPEC.md`, and `docs/METRIC_DEFINITIONS.md` for Core simulation semantics.
+
+Atlassian/Codegeist work is an additional isolated track. Read `docs/codegeist/sprints/CG-00.md` and `docs/adrs/ADR-023-atlassian-application-isolation.md` before editing `apps/atlassian-forge/` or `docs/integrations/atlassian/`. OpsTwin Core must never import Forge or Atlassian modules. Do not register, deploy, or install a Forge app without owner authentication on `opstwin-dev.atlassian.net`.
 
 ## Context discipline
 
@@ -49,6 +51,9 @@ See `docs/sprints/SPRINT_04_SCENARIO_COMPARISON.md`, `docs/SCENARIO_COMPARISON_S
 - Test: `pnpm test`
 - Build: `pnpm build`
 - Full verification: `pnpm verify` (preferred) or `make verify`
+- Atlassian isolation: `pnpm verify:atlassian-isolation`
+- Forge foundation: `pnpm verify:forge`
+- Bootstrap Python must be 3.12 (`PYTHON=$(command -v python3.12) pnpm bootstrap`) when `python3` is 3.14+
 
 ## Definition of done
 

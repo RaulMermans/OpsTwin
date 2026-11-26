@@ -31,3 +31,6 @@ jobs:
 
       - name: Verify repository with analytical, repeated, and comparison smoke checks
         run: pnpm verify
+
+      - name: Verify isolated Forge foundation
+        run: pnpm verify:forge
