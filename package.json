@@ -31,7 +31,9 @@
     "test": "\"%npm_node_execpath%\" scripts/tasks.mjs test || node scripts/tasks.mjs test",
     "test:web": "\"%npm_node_execpath%\" scripts/tasks.mjs test:web || node scripts/tasks.mjs test:web",
     "build": "\"%npm_node_execpath%\" scripts/tasks.mjs build || node scripts/tasks.mjs build",
-    "verify": "\"%npm_node_execpath%\" scripts/tasks.mjs verify || node scripts/tasks.mjs verify"
+    "verify": "\"%npm_node_execpath%\" scripts/tasks.mjs verify || node scripts/tasks.mjs verify",
+    "verify:atlassian-isolation": "\"%npm_node_execpath%\" scripts/tasks.mjs verify:atlassian-isolation || node scripts/tasks.mjs verify:atlassian-isolation",
+    "verify:forge": "\"%npm_node_execpath%\" scripts/tasks.mjs verify:forge || node scripts/tasks.mjs verify:forge"
   },
   "devDependencies": {
     "vercel": "^56.2.0"

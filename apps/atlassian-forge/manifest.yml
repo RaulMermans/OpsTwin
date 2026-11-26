@@ -1,0 +1,32 @@
+modules:
+  jiraServiceManagement:queuePage:
+    - key: opstwin-ai-transformation-lab
+      resource: transformation-lab
+      resolver:
+        function: resolver
+      title: OpsTwin for Jira
+      layout: native
+  jira:projectPage:
+    - key: opstwin-ai-transformation-lab-project
+      resource: transformation-lab
+      resolver:
+        function: resolver
+      title: OpsTwin for Jira
+      layout: native
+  function:
+    - key: resolver
+      handler: index.handler
+
+resources:
+  - key: transformation-lab
+    path: static/transformation-lab/build
+
+app:
+  id: ari:cloud:ecosystem::app/73670daa-a329-4491-8a96-89bf239b203b
+  runtime:
+    name: nodejs22.x
+
+permissions:
+  scopes:
+    - read:jira-work
+    - read:servicedesk-request

@@ -1,5 +1,14 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-0 checkpoint — 2026-11-26
+
+- Desktop copy had no `.git`; restored from GitHub `master` `cf5a7eb57b13c83018757a522cfcad0117b207ea` (empty `diff -rq` vs clone). Local tag `cg0-pre-hackathon-baseline`. Branch `feat/codegeist-cg0-foundation` (not pushed).
+- `pnpm verify`: 247 pytest + 183 vitest, builds, smokes, source package, public-release, Atlassian isolation. `pnpm verify:forge`: 13 Node tests, Vite Custom UI build.
+- Forge CLI 15.1.0 present; `forge whoami` / `forge lint` / deploy / install **not logged in**. No invented registered app ID.
+- Official Forge skills + MCP config installed at project scope for Cursor and Claude. MCP tools not live in this agent session.
+- Isolated `apps/atlassian-forge` foundation + docs under `docs/integrations/atlassian/` and `docs/codegeist/`. ADR-023. Core contracts unchanged.
+- Live Jira API and hosted Forge Remote remain blocked on owner `forge login`.
+
 ## Active milestone
 
 Sprint 07 controlled workflow visualization is implemented locally over the unchanged operational `0.2.0` and comparison `0.5.0` contracts. Sprint 06.1 recovered source-level evidence but the managed environment still blocks frontend test startup, completed builds, local runtime, and browser QA.

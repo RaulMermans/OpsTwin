@@ -44,8 +44,8 @@ actually been verified, not what would merely be convenient to say.
 | The canonical model covers support operations, not arbitrary workflows | Known limitation | `docs/SCENARIO_LAB_SPEC.md` deferred-scope list; `docs/PROJECT_BRIEF.md` |
 | No real-company operational outcome has been measured | Known limitation | No such evidence exists anywhere in the repository; absence confirmed by audit |
 | Development was AI-assisted with human-directed scope, architecture, and acceptance criteria | Owner statement | Author statement; cross-checked against this repository's own sprint/ADR discipline (every behavior change requires an executable verification path, per `CLAUDE.md`) |
-| The project is open source | Unsupported | No `LICENSE` file exists in the repository (confirmed by audit); must not be claimed until an owner selects and adds a license |
-| The repository is public | Unsupported | Repository visibility remains private as of this sprint; owner decision pending |
+| The project is open source | Source verified | `LICENSE` is MIT (Copyright 2026 Raul Mermans); GitHub `licenseInfo.key` is `mit` as of 2026-11-26 |
+| The repository is public | Command verified | `gh repo view RaulMermans/OpsTwin --json isPrivate` → `false` (2026-11-26) |
 
 ## Process note
 

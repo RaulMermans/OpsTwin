@@ -25,7 +25,7 @@ for `.env`, build artifacts, and virtual environments.
 | README stated Vercel deployment as "proposed" with "no Vercel project linked" | **Fixed this sprint** | Was stale against the live Sprint 11 production deployment; corrected in the README rewrite |
 | `docs/ARCHITECTURE.md` stated "ADR-014 remains proposed" | **Fixed this sprint** | ADR-014 was accepted 2026-07-20; corrected in place |
 | License | MIT (`LICENSE`) | Resolved |
-| Repository visibility | Requires owner decision | See Visibility gate below |
+| Repository visibility | Public | Confirmed 2026-11-26 via `gh repo view` (`isPrivate: false`) |
 
 ## Code
 

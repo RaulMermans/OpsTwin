@@ -19,7 +19,9 @@
 - Sprint 11: Vercel production recovery and flagship verification (deployed; production live at `https://ops-twin.vercel.app`, ADR-014 accepted 2026-07-20)
 - Sprint 12: first-time usability and guided decision flow (implemented locally; participant study pending)
 - Sprint 12.1: guided usability closure (deployed to production 2026-07-21; four Sprint 12 defects closed, no human-participant study yet)
-- Sprint 13: public release, case-study README, and portfolio handoff (documentation and release-readiness only; repository remains private, no license selected, no release tag)
+- Sprint 13: public release, case-study README, and portfolio handoff (documentation sprint; repository is now public under MIT as of later 2026 commits — see LICENSE and GitHub)
+- Sprint 14 / 15 / 15.1: presentation and process closure records exist under `docs/sprints/`
+- Codegeist CG-0 (2026-11-26): isolated Forge foundation for OpsTwin for Jira; see `docs/codegeist/ROADMAP.md`. Does not replace Core product sprints.
 - Future: topology editing only after validation, persistence, and multi-template layout requirements justify a separate product boundary
 - Future: multi-run animated aggregate visualization remains distinct from single-representative playback and is not planned
 - Future: multi-factor experimentation only after OFAT evidence and asynchronous capacity justify it

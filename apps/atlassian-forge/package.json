@@ -1,0 +1,18 @@
+{
+  "name": "@opstwin/atlassian-forge",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "OpsTwin for Jira — Forge application layer (CG-0 foundation)",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "npm --prefix static/transformation-lab run build",
+    "test": "node --test src/remote/fit.test.js src/jira/classify-response.test.js src/manifest.test.js src/isolation.test.js",
+    "lint:manifest": "node src/manifest.test.js"
+  },
+  "dependencies": {
+    "@forge/api": "^8.5.1",
+    "@forge/resolver": "^2.0.2",
+    "jose": "^6.1.0"
+  }
+}

@@ -1,0 +1,23 @@
+# Data contract (CG-0)
+
+Integration data is **not** a Core schema change. Until a versioned JSON Schema is added in CG-2, the adapter must emit the existing operational model `0.2.0` and comparison request `0.5.0`.
+
+## Mapping intent
+
+| JSM observation | Core field | Status |
+|---|---|---|
+| Project key / name | provenance only, not simulated | observe |
+| Request type counts | source mix / arrival process | derive or assume |
+| Created timestamps | arrival process | derive |
+| Status changelog | stage occupancy proxy | derive with bias |
+| Assignee / team size | `resourcePools[].capacity` | derive or assume |
+| SLA goals / cycles | `slaRules.targetDuration` | observe / calendar mismatch |
+| Worklogs | handling time | observe if present, else unknown |
+| Resolution + reopen | rework / failure probability | derive |
+| Issue summary/description | **do not persist or forward** | privacy |
+
+## Forbidden
+
+- Inferring Core metrics inside Forge without running the engine
+- LLM-generated numeric model parameters
+- Silent topology edits (new stages/routes) — rejected by existing materializer

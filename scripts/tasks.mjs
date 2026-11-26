@@ -144,6 +144,18 @@ const tasks = {
   "verify:public-release"() {
     run(nodeExecutable(), ["scripts/verify-public-release.mjs"]);
   },
+  "verify:atlassian-isolation"() {
+    run(nodeExecutable(), ["scripts/verify-atlassian-isolation.mjs"]);
+  },
+  "verify:forge"() {
+    const forgeRoot = resolve(root, "apps", "atlassian-forge");
+    const uiRoot = resolve(forgeRoot, "static", "transformation-lab");
+    tasks["verify:atlassian-isolation"]();
+    run("npm", ["install"], forgeRoot);
+    run("npm", ["install"], uiRoot);
+    run("npm", ["test"], forgeRoot);
+    run("npm", ["run", "build"], forgeRoot);
+  },
   lint() {
     requireEnvironment();
     run(python, ["-m", "ruff", "check", "apps/simulation-api"]);
@@ -184,6 +196,7 @@ const tasks = {
     tasks["package:source"]();
     tasks["verify:source-package"]();
     tasks["verify:public-release"]();
+    tasks["verify:atlassian-isolation"]();
   },
 };
 

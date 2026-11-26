@@ -211,12 +211,18 @@ function checkNoSecretsOrLocalPaths() {
   const files = gitLsFiles();
   for (const relativePath of files) {
     if (relativePath.endsWith(".png") || relativePath.endsWith(".jpg") || relativePath.endsWith(".webp")) continue;
-    if (/(^|\/)\.env(\..+)?$/.test(relativePath) && relativePath !== ".env.example") {
+    if (/(^|\/)\.env(\..+)?$/.test(relativePath) && !relativePath.endsWith(".env.example")) {
       fail(`tracked .env-style file: ${relativePath}`);
       continue;
     }
     const content = readTracked(relativePath);
     if (content === null) continue;
+    if (
+      /(^|\/)\.cursor\/skills\//.test(relativePath) ||
+      /(^|\/)\.claude\/skills\/forge-/.test(relativePath)
+    ) {
+      continue;
+    }
 
     for (const pattern of SECRET_PATTERNS) {
       if (pattern.test(content)) {

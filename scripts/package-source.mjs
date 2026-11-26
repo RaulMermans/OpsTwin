@@ -36,6 +36,10 @@ const FORBIDDEN_PATTERNS = [
   /(^|\/)pytest-of-[^/]+\//,
   /(^|\/)build-env-[^/]+\//,
 ];
+const SKIP_PATTERNS = [
+  /(^|\/)\.cursor\/skills\//,
+  /(^|\/)\.claude\/skills\/forge-/,
+];
 
 function isForbidden(relativePath) {
   const segments = relativePath.split("/");
@@ -61,6 +65,11 @@ function main() {
   let uncompressedBytes = 0;
 
   for (const relativePath of candidates) {
+    if (SKIP_PATTERNS.some((pattern) => pattern.test(relativePath))) {
+      const category = "forge-vendor-skills";
+      excludedByCategory[category] = (excludedByCategory[category] ?? 0) + 1;
+      continue;
+    }
     if (isForbidden(relativePath)) {
       const category = relativePath.split("/")[0];
       excludedByCategory[category] = (excludedByCategory[category] ?? 0) + 1;
