@@ -10,15 +10,15 @@ def test_golden_parameter_recovery_and_noisy_refusal() -> None:
     recovered = evaluate_profile("cg3-golden-analytical", 21)
     assert recovered["arrivalEstimate"] is not None
     assert recovered["arrivalRelativeError"] is not None
-    assert recovered["arrivalRelativeError"] < 0.4
-    assert recovered["readiness"] in {
-        "validated_for_defined_scope",
-        "model_constructed",
-        "validation_failed",
-    }
+    assert recovered["arrivalRelativeError"] < 0.25
+    assert recovered["arrivalRecovered"] is True
+    assert recovered["constructionCorrect"] is True
+    assert recovered["readiness"] in {"model_constructed", "validation_failed"}
+    assert recovered["naiveLabel"] == "estimated_arrivals_default_service_capacity"
     refused = evaluate_profile("cg3-noisy", 21)
-    assert refused["failureClass"] in {"insufficient_evidence", "unsupported_topology"}
+    assert refused["failureClass"] == "insufficient_evidence"
     assert refused["readiness"] == "insufficient_evidence"
+    assert refused["falseConfidence"] is False
 
 
 def test_partial_requires_assumptions_without_approval() -> None:

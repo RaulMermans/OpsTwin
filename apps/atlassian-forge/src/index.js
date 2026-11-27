@@ -299,7 +299,7 @@ resolver.define("runSyntheticCalibration", async (request) => {
   const body = {
     contractVersion: "cg3.v1",
     fixtureId: payload.fixtureId === "cg3-partially-observable" ? "cg3-partially-observable" : "cg3-golden-analytical",
-    approveLabAssumptions: payload.approveLabAssumptions !== false,
+    approveLabAssumptions: payload.approveLabAssumptions === true,
     randomSeed: payload.randomSeed ?? 20260327,
   };
   let remote;

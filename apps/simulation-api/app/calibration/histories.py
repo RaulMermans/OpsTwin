@@ -4,7 +4,7 @@ import random
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from app.calibration.snapshot import content_fingerprint, minutes_between
+from app.calibration.snapshot import content_fingerprint, minutes_between, parse_utc
 
 ProfileId = Literal[
     "golden",
@@ -59,13 +59,17 @@ def _interval(
     end: datetime | None,
     complete: bool,
 ) -> dict[str, Any]:
-    duration = minutes_between(start, end) if end is not None else None
+    start_at = _iso(start)
+    end_at = _iso(end) if end is not None else None
+    begin = parse_utc(start_at)
+    finish = parse_utc(end_at) if end_at else None
+    duration = minutes_between(begin, finish) if begin is not None and finish is not None else None
     return {
         "intervalId": interval_id,
         "caseId": case_id,
         "intervalType": interval_type,
-        "startAt": _iso(start),
-        "endAt": _iso(end) if end is not None else None,
+        "startAt": start_at,
+        "endAt": end_at,
         "durationMinutes": duration,
         "censoring": "none" if complete else "right",
         "complete": complete,

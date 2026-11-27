@@ -63,7 +63,12 @@ def test_compare_still_rejects_operational_snapshots(authorized: None, monkeypat
 def test_synthetic_fixture_calibration_is_labeled(authorized: None) -> None:
     response = TestClient(app).post(
         PATH,
-        json={"contractVersion": "cg3.v1", "fixtureId": "cg3-golden-analytical", "randomSeed": 21},
+        json={
+            "contractVersion": "cg3.v1",
+            "fixtureId": "cg3-golden-analytical",
+            "randomSeed": 21,
+            "approveLabAssumptions": True,
+        },
     )
     assert response.status_code == 200
     body = response.json()
@@ -71,6 +76,17 @@ def test_synthetic_fixture_calibration_is_labeled(authorized: None) -> None:
     assert "not this jira" in body["disclosure"].lower()
     assert body["fixtureId"] == "cg3-golden-analytical"
     assert "authorization" not in json_text(body)
+    assert body["schemaVersion"] == "cal.1.0.0"
+
+
+def test_remote_does_not_approve_synthetic_assumptions_by_default(authorized: None) -> None:
+    response = TestClient(app).post(
+        PATH,
+        json={"contractVersion": "cg3.v1", "fixtureId": "cg3-partially-observable", "randomSeed": 21},  # noqa: E501
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["readinessStatus"] == "assumptions_required"
 
 
 def json_text(value: object) -> str:

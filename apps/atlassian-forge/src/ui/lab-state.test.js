@@ -21,6 +21,8 @@ test("failed imports do not keep the previous snapshot as current", () => {
 test("calibration payloads are fixture identifiers only", () => {
   const payload = calibrationPayload("cg3-golden-analytical", true);
   assert.equal(payload.fixtureId, "cg3-golden-analytical");
+  assert.equal(payload.approveLabAssumptions, true);
+  assert.equal(calibrationPayload("cg3-golden-analytical").approveLabAssumptions, false);
   assert.equal("snapshot" in payload, false);
   assert.equal("projectKey" in payload, false);
   const stale = afterCalibrationChange({ evidence: { readinessStatus: "validated_for_defined_scope" }, status: "completed" });

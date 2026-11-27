@@ -56,7 +56,7 @@ export function metricById(snapshot, metricId) {
   return snapshot?.descriptiveEvidence?.find((item) => item.metricId === metricId) ?? null;
 }
 
-export function calibrationPayload(fixtureId, approveLabAssumptions = true) {
+export function calibrationPayload(fixtureId, approveLabAssumptions = false) {
   return {
     fixtureId,
     approveLabAssumptions,

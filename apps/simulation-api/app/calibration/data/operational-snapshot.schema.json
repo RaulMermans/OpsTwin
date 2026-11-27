@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opstwin.local/contracts/operational-snapshot.schema.json",
+  "title": "OpsTwin operational snapshot os.1.0.0",
+  "description": "Versioned observed operational evidence. Not a simulation model and not a calibration result.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "connectorVersion",
+    "sourceSystem",
+    "sourceProject",
+    "observationWindow",
+    "importTimestamp",
+    "importConfiguration",
+    "cases",
+    "events",
+    "statuses",
+    "requestTypes",
+    "intervals",
+    "descriptiveEvidence",
+    "dataQuality",
+    "completenessStatus",
+    "readiness",
+    "provenance",
+    "contentFingerprint"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "os.1.0.0" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "connectorVersion": { "type": "string", "minLength": 1 },
+    "sourceSystem": { "type": "string", "minLength": 1 },
+    "sourceProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "key", "name"],
+      "properties": {
+        "reference": { "type": "string", "minLength": 1 },
+        "key": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "serviceDeskId": { "type": ["string", "null"] }
+      }
+    },
+    "authorizedInstallationRef": { "type": ["string", "null"] },
+    "observationWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "convention"],
+      "properties": {
+        "start": { "type": "string", "minLength": 1 },
+        "end": { "type": "string", "minLength": 1 },
+        "convention": { "const": "closed-start-open-end-utc" }
+      }
+    },
+    "importTimestamp": { "type": "string", "minLength": 1 },
+    "importStartedAt": { "type": ["string", "null"] },
+    "importCompletedAt": { "type": ["string", "null"] },
+    "importConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowDays", "recordLimit", "pageLimit", "cohortPolicy", "includeWorklogs", "includeSla"],
+      "properties": {
+        "windowDays": { "type": "integer", "enum": [30, 60, 90] },
+        "recordLimit": { "type": "integer", "minimum": 1 },
+        "pageLimit": { "type": "integer", "minimum": 1 },
+        "cohortPolicy": { "const": "open-during-window" },
+        "includeWorklogs": { "type": "boolean" },
+        "includeSla": { "type": "boolean" }
+      }
+    },
+    "cases": { "type": "array", "items": { "$ref": "#/$defs/operationalCase" } },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/operationalEvent" } },
+    "statuses": { "type": "array", "items": { "$ref": "#/$defs/operationalStatus" } },
+    "requestTypes": { "type": "array", "items": { "$ref": "#/$defs/requestType" } },
+    "intervals": { "type": "array", "items": { "$ref": "#/$defs/operationalInterval" } },
+    "descriptiveEvidence": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
+    "dataQuality": { "type": "array", "items": { "$ref": "#/$defs/qualityResult" } },
+    "completenessStatus": { "type": "string", "enum": ["complete", "partial", "empty", "invalid"] },
+    "readiness": {
+      "type": "string",
+      "enum": ["valid", "partial", "invalid", "insufficient_for_calibration", "potentially_suitable_for_calibration_assessment"]
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "contentFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "limitations": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "extraction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "truncatedReason", "pageCount", "retryCount", "inconsistentSource"],
+      "properties": {
+        "complete": { "type": "boolean" },
+        "truncatedReason": { "type": ["string", "null"] },
+        "pageCount": { "type": "integer", "minimum": 0 },
+        "retryCount": { "type": "integer", "minimum": 0 },
+        "inconsistentSource": { "type": "boolean" },
+        "worklogCapability": { "type": "string", "enum": ["retrieved", "unavailable", "forbidden", "not_requested"] },
+        "slaCapability": { "type": "string", "enum": ["retrieved", "unavailable", "forbidden", "not_requested"] },
+        "changelogCapability": { "type": "string", "enum": ["retrieved", "unavailable", "forbidden", "partial"] },
+        "searchCompleteness": { "type": ["string", "null"] },
+        "changelogCompleteness": { "type": ["string", "null"] },
+        "requestTypeCompleteness": { "type": ["string", "null"] },
+        "worklogCompleteness": { "type": ["string", "null"] },
+        "slaCompleteness": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceSystem", "evidenceClass", "transformationVersion"],
+      "properties": {
+        "sourceSystem": { "type": "string", "minLength": 1 },
+        "sourceProject": { "type": ["string", "null"] },
+        "sourceEndpoint": { "type": ["string", "null"] },
+        "extractionTimestamp": { "type": ["string", "null"] },
+        "sourceRecordReference": { "type": ["string", "null"] },
+        "transformationVersion": { "type": "string", "minLength": 1 },
+        "evidenceClass": { "type": "string", "enum": ["observed", "derived", "assumed", "synthetic", "unknown"] },
+        "observationWindow": { "type": ["string", "null"] },
+        "derivationMethod": { "type": ["string", "null"] },
+        "transportAuthenticity": { "type": "string", "enum": ["live_api", "offline_fixture", "unknown"] }
+      }
+    },
+    "operationalCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "caseId",
+        "sourceReference",
+        "sourceSystem",
+        "projectReference",
+        "requestTypeReference",
+        "priorityReference",
+        "createdAt",
+        "resolvedAt",
+        "currentStatusReference",
+        "observationStatus",
+        "lifecycleCompleteness",
+        "provenance"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "os.1.0.0" },
+        "caseId": { "type": "string", "minLength": 1 },
+        "sourceReference": { "type": "string", "minLength": 1 },
+        "sourceSystem": { "type": "string", "minLength": 1 },
+        "projectReference": { "type": "string", "minLength": 1 },
+        "requestTypeReference": { "type": ["string", "null"] },
+        "priorityReference": { "type": ["string", "null"] },
+        "createdAt": { "type": ["string", "null"] },
+        "resolvedAt": { "type": ["string", "null"] },
+        "currentStatusReference": { "type": ["string", "null"] },
+        "observationStatus": { "type": "string", "enum": ["open", "resolved", "reopened", "unknown"] },
+        "lifecycleCompleteness": { "type": "string", "enum": ["complete", "incomplete", "unknown"] },
+        "assigneeReference": { "type": ["string", "null"] },
+        "updatedAt": { "type": ["string", "null"] },
+        "createdAtInvalid": { "type": "boolean" },
+        "syntheticOrigin": { "type": "boolean" },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "operationalEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventId",
+        "caseId",
+        "eventType",
+        "occurredAt",
+        "observedAt",
+        "previousValue",
+        "newValue",
+        "sourceReference",
+        "provenance"
+      ],
+      "properties": {
+        "eventId": { "type": "string", "minLength": 1 },
+        "caseId": { "type": "string", "minLength": 1 },
+        "eventType": {
+          "type": "string",
+          "enum": [
+            "case_created",
+            "status_changed",
+            "assigned",
+            "reassigned",
+            "priority_changed",
+            "resolved",
+            "reopened",
+            "worklog_recorded",
+            "sla_cycle_observed"
+          ]
+        },
+        "occurredAt": { "type": ["string", "null"] },
+        "observedAt": { "type": ["string", "null"] },
+        "previousValue": { "type": ["string", "null"] },
+        "newValue": { "type": ["string", "null"] },
+        "sourceReference": { "type": "string", "minLength": 1 },
+        "durationMinutes": { "type": ["number", "null"] },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "operationalStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statusId", "displayName", "sourceCategory", "operationalClass", "mappingStatus", "classificationProvenance"],
+      "properties": {
+        "statusId": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string", "minLength": 1 },
+        "sourceCategory": { "type": ["string", "null"] },
+        "operationalClass": { "const": "unresolved" },
+        "mappingStatus": { "type": "string", "enum": ["unresolved", "explicit"] },
+        "classificationProvenance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "requestType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestTypeId", "name"],
+      "properties": {
+        "requestTypeId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "operationalInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intervalId", "caseId", "intervalType", "startAt", "endAt", "durationMinutes", "censoring", "complete"],
+      "properties": {
+        "intervalId": { "type": "string", "minLength": 1 },
+        "caseId": { "type": "string", "minLength": 1 },
+        "intervalType": {
+          "type": "string",
+          "enum": ["status_residence", "elapsed_lifetime", "recorded_work", "sla_elapsed", "unknown"]
+        },
+        "startAt": { "type": ["string", "null"] },
+        "endAt": { "type": ["string", "null"] },
+        "durationMinutes": { "type": ["number", "null"] },
+        "censoring": { "type": "string", "enum": ["none", "left", "right", "both", "unknown"] },
+        "complete": { "type": "boolean" },
+        "statusReference": { "type": ["string", "null"] }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metricId",
+        "definition",
+        "value",
+        "unit",
+        "population",
+        "sampleSize",
+        "observationWindow",
+        "excludedRecords",
+        "coverage",
+        "provenance",
+        "interpretationLimitations"
+      ],
+      "properties": {
+        "metricId": { "type": "string", "minLength": 1 },
+        "definition": { "type": "string", "minLength": 1 },
+        "value": {},
+        "unit": { "type": "string", "minLength": 1 },
+        "population": { "type": "string", "minLength": 1 },
+        "sampleSize": { "type": "integer", "minimum": 0 },
+        "observationWindow": { "type": "string", "minLength": 1 },
+        "excludedRecords": { "type": "integer", "minimum": 0 },
+        "coverage": { "type": ["number", "null"] },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "interpretationLimitations": { "type": "string", "minLength": 1 }
+      }
+    },
+    "qualityResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metricId",
+        "definition",
+        "numerator",
+        "denominator",
+        "value",
+        "status",
+        "explanation",
+        "consequence",
+        "recommendedNextAction"
+      ],
+      "properties": {
+        "metricId": { "type": "string", "minLength": 1 },
+        "definition": { "type": "string", "minLength": 1 },
+        "numerator": { "type": ["number", "null"] },
+        "denominator": { "type": ["number", "null"] },
+        "value": { "type": ["number", "null"] },
+        "status": { "type": "string", "enum": ["pass", "warning", "fail", "unknown", "not_applicable"] },
+        "explanation": { "type": "string", "minLength": 1 },
+        "consequence": { "type": "string", "minLength": 1 },
+        "recommendedNextAction": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -5,6 +5,8 @@ checkpoints recorded in `SCRATCHPAD.md` and `docs/sprints/`.
 
 ## Unreleased
 
+Codegeist CG-3.1: scientific integrity of calibration — estimated parameters bind the executed model, worklogs require attribution, snapshot schema+semantics at the calibration boundary, time-based holdout without leakage, matching metric populations, empty-system backlog incompatibility, bounded replication, distinct model/content/execution identities, and a revealing multi-seed benchmark. Live operational calibration is not claimed.
+
 Codegeist CG-3: platform-independent calibration (`cal.1.0.0`) from operational snapshots to Core `0.2.0` models, identifiability and assumption gates, generative holdout, synthetic fixture remote at `POST /api/integrations/atlassian/v1/calibrate`. Compare remains synthetic-only. Live Jira snapshots are not calibrated remotely.
 
 Codegeist CG-2: versioned operational snapshot `os.1.0.0`, Jira/JSM bounded ingest with provenance and data quality, seeded synthetic lab, and an Operational Data section in the Forge Custom UI. Snapshots are not sent to the simulation remote. Public `/api/simulation/*` contracts are unchanged.

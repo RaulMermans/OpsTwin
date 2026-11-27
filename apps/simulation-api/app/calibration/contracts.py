@@ -7,9 +7,29 @@ from pydantic import Field
 from app.domain.models import ContractModel, OperationalModel
 
 SCHEMA_VERSION = "cal.1.0.0"
-ENGINE_VERSION = "cg3.cal.1"
+ENGINE_VERSION = "cg3.1.cal.1"
 TEMPLATE_ID = "support-triage-resolution.1"
 MAPPING_VERSION = "status-role.1"
+
+MATERIAL_PARAMETERS = frozenset(
+    {
+        "arrival.mean_interarrival_time",
+        "triage.processing_time.mean",
+        "resolution.processing_time.mean",
+        "resource.triage-team.capacity",
+        "resource.resolution-team.capacity",
+        "routing.triage_to_resolution",
+    }
+)
+KNOWN_ASSUMPTION_IDS = frozenset(
+    {
+        "triage.processing_time.mean",
+        "resolution.processing_time.mean",
+        "resource.triage-team.capacity",
+        "resource.resolution-team.capacity",
+        "worklog.completeness",
+    }
+)
 
 EvidenceClass = Literal["observed", "derived", "assumed", "synthetic", "unknown"]
 IdentifiabilityStatus = Literal[
@@ -48,6 +68,7 @@ FailureClass = Literal[
     "historical_validation_failure",
     "authorization_failure",
     "integration_failure",
+    "unsupported_parameter",
 ]
 
 
@@ -58,7 +79,12 @@ class ObservationWindow(ContractModel):
 
 
 class UncertaintyInterval(ContractModel):
-    kind: Literal["poisson_rate_normal", "sample_sd", "assumption_range"]
+    kind: Literal[
+        "poisson_rate_normal",
+        "sample_mean_t",
+        "assumption_range",
+        "heuristic_sensitivity_range",
+    ]
     lower: float
     upper: float
     unit: str
@@ -80,6 +106,10 @@ class ParameterEstimate(ContractModel):
     assumptions: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     validation_status: Literal["not_validated", "included_in_holdout", "excluded"] = "not_validated"
+    consumed_by_model: bool = True
+    origin: Literal["empirical_estimate", "approved_assumption", "structural_constraint", "diagnostic_only"] = (  # noqa: E501
+        "empirical_estimate"
+    )
 
 
 class AssumptionRecord(ContractModel):
@@ -127,11 +157,13 @@ class ValidationThresholds(ContractModel):
     throughput_relative: float = Field(default=0.15, gt=0)
     cycle_time_median_relative: float = Field(default=0.20, gt=0)
     cycle_time_p90_relative: float = Field(default=0.25, gt=0)
+    min_cycle_sample_median: int = Field(default=10, ge=1)
+    min_cycle_sample_p90: int = Field(default=20, ge=1)
 
 
 class ExecutionBudget(ContractModel):
     max_items: int = Field(default=200, ge=1, le=500)
-    max_replications: int = Field(default=1, ge=1, le=8)
+    max_replications: int = Field(default=3, ge=1, le=8)
 
 
 class CalibrationRequest(ContractModel):
@@ -175,6 +207,12 @@ class CalibrationValidationReport(ContractModel):
     excluded_targets: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     adequacy: str
+    validation_class: str = "empty_system_generative"
+    replication_count: int = 1
+    requested_replications: int = 1
+    excluded_replications: int = 0
+    simulation_seeds: list[int] = Field(default_factory=list)
+    arrivals_truncated: bool = False
 
 
 class CalibrationDiagnostics(ContractModel):
@@ -182,7 +220,11 @@ class CalibrationDiagnostics(ContractModel):
     weekday_concentration: float | None = None
     homogeneous_poisson_adequate: bool | None = None
     initial_backlog_at_holdout: int = 0
+    unknown_backlog_at_holdout: int = 0
     worklog_overlap_count: int = 0
+    worklog_unattributed_count: int = 0
+    worklog_duplicate_count: int = 0
+    worklog_invalid_count: int = 0
     censored_duration_excluded: int = 0
     unsupported_transitions: list[str] = Field(default_factory=list)
     unmapped_statuses: list[str] = Field(default_factory=list)
@@ -197,13 +239,18 @@ class ExecutionMetadata(ContractModel):
     validation_ms: float = 0
     total_ms: float = 0
     replication_count: int = 1
+    requested_replications: int = 1
+    excluded_replications: int = 0
     item_count: int = 0
+    fixture_seed: int = 0
+    simulation_seeds: list[int] = Field(default_factory=list)
+    arrivals_truncated: bool = False
 
 
 class CalibrationArtifact(ContractModel):
     calibration_id: str
     schema_version: Literal["cal.1.0.0"] = "cal.1.0.0"
-    engine_version: Literal["cg3.cal.1"] = "cg3.cal.1"
+    engine_version: Literal["cg3.1.cal.1"] = "cg3.1.cal.1"
     source_snapshot_fingerprint: str
     model_template_version: str
     mapping_version: str
@@ -211,6 +258,7 @@ class CalibrationArtifact(ContractModel):
     assumptions: list[AssumptionRecord]
     constructed_model: OperationalModel | None = None
     model_fingerprint: str | None = None
+    execution_identity: str | None = None
     training_configuration: dict[str, Any]
     validation_configuration: dict[str, Any]
     diagnostics: CalibrationDiagnostics

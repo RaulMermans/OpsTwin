@@ -1,0 +1,356 @@
+{
+  "integer_and_float": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Fingerprint"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": true,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "retrieved",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"caseId": "c1", "count": 1, "rate": 1.5, "whole": 2.0}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": [{"metricId": "n", "value": 1.0, "status": "pass", "numerator": 1, "denominator": 1}]
+  },
+  "unicode": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "café 日本語"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"caseId": "c-ü", "summary": "naïve"}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "nested_a": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Nested", "extra": {"b": 2, "a": 1}},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"z": 1, "a": {"y": 2, "x": 3}}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "nested_b": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "name": "Nested", "key": "FP", "extra": {"a": 1, "b": 2}},
+    "observationWindow": {
+      "convention": "closed-start-open-end-utc",
+      "end": "2026-01-02T00:00:00.000Z",
+      "start": "2026-01-01T00:00:00.000Z"
+    },
+    "importConfiguration": {
+      "includeSla": false,
+      "includeWorklogs": false,
+      "cohortPolicy": "open-during-window",
+      "pageLimit": 8,
+      "recordLimit": 40,
+      "windowDays": 30
+    },
+    "provenance": {"evidenceClass": "synthetic"},
+    "extraction": {
+      "changelogCompleteness": "complete",
+      "searchCompleteness": "complete",
+      "slaCapability": "not_requested",
+      "worklogCapability": "not_requested",
+      "changelogCapability": "retrieved",
+      "truncatedReason": null,
+      "complete": true
+    },
+    "cases": [{"a": {"x": 3, "y": 2}, "z": 1}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "volatile_a": {
+    "schemaVersion": "os.1.0.0",
+    "snapshotId": "snap-1",
+    "importTimestamp": "2026-01-02T00:00:00.000Z",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Vol"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic", "extractionTimestamp": "2026-01-02T00:00:00.000Z"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"caseId": "c1", "observedAt": "2026-01-01T01:00:00.000Z"}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "volatile_b": {
+    "schemaVersion": "os.1.0.0",
+    "snapshotId": "snap-2",
+    "importTimestamp": "2099-01-01T00:00:00.000Z",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Vol"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic", "extractionTimestamp": "2099-01-01T00:00:00.000Z"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"caseId": "c1", "observedAt": "2099-01-01T01:00:00.000Z"}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "completeness_complete": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Comp"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"caseId": "c1"}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "completeness_partial": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Comp"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic"},
+    "extraction": {
+      "complete": false,
+      "truncatedReason": "incomplete_changelog",
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "incomplete"
+    },
+    "cases": [{"caseId": "c1"}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "origin_synthetic": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Origin"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "synthetic"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"caseId": "c1"}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  },
+  "origin_observed": {
+    "schemaVersion": "os.1.0.0",
+    "connectorVersion": "fp.1",
+    "sourceSystem": "lab",
+    "sourceProject": {"reference": "lab:fp", "key": "FP", "name": "Origin"},
+    "observationWindow": {
+      "start": "2026-01-01T00:00:00.000Z",
+      "end": "2026-01-02T00:00:00.000Z",
+      "convention": "closed-start-open-end-utc"
+    },
+    "importConfiguration": {
+      "windowDays": 30,
+      "recordLimit": 40,
+      "pageLimit": 8,
+      "cohortPolicy": "open-during-window",
+      "includeWorklogs": false,
+      "includeSla": false
+    },
+    "provenance": {"evidenceClass": "observed"},
+    "extraction": {
+      "complete": true,
+      "truncatedReason": null,
+      "changelogCapability": "retrieved",
+      "worklogCapability": "not_requested",
+      "slaCapability": "not_requested",
+      "searchCompleteness": "complete",
+      "changelogCompleteness": "complete"
+    },
+    "cases": [{"caseId": "c1"}],
+    "events": [],
+    "statuses": [],
+    "requestTypes": [],
+    "intervals": [],
+    "dataQuality": []
+  }
+}

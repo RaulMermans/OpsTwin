@@ -39,15 +39,42 @@ def mapping_index(mapping: OperationalMapping) -> dict[str, StatusMapping]:
 
 
 def validate_mapping(snapshot: dict[str, Any], mapping: OperationalMapping) -> dict[str, Any]:
-    index = mapping_index(mapping)
+    seen: dict[str, StatusMapping] = {}
+    for item in mapping.statuses:
+        if item.status_id in seen:
+            raise MappingError(
+                "unsupported_topology",
+                "Duplicate or contradictory status mappings are not allowed.",
+                {"statusId": item.status_id},
+            )
+        seen[item.status_id] = item
+        if item.role == "processing":
+            if item.stage_id not in PROCESSING_STAGES:
+                raise MappingError(
+                    "unsupported_topology",
+                    "Processing statuses require an explicit triage or resolution stage identifier.",  # noqa: E501
+                    {"statusId": item.status_id, "stageId": item.stage_id},
+                )
+            if not item.reviewed:
+                raise MappingError(
+                    "mapping_required",
+                    "Material processing-stage mappings require explicit review.",
+                    {"statusId": item.status_id},
+                )
+        elif item.stage_id is not None:
+            raise MappingError(
+                "unsupported_topology",
+                "Non-processing statuses cannot carry a processing-stage identifier.",
+                {"statusId": item.status_id},
+            )
     relevant = relevant_status_ids(snapshot)
-    unmapped = sorted(status_id for status_id in relevant if status_id not in index)
+    unmapped = sorted(status_id for status_id in relevant if status_id not in seen)
     unknown = sorted(
         status_id
-        for status_id, item in index.items()
+        for status_id, item in seen.items()
         if status_id in relevant and item.role == "unknown"
     )
-    roles = {item.role for item in index.values() if item.status_id in relevant or not relevant}
+    roles = {item.role for item in seen.values() if item.status_id in relevant or not relevant}
     missing_roles = [role for role in REQUIRED_ROLES if role not in roles]
     processing = [item for item in mapping.statuses if item.role == "processing"]
     if unmapped or unknown:
@@ -62,18 +89,26 @@ def validate_mapping(snapshot: dict[str, Any], mapping: OperationalMapping) -> d
             "The supported template requires queue, processing, and completed roles.",
             {"missingRoles": missing_roles},
         )
+    if any(item.role == "review" and item.status_id in relevant for item in mapping.statuses):
+        raise MappingError(
+            "unsupported_topology",
+            "Review paths are not representable by support-triage-resolution.",
+            {"review": [item.status_id for item in mapping.statuses if item.role == "review"]},
+        )
+    stage_ids = [item.stage_id for item in processing]
     if len(processing) > 2:
         raise MappingError(
             "unsupported_topology",
             "More than two processing statuses cannot be represented by support-triage-resolution.",
             {"processing": [item.status_id for item in processing]},
         )
-    if any(item.role == "processing" and not item.stage_id for item in processing) and len(processing) == 2:  # noqa: E501
-        for item, stage_id in zip(processing, PROCESSING_STAGES, strict=True):
-            item.stage_id = stage_id
-    elif len(processing) == 1:
-        processing[0].stage_id = processing[0].stage_id or "triage"
-    if not mapping.reviewed:
+    if len(stage_ids) != len(set(stage_ids)):
+        raise MappingError(
+            "unsupported_topology",
+            "Processing-stage assignments are ambiguous.",
+            {"stages": stage_ids},
+        )
+    if not mapping.reviewed or any(not item.reviewed and item.status_id in relevant for item in mapping.statuses):  # noqa: E501
         raise MappingError(
             "mapping_required",
             "Material operational mappings require explicit review.",

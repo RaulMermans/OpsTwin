@@ -56,5 +56,5 @@ def test_empty_history_is_insufficient() -> None:
     snapshot["contentFingerprint"] = content_fingerprint(snapshot)
     request = request_for_fixture("cg3-golden-analytical", snapshot, approve=True)
     artifact = calibrate(snapshot, request)
-    assert artifact.failure_class in {"insufficient_evidence", "invalid_evidence"}
+    assert artifact.failure_class in {"insufficient_evidence", "invalid_evidence", "missing_assumptions"}  # noqa: E501
     assert artifact.constructed_model is None

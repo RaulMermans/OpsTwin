@@ -37,6 +37,7 @@ export function App() {
     evidence: null,
     message: null,
     fixtureId: "cg3-golden-analytical",
+    approveLabAssumptions: false,
   });
   const calibrating = useRef(false);
   const [importState, setImportState] = useState({
@@ -209,7 +210,10 @@ export function App() {
     calibrating.current = true;
     setCalibration((current) => ({ ...current, status: "running", evidence: null, message: null }));
     try {
-      const result = await invoke("runSyntheticCalibration", calibrationPayload(calibration.fixtureId, true));
+      const result = await invoke(
+        "runSyntheticCalibration",
+        calibrationPayload(calibration.fixtureId, calibration.approveLabAssumptions),
+      );
       if (result?.status === "ok" && result.evidence) {
         setCalibration((current) => ({
           ...current,
@@ -415,6 +419,19 @@ export function App() {
               <option value="cg3-partially-observable">Partially observable (assumptions required)</option>
             </select>
           </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={calibration.approveLabAssumptions}
+              onChange={(event) => {
+                setCalibration((current) =>
+                  afterCalibrationChange({ ...current, approveLabAssumptions: event.target.checked }),
+                );
+              }}
+              disabled={calibration.status === "running"}
+            />
+            Accept laboratory assumptions for this synthetic fixture
+          </label>
           <button type="button" onClick={runCalibration} disabled={calibration.status === "running"}>
             {calibration.status === "running" ? "Calibrating…" : "Run synthetic calibration"}
           </button>
@@ -427,30 +444,54 @@ export function App() {
                 <dd>{calibration.evidence.disclosure}</dd>
                 <dt>Readiness</dt>
                 <dd>{calibration.evidence.readinessStatus}</dd>
+                <dt>Historically adequate</dt>
+                <dd>{calibration.evidence.readinessStatus === "validated_for_defined_scope" ? "yes, for the recorded scope" : "no"}</dd>
                 <dt>Failure class</dt>
                 <dd>{calibration.evidence.failureClass ?? "none"}</dd>
                 <dt>Snapshot fingerprint</dt>
                 <dd>{calibration.evidence.sourceSnapshotFingerprint}</dd>
               </dl>
-              <h3>Assumptions and estimates</h3>
+              <h3>Estimated parameters</h3>
               <ul>
-                {(calibration.evidence.parameterEstimates ?? []).map((item) => (
-                  <li key={item.parameterId}>
-                    {item.parameterId}: {String(item.value)} ({item.evidenceClass}, {item.identifiabilityStatus})
-                  </li>
-                ))}
+                {(calibration.evidence.parameterEstimates ?? [])
+                  .filter((item) => item.origin === "empirical_estimate" && item.consumedByModel !== false)
+                  .map((item) => (
+                    <li key={item.parameterId}>
+                      {item.parameterId}: {String(item.value)} ({item.identifiabilityStatus})
+                    </li>
+                  ))}
+              </ul>
+              <h3>Assumptions</h3>
+              <ul>
+                {(calibration.evidence.parameterEstimates ?? [])
+                  .filter((item) => item.origin === "approved_assumption" || item.origin === "structural_constraint")
+                  .map((item) => (
+                    <li key={item.parameterId}>
+                      {item.parameterId}: {String(item.value)} ({item.origin})
+                    </li>
+                  ))}
+              </ul>
+              <h3>Unknown or diagnostic parameters</h3>
+              <ul>
+                {(calibration.evidence.parameterEstimates ?? [])
+                  .filter((item) => item.value == null || item.consumedByModel === false)
+                  .map((item) => (
+                    <li key={item.parameterId}>
+                      {item.parameterId}: unknown ({item.identifiabilityStatus})
+                    </li>
+                  ))}
               </ul>
               <h3>Constructed model</h3>
               <p>
                 {calibration.evidence.constructedModel
-                  ? `Fingerprint ${calibration.evidence.modelFingerprint}. Construction succeeded; that is not historical validity.`
+                  ? `Fingerprint ${calibration.evidence.modelFingerprint}. A constructed model is not a historically adequate model.`
                   : calibration.evidence.blockedReason ?? "No model was constructed."}
               </p>
               <h3>Historical validation</h3>
               <p>
                 {calibration.evidence.validationReport
-                  ? `${calibration.evidence.validationReport.overallOutcome} (${calibration.evidence.validationReport.mode})`
-                  : "No independent holdout report."}
+                  ? `${calibration.evidence.validationReport.overallOutcome} (${calibration.evidence.validationReport.validationClass ?? calibration.evidence.validationReport.mode})`
+                  : "No independent holdout report. Failed and inconclusive outcomes stay failed or inconclusive."}
               </p>
             </>
           ) : null}

@@ -5,6 +5,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any, cast
 
+from app.calibration.assumptions import finite_number
 from app.calibration.contracts import (
     AssumptionRecord,
     CalibrationRequest,
@@ -16,6 +17,19 @@ from app.calibration.contracts import (
 )
 from app.calibration.mapping import role_of, stage_of
 from app.calibration.snapshot import minutes_between, parse_utc
+
+T_CRIT_95 = {
+    1: 12.706,
+    2: 4.303,
+    3: 3.182,
+    4: 2.776,
+    5: 2.571,
+    6: 2.447,
+    7: 2.365,
+    8: 2.306,
+    9: 2.262,
+    10: 2.228,
+}
 
 
 class EstimationError(Exception):
@@ -37,9 +51,14 @@ def cases_created_in(snapshot: dict[str, Any], start: datetime, end: datetime) -
     selected: list[dict[str, Any]] = []
     seen: set[str] = set()
     for case in snapshot.get("cases") or []:
+        if case.get("createdAtInvalid"):
+            raise EstimationError(
+                "invalid_evidence",
+                "Malformed created timestamps cannot be dropped from the arrival population.",
+            )
         created = parse_utc(case.get("createdAt"))
-        if created is None or case.get("createdAtInvalid"):
-            continue
+        if created is None:
+            raise EstimationError("invalid_evidence", "Every case in the estimation population needs a valid createdAt.")  # noqa: E501
         case_id = str(case.get("caseId"))
         if case_id in seen:
             continue
@@ -65,18 +84,38 @@ def _origin(snapshot: dict[str, Any]) -> EvidenceClass:
     evidence = (snapshot.get("provenance") or {}).get("evidenceClass")
     if evidence in {"observed", "derived", "assumed", "synthetic", "unknown"}:
         return cast(EvidenceClass, evidence)
-    return "unknown"  # noqa: E501
+    return "unknown"
 
 
 def poisson_rate_interval(count: int, exposure_minutes: float) -> UncertaintyInterval:
     rate = count / exposure_minutes
     se = math.sqrt(count) / exposure_minutes if count else 0.0
+    notes = "Normal approximation to a Poisson count. Not an assumption range."
+    if count < 10:
+        notes += " Finite-sample coverage is poor below about 10 events."
     return UncertaintyInterval(
         kind="poisson_rate_normal",
         lower=max(0.0, rate - 1.96 * se),
         upper=rate + 1.96 * se,
         unit="cases_per_minute",
-        notes="Normal approximation to a Poisson count. Not an assumption range.",
+        notes=notes,
+    )
+
+
+def sample_mean_t_interval(values: list[float]) -> UncertaintyInterval | None:
+    n = len(values)
+    if n < 2:
+        return None
+    mean = sum(values) / n
+    variance = sum((value - mean) ** 2 for value in values) / (n - 1)
+    se = math.sqrt(variance / n)
+    tcrit = T_CRIT_95.get(n - 1, 1.96)
+    return UncertaintyInterval(
+        kind="sample_mean_t",
+        lower=max(1e-6, mean - tcrit * se),
+        upper=mean + tcrit * se,
+        unit="minutes",
+        notes="Student t 95% interval for the mean of complete processing episodes. Not a CI for mixed-origin evidence.",  # noqa: E501
     )
 
 
@@ -119,6 +158,7 @@ def estimate_arrivals(
         "exposure_minutes": exposure,
         "dispersion": day_dispersion(stamps, start, end),
         "weekday_concentration": weekday_concentration(stamps),
+        "partial_day_exposure": exposure % 1440 != 0,
     }
     if exposure <= 0:
         raise EstimationError("invalid_evidence", "Training exposure time must be positive.")
@@ -136,6 +176,7 @@ def estimate_arrivals(
                 sample_size=len(stamps),
                 source_references=["cases.createdAt"],
                 limitations=["Training arrival sample is below the configured minimum."],
+                origin="empirical_estimate",
             ),
             diagnostics,
         )
@@ -172,6 +213,7 @@ def estimate_arrivals(
                 "Calendar minutes are not resource availability.",
                 "Homogeneous Poisson is rejected when training demand is strongly split or overdispersed.",  # noqa: E501
             ],
+            origin="empirical_estimate",
         ),
         {
             **diagnostics,
@@ -183,45 +225,113 @@ def estimate_arrivals(
     )
 
 
+def _interval_key(interval: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        interval.get("caseId"),
+        interval.get("startAt"),
+        interval.get("endAt"),
+        interval.get("durationMinutes"),
+        interval.get("statusReference"),
+    )
+
+
 def _worklog_samples(
     snapshot: dict[str, Any],
     start: datetime,
     end: datetime,
     mapping: OperationalMapping,
-) -> tuple[dict[str, list[float]], int, int]:
+) -> tuple[dict[str, list[float]], dict[str, int]]:
     samples: dict[str, list[float]] = {"triage": [], "resolution": []}
-    overlap = 0
-    censored = 0
-    by_case: dict[str, list[dict[str, Any]]] = {}
+    counts = {
+        "overlap": 0,
+        "censored": 0,
+        "unattributed": 0,
+        "duplicates": 0,
+        "invalid": 0,
+        "boundary_crossing": 0,
+        "holdout_only": 0,
+        "outside_training": 0,
+    }
+    seen: set[tuple[Any, ...]] = set()
+    attributed: list[tuple[str, str, datetime, datetime, float]] = []
     for interval in snapshot.get("intervals") or []:
         if interval.get("intervalType") != "recorded_work":
             continue
         begin = parse_utc(interval.get("startAt"))
-        if begin is None or not (start <= begin < end):
-            continue
-        if interval.get("complete") is not True or interval.get("censoring") != "none":
-            censored += 1
-            continue
+        finish = parse_utc(interval.get("endAt"))
         duration = interval.get("durationMinutes")
-        if not isinstance(duration, int | float) or duration < 0:
+        if begin is None or (interval.get("endAt") and finish is None):
+            counts["invalid"] += 1
             continue
-        by_case.setdefault(str(interval["caseId"]), []).append(interval)
-        stage_id = "triage"
+        if finish is not None and begin is not None and finish < begin:
+            counts["invalid"] += 1
+            continue
+        if not isinstance(duration, int | float) or isinstance(duration, bool) or duration <= 0:
+            counts["invalid"] += 1
+            continue
+        if finish is not None and abs(float(duration) - minutes_between(begin, finish)) > 1 / 60:
+            counts["invalid"] += 1
+            continue
+        key = _interval_key(interval)
+        if key in seen:
+            counts["duplicates"] += 1
+            continue
+        seen.add(key)
+        if begin >= end:
+            counts["holdout_only"] += 1
+            continue
+        if finish is not None and finish > end:
+            counts["boundary_crossing"] += 1
+            counts["censored"] += 1
+            continue
+        if begin < start:
+            counts["outside_training"] += 1
+            counts["censored"] += 1
+            continue
+        if interval.get("complete") is not True or interval.get("censoring") != "none" or finish is None:  # noqa: E501
+            counts["censored"] += 1
+            continue
         status_ref = interval.get("statusReference")
         mapped = stage_of(status_ref, mapping) if status_ref else None
-        if mapped:
-            stage_id = mapped
-        elif len(samples["triage"]) > len(samples["resolution"]):
-            stage_id = "resolution"
-        samples[stage_id].append(float(duration))
-    for intervals in by_case.values():
-        ordered = sorted(intervals, key=lambda item: parse_utc(item.get("startAt")) or start)
-        for left, right in zip(ordered, ordered[1:], strict=False):
-            left_end = parse_utc(left.get("endAt"))
-            right_start = parse_utc(right.get("startAt"))
-            if left_end and right_start and right_start < left_end:
-                overlap += 1
-    return samples, overlap, censored
+        if mapped not in samples:
+            counts["unattributed"] += 1
+            continue
+        attributed.append((str(interval["caseId"]), mapped, begin, finish, float(duration)))
+    attributed.sort(key=lambda item: (item[0], item[1], item[2]))
+    episodes: list[tuple[str, str, datetime, datetime, float]] = []
+    for item in attributed:
+        if not episodes:
+            episodes.append(item)
+            continue
+        case_id, stage_id, begin, finish, duration = item
+        prev_case, prev_stage, prev_begin, prev_finish, prev_duration = episodes[-1]
+        if case_id == prev_case and stage_id == prev_stage and begin < prev_finish:
+            counts["overlap"] += 1
+            merged_end = max(prev_finish, finish)
+            episodes[-1] = (case_id, stage_id, prev_begin, merged_end, minutes_between(prev_begin, merged_end))  # noqa: E501
+            continue
+        if case_id == prev_case and stage_id == prev_stage and begin == prev_finish:
+            episodes[-1] = (
+                case_id,
+                stage_id,
+                prev_begin,
+                finish,
+                prev_duration + duration,
+            )
+            continue
+        episodes.append(item)
+    for _case_id, stage_id, _begin, _finish, duration in episodes:
+        samples[stage_id].append(duration)
+    counts["episodes"] = len(episodes)
+    return samples, counts
+
+
+def _worklogs_complete(snapshot: dict[str, Any], request: CalibrationRequest) -> bool:
+    extraction = snapshot.get("extraction") or {}
+    if extraction.get("worklogCompleteness") == "complete" and extraction.get("worklogCapability") == "retrieved":  # noqa: E501
+        return True
+    approved = _approved(request, "worklog.completeness")
+    return approved is not None
 
 
 def estimate_service_times(
@@ -236,9 +346,25 @@ def estimate_service_times(
         for interval in snapshot.get("intervals") or []
         if interval.get("intervalType") == "status_residence"
     ]
-    diagnostics = {"status_residence_count": len(residence)}
-    samples, overlap, censored = _worklog_samples(snapshot, start, end, mapping)
-    diagnostics.update({"worklog_overlap_count": overlap, "censored_duration_excluded": censored})
+    diagnostics: dict[str, Any] = {"status_residence_count": len(residence)}
+    samples, counts = _worklog_samples(snapshot, start, end, mapping)
+    diagnostics.update(
+        {
+            "worklog_overlap_count": counts["overlap"],
+            "censored_duration_excluded": counts["censored"],
+            "worklog_unattributed_count": counts["unattributed"],
+            "worklog_duplicate_count": counts["duplicates"],
+            "worklog_invalid_count": counts["invalid"],
+            "worklog_boundary_crossing": counts["boundary_crossing"],
+            "worklog_holdout_only": counts["holdout_only"],
+        }
+    )
+    usable = (
+        request.estimation_configuration.treat_worklogs_as_processing
+        and _worklogs_complete(snapshot, request)
+        and counts["overlap"] == 0
+        and counts["invalid"] == 0
+    )
     estimates: list[ParameterEstimate] = []
     for stage_id, path in (
         ("triage", "stages[triage].processingTime.mean"),
@@ -246,38 +372,32 @@ def estimate_service_times(
     ):
         assumption_id = f"{stage_id}.processing_time.mean"
         values = samples[stage_id]
-        if request.estimation_configuration.treat_worklogs_as_processing and overlap == 0:
-            if len(values) >= request.estimation_configuration.min_duration_sample:
-                mean = sum(values) / len(values)
-                estimates.append(
-                    ParameterEstimate(
-                        parameter_id=assumption_id,
-                        target_model_path=path,
-                        parameter_type="exponential_mean_minutes",
-                        value=mean,
-                        unit="minutes",
-                        estimation_method="worklog_mean_exponential",
-                        evidence_class=_origin(snapshot),
-                        identifiability_status="identifiable",
-                        sample_size=len(values),
-                        uncertainty=UncertaintyInterval(
-                            kind="sample_sd",
-                            lower=max(1e-6, mean * 0.5),
-                            upper=mean * 1.5,
-                            unit="minutes",
-                            notes="Heuristic scale around the sample mean; not a bootstrap CI.",
-                        ),
-                        source_references=["intervals.recorded_work"],
-                        limitations=[
-                            "Worklogs are not automatically active processing time.",
-                            "Censored or overlapping worklogs were excluded.",
-                        ],
-                    )
+        if usable and len(values) >= request.estimation_configuration.min_duration_sample:
+            mean = sum(values) / len(values)
+            estimates.append(
+                ParameterEstimate(
+                    parameter_id=assumption_id,
+                    target_model_path=path,
+                    parameter_type="exponential_mean_minutes",
+                    value=mean,
+                    unit="minutes",
+                    estimation_method="worklog_episode_mean_exponential",
+                    evidence_class=_origin(snapshot),
+                    identifiability_status="identifiable",
+                    sample_size=len(values),
+                    uncertainty=sample_mean_t_interval(values),
+                    source_references=["intervals.recorded_work"],
+                    limitations=[
+                        "Only attributed, complete, in-window processing episodes are used.",
+                        "A Boolean worklog-usage flag is not itself attribution or completeness.",
+                    ],
+                    origin="empirical_estimate",
                 )
-                continue
+            )
+            continue
         approved = _approved(request, assumption_id)
         if approved is not None:
-            value = float(approved.proposed_value)
+            value = finite_number(approved.proposed_value, label=assumption_id)
             estimates.append(
                 ParameterEstimate(
                     parameter_id=assumption_id,
@@ -299,6 +419,7 @@ def estimate_service_times(
                     source_references=[],
                     assumptions=[assumption_id],
                     limitations=["Status residence was not used as processing time."],
+                    origin="approved_assumption",
                 )
             )
             continue
@@ -311,12 +432,11 @@ def estimate_service_times(
                 unit="minutes",
                 estimation_method="refused_status_residence",
                 evidence_class=_origin(snapshot),
-                identifiability_status="not_identifiable"
-                if residence
-                else "insufficient_evidence",
+                identifiability_status="not_identifiable" if residence else "insufficient_evidence",
                 sample_size=len(values),
                 source_references=["intervals.status_residence"],
                 limitations=["Status residence includes waiting and inactivity and is not service time."],  # noqa: E501
+                origin="empirical_estimate",
             )
         )
     return estimates, diagnostics
@@ -336,12 +456,18 @@ def estimate_capacity(snapshot: dict[str, Any], request: CalibrationRequest) -> 
         assumption_id = f"resource.{pool_id}.capacity"
         approved = _approved(request, assumption_id)
         if approved is not None:
+            value = finite_number(approved.proposed_value, label=assumption_id)
+            if value != int(value):
+                raise EstimationError(
+                    "contract_validation_failure",
+                    f"{assumption_id} staffing capacity must be a whole number of servers.",
+                )
             estimates.append(
                 ParameterEstimate(
                     parameter_id=assumption_id,
                     target_model_path=path,
                     parameter_type="capacity",
-                    value=int(float(approved.proposed_value)),
+                    value=int(value),
                     unit="servers",
                     estimation_method="approved_assumption",
                     evidence_class="assumed",
@@ -349,6 +475,7 @@ def estimate_capacity(snapshot: dict[str, Any], request: CalibrationRequest) -> 
                     sample_size=len(assignees),
                     assumptions=[assumption_id],
                     limitations=["Distinct assignees are not staffing capacity."],
+                    origin="approved_assumption",
                 )
             )
             continue
@@ -365,6 +492,7 @@ def estimate_capacity(snapshot: dict[str, Any], request: CalibrationRequest) -> 
                 sample_size=len(assignees),
                 source_references=["cases.assigneeReference"],
                 limitations=["Assignee counts are not licensed or scheduled capacity."],
+                origin="empirical_estimate",
             )
         )
     return estimates
@@ -404,7 +532,25 @@ def estimate_routing(
             unsupported.append(f"{event.get('previousValue')}->{event.get('newValue')}")
     estimates: list[ParameterEstimate] = []
     triage_total = sum(from_triage.values())
-    if triage_total >= request.estimation_configuration.min_routing_sample:
+    competing = set(from_triage) - {"resolution"}
+    if unsupported:
+        estimates.append(
+            ParameterEstimate(
+                parameter_id="routing.triage_to_resolution",
+                target_model_path="routes[triage-success].options",
+                parameter_type="probability",
+                value=None,
+                unit="probability",
+                estimation_method="empirical_transition_share",
+                evidence_class=_origin(snapshot),
+                identifiability_status="not_identifiable",
+                sample_size=triage_total,
+                source_references=["events.status_changed"],
+                limitations=["Unknown competing routes are not assigned probability zero."],
+                origin="empirical_estimate",
+            )
+        )
+    elif triage_total >= request.estimation_configuration.min_routing_sample:
         to_resolution = from_triage.get("resolution", 0) / triage_total
         estimates.append(
             ParameterEstimate(
@@ -419,24 +565,10 @@ def estimate_routing(
                 sample_size=triage_total,
                 source_references=["events.status_changed"],
                 limitations=["Unknown routes are not assigned probability zero."],
+                origin="empirical_estimate",
             )
         )
-    elif triage_total == 0:
-        estimates.append(
-            ParameterEstimate(
-                parameter_id="routing.triage_to_resolution",
-                target_model_path="routes[triage-success].options",
-                parameter_type="probability",
-                value=1.0,
-                unit="probability",
-                estimation_method="template_default_single_path",
-                evidence_class="derived",
-                identifiability_status="partially_identifiable",
-                sample_size=0,
-                limitations=["Linear template path used because no competing processing route was observed."],  # noqa: E501
-            )
-        )
-    else:
+    elif competing:
         estimates.append(
             ParameterEstimate(
                 parameter_id="routing.triage_to_resolution",
@@ -449,6 +581,26 @@ def estimate_routing(
                 identifiability_status="insufficient_evidence",
                 sample_size=triage_total,
                 limitations=["Sparse routing samples are not smoothed to hide uncertainty."],
+                origin="empirical_estimate",
+            )
+        )
+    else:
+        estimates.append(
+            ParameterEstimate(
+                parameter_id="routing.triage_to_resolution",
+                target_model_path="routes[triage-success].options",
+                parameter_type="probability",
+                value=1.0,
+                unit="probability",
+                estimation_method="structural_linear_template",
+                evidence_class="derived",
+                identifiability_status="partially_identifiable",
+                sample_size=triage_total,
+                limitations=[
+                    "Linear template constraint: triage success routes to resolution.",
+                    "This is not an empirical probability and is not a missing-data default.",
+                ],
+                origin="structural_constraint",
             )
         )
     reopen_events = [
@@ -468,6 +620,9 @@ def estimate_routing(
             identifiability_status="not_identifiable",
             sample_size=len(reopen_events),
             limitations=["Reopening is not treated as processing failure or rework."],
+            consumed_by_model=False,
+            origin="diagnostic_only",
+            validation_status="excluded",
         )
     )
     return estimates, unsupported
@@ -490,30 +645,36 @@ def mix_estimates(snapshot: dict[str, Any], start: datetime, end: datetime) -> l
             sample_size=total,
             source_references=["cases.requestTypeReference"],
             limitations=["The supported template uses a single arrival class; mix is diagnostic only."],  # noqa: E501
+            consumed_by_model=False,
+            origin="diagnostic_only",
+            validation_status="excluded",
         )
     ]
+
+
+def observation_bounds(snapshot: dict[str, Any]) -> tuple[datetime, datetime]:
+    window = snapshot.get("observationWindow") or {}
+    return window_bounds(str(window.get("start")), str(window.get("end")))
 
 
 def split_windows(
     snapshot: dict[str, Any],
     request: CalibrationRequest,
 ) -> tuple[datetime, datetime, datetime, datetime]:
+    obs_start, obs_end = observation_bounds(snapshot)
     if request.training_window and request.validation_window:
         train_start, train_end = window_bounds(request.training_window.start, request.training_window.end)  # noqa: E501
         hold_start, hold_end = window_bounds(
             request.validation_window.start, request.validation_window.end
         )
-        if hold_start < train_end:
-            raise EstimationError("invalid_evidence", "Holdout must start at or after the training end.")  # noqa: E501
-        return train_start, train_end, hold_start, hold_end
-    window = snapshot.get("observationWindow") or {}
-    start, end = window_bounds(str(window.get("start")), str(window.get("end")))
-    created = [parse_utc(case.get("createdAt")) for case in snapshot.get("cases") or []]
-    stamps = sorted(stamp for stamp in created if stamp is not None and start <= stamp < end)
-    if len(stamps) < 4:
-        raise EstimationError("insufficient_evidence", "Too few created timestamps to form a temporal split.")  # noqa: E501
-    cut_index = max(1, min(len(stamps) - 1, int(len(stamps) * request.estimation_configuration.training_fraction)))  # noqa: E501
-    cut = stamps[cut_index]
-    if cut <= start or cut >= end:
-        cut = start + timedelta(minutes=minutes_between(start, end) * request.estimation_configuration.training_fraction)  # noqa: E501
-    return start, cut, cut, end
+    else:
+        span = obs_end - obs_start
+        cut = obs_start + timedelta(seconds=span.total_seconds() * request.estimation_configuration.training_fraction)  # noqa: E501
+        train_start, train_end, hold_start, hold_end = obs_start, cut, cut, obs_end
+    if train_start < obs_start or hold_end > obs_end or train_end > obs_end or hold_start < obs_start:  # noqa: E501
+        raise EstimationError("invalid_evidence", "Training and holdout windows must lie inside the snapshot observation window.")  # noqa: E501
+    if hold_start < train_end:
+        raise EstimationError("invalid_evidence", "Holdout must start at or after the training end.")  # noqa: E501
+    if train_end <= train_start or hold_end <= hold_start:
+        raise EstimationError("invalid_evidence", "Training and holdout windows must be non-empty.")  # noqa: E501
+    return train_start, train_end, hold_start, hold_end
