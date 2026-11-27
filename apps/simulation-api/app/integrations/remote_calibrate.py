@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 import uuid
@@ -38,7 +39,7 @@ FixtureId = Literal[
 class AtlassianCalibrateRequest(ContractModel):
     contract_version: Literal["cg3.v1"] = "cg3.v1"
     fixture_id: FixtureId
-    approve_lab_assumptions: bool = True
+    approve_lab_assumptions: bool = False
     random_seed: int = Field(default=20_260_327, ge=0, le=2**63 - 1)
 
 
@@ -70,6 +71,16 @@ async def calibrate_remote(request: Request) -> JSONResponse:
             },
         )
         return _error(401, "FIT_INVALID", "The Forge Invocation Token could not be verified.")
+    installation_id = str(verified["installationId"])
+    emit(
+        "remote.authentication.accepted",
+        {
+            "correlationId": correlation_id,
+            "operation": "calibrate",
+            "installationRef": _installation_ref(installation_id),
+            "contractVersion": "cg3.v1",
+        },
+    )
     try:
         payload: dict[str, Any] = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
@@ -93,23 +104,13 @@ async def calibrate_remote(request: Request) -> JSONResponse:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
     if calibrate_request.fixture_id not in FIXTURE_IDS:
         return _error(422, "UNKNOWN_FIXTURE", "The fixture identifier is not in the synthetic catalog.")  # noqa: E501
-    installation_id = str(verified["installationId"])
-    emit(
-        "remote.authentication.accepted",
-        {
-            "correlationId": correlation_id,
-            "operation": "calibrate",
-            "installationRef": _installation_ref(installation_id),
-            "contractVersion": "cg3.v1",
-        },
-    )
     snapshot = load_fixture(calibrate_request.fixture_id, calibrate_request.random_seed)
     engine_request = request_for_fixture(
         calibrate_request.fixture_id,
         snapshot,
         approve=calibrate_request.approve_lab_assumptions,
     )
-    artifact = calibrate(snapshot, engine_request)
+    artifact = await asyncio.to_thread(calibrate, snapshot, engine_request)
     duration_ms = int((time.perf_counter() - started) * 1000)
     emit(
         "calibration.completed",
@@ -125,4 +126,6 @@ async def calibrate_remote(request: Request) -> JSONResponse:
     body["synthetic"] = True
     body["fixtureId"] = calibrate_request.fixture_id
     body["disclosure"] = "Synthetic laboratory calibration. Not this Jira project's history."
+    if body.get("schemaVersion") != "cal.1.0.0" or body.get("synthetic") is not True:
+        return _error(500, "RESPONSE_VALIDATION_FAILED", "Calibration response contract was invalid.")  # noqa: E501
     return JSONResponse(content=body)

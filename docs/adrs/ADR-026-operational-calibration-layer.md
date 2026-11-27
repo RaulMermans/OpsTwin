@@ -16,7 +16,9 @@ The engine already supports Poisson or fixed arrivals, exponential/fixed/uniform
 3. **Identifiability before numbers.** Arrival rate may be estimated from training-window created timestamps. Active processing time is not estimated from status residence. Capacity is not estimated from assignee counts. Rework is not estimated from reopening. Missing material parameters require explicitly approved assumptions.
 4. **Holdout.** Parameters are fit on an earlier training window only. Validation is **generative** (the engine samples arrivals) against a later holdout. Replay of historical arrivals is not implemented and must not be described as arrival-process validation.
 5. **Remote.** `POST /api/integrations/atlassian/v1/compare` remains synthetic-catalog-only. A separate `POST /api/integrations/atlassian/v1/calibrate` accepts fixture identifiers only (Option A). Live operational-data egress is out of scope until independent project and user authorization for that purpose is verified.
-6. **Uncertainty.** Poisson-rate intervals are statistical. Assumption ranges are labeled separately. They are never merged into a confidence percentage.
+6. **Uncertainty.** Poisson-rate intervals are statistical (normal approximation; poor below ~10 events). Service-time intervals are Student-t intervals on complete episode means. Assumption ranges are labeled separately. Heuristic sensitivity ranges, if used, are never labeled as confidence intervals.
+7. **Binding.** Every material estimate is either applied to the Core `0.2.0` model or the calibration is refused. Routing uses supported success-route options. Linear-template probability 1 is a structural constraint, not a missing-data default. Rework and demand-mix remain diagnostic.
+8. **Identities.** `modelFingerprint` is the canonical constructed model (excluding execution `itemCount` and simulation seeds). `contentIdentity` includes mapping, assumptions, windows, estimation configuration, thresholds, budget, and model fingerprint. `executionIdentity` records the validation copy: windows, item cap, seed schedule, replication count. Different executions may share a model identity.
 
 ## Consequences
 

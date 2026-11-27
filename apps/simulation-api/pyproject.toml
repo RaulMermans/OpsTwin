@@ -10,6 +10,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
   "cryptography==46.0.3",
   "fastapi==0.116.1",
+  "jsonschema==4.25.0",
   "pydantic==2.11.7",
   "PyJWT==2.10.1",
   "simpy==4.1.1",
@@ -20,7 +21,6 @@ dependencies = [
 dev = [
   "build==1.2.2.post1",
   "httpx==0.28.1",
-  "jsonschema==4.25.0",
   "mypy==1.17.1",
   "pytest==8.4.1",
   "ruff==0.12.4"
@@ -32,6 +32,7 @@ include = ["app*"]
 
 [tool.setuptools.package-data]
 "app.integrations" = ["fixtures/*.json"]
+"app.calibration" = ["data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

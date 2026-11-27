@@ -1,5 +1,15 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-3.1 checkpoint — 2026-11-27
+
+- Continue `feat/codegeist-cg3-model-calibration` from `d7774de`. Recoverable pointer `checkpoint/cg3.1-start` (= `d7774de`). Not pushed.
+- Scientific P0s: routing binds Core success options; no triage-duration fallback; unattributed worklogs stay unattributed; snapshot JSON Schema + semantics at the calibration boundary; time-based holdout; matching newly-arrived metric populations; empty-system vs backlog incompatibility; 3 SHA-256 simulation replications; model/content/execution identities; 8×3 benchmark matrix.
+- Engine `cg3.1.cal.1`. Contracts `cal.1.0.0` / `os.1.0.0`.
+- Full matrix seeds 1–3: false-confidence 0/24; incorrect refusal 0/24; mean 253 ms. Naive baseline (estimated arrivals + default service/capacity) failed holdout on constructed runs. Golden arrival rel err 0.032–0.074.
+- Remote still fixture-ID only; lab assumptions not approved by default. Live operational calibration not claimed. CG-4 not started.
+- `pnpm verify`: 314 pytest, 183 vitest. `pnpm verify:forge`: 80 Node tests, Custom UI Vite build. Not committed. Not pushed.
+- Rollback: `git reset --hard checkpoint/cg3.1-start` (discards CG-3.1 working tree) or `git checkout checkpoint/cg3-start` for pre-CG-3.
+
 ## Codegeist CG-3 checkpoint — 2026-11-27
 
 - Branch `feat/codegeist-cg3-model-calibration` from CG-2.1 `06d3e99`. Recoverable pointer `checkpoint/cg3-start`. Not pushed.

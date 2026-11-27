@@ -43,6 +43,7 @@ Durable integration rules:
 - Partial extraction must never be presented as complete.
 - Tenant and project authorization are separate concerns.
 - Snapshot fingerprints must be reproducible.
+- Estimated calibration parameters must bind the executed model or the run must be refused; template defaults are not substitutes for missing evidence.
 - Calibration must remain distinct from ingestion.
 - Every calibrated parameter requires inspectable provenance.
 - Identifiability is evaluated before estimation.

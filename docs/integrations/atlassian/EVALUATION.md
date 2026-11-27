@@ -14,5 +14,5 @@ Atlassian-layer claims allowed only with evidence:
 | Live Forge Remote | unauthenticated hosted POST returned 401 FIT_INVALID on 2026-11-27 |
 | Operational snapshot contract | golden fixture validates in Python and Node |
 | Live CG-2 import UI | development **3.1.0** deployed 2026-11-27; install `b1bb872d-...` latest on major 3 |
-| Offline CG-3 calibration engine | pytest `test_calibration_*`; synthetic fixture remote only |
+| Offline CG-3 / CG-3.1 calibration engine | pytest `test_calibration_*`; full benchmark matrix seeds 1–3; synthetic fixture remote only |
 | Live operational calibration | not claimed |
