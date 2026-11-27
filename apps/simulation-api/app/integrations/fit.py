@@ -19,7 +19,7 @@ FIT_ISSUER = "forge/invocation-token"
 UNREGISTERED_APP_ID = "ari:cloud:ecosystem::app/00000000-0000-4000-8000-000000000000"
 REGISTERED_APP_ID = "ari:cloud:ecosystem::app/73670daa-a329-4491-8a96-89bf239b203b"
 COMMERCIAL_JWKS_URL = "https://forge.cdn.prod.atlassian-dev.net/.well-known/jwks.json"
-MAX_REMOTE_BYTES = 64 * 1024
+MAX_REMOTE_BYTES = 192 * 1024
 ALLOWED_ALGORITHMS = ["RS256"]
 APP_ARI = re.compile(
     r"^ari:cloud:ecosystem::app/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -233,3 +233,17 @@ def verify_forge_invocation_token(
     installation_id = _installation_id(payload)
     _assert_environment(payload)
     return {"payload": payload, "installationId": installation_id}
+
+
+def environment_type_from_verified(verified: Mapping[str, Any]) -> str:
+    payload = verified.get("payload")
+    if not isinstance(payload, Mapping):
+        return "DEVELOPMENT"
+    app = payload.get("app")
+    if not isinstance(app, Mapping):
+        return "DEVELOPMENT"
+    environment = app.get("environment")
+    if not isinstance(environment, Mapping):
+        return "DEVELOPMENT"
+    value = environment.get("type")
+    return str(value) if value else "DEVELOPMENT"

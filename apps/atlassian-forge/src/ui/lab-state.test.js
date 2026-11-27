@@ -46,6 +46,7 @@ test("transformation payloads stay on fixture identifiers and experiment volume"
   );
   assert.equal(payload.contractVersion, "cg5.v1");
   assert.equal(payload.fixtureId, "cg5-hybrid-support");
+  assert.equal(payload.sourceMode, "synthetic");
   assert.equal(payload.execution.itemCount, 20);
   assert.notEqual(payload.execution.itemCount, 1);
   assert.equal(payload.alternatives.length, 3);

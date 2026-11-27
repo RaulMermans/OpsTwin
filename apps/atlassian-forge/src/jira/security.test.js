@@ -15,7 +15,9 @@ test("resolver constructor uses Forge default-export interop", () => {
 test("operational import never uses asApp and never forwards issues to the simulation remote", () => {
   assert.match(index, /importOperationalSnapshot/);
   assert.doesNotMatch(index, /asApp\(/);
-  assert.doesNotMatch(index, /invokeRemote\(REMOTE_KEY, \{[\s\S]*snapshot/);
+  const compareBlock = index.slice(index.indexOf("runSyntheticComparison"), index.indexOf("runSyntheticCalibration"));
+  assert.doesNotMatch(compareBlock, /snapshot/);
+  assert.match(index, /minimizeSnapshot/);
   assert.match(index, /contractVersion: "cg1.v1"/);
   assert.doesNotMatch(ingest, /asApp\(/);
   assert.doesNotMatch(ingest, /description/);

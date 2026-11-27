@@ -11,7 +11,7 @@ Hackathon start 2026-10-27; internal freeze 2026-12-18; submit 2026-12-21.
 | CG-4 | AI transformation interventions (adapters, not new math) |
 | CG-5 | Native Atlassian product experience |
 | CG-6 | Decision intelligence and economics in Jira |
-| CG-7 | Evaluation, security, hardening |
+| CG-7 | BYOD, signed evidence, production hardening |
 | CG-8 | Release, storytelling, submission |
 
 ## CG-1 implementation specification
@@ -49,3 +49,5 @@ CG-4 implementation: `docs/codegeist/sprints/CG-04.md`, ADR-027, `apps/simulatio
 CG-5 implementation: `docs/codegeist/sprints/CG-05.md`, ADR-028. Native multi-scenario lab. Live operational calibration is still not claimed.
 
 CG-6 implementation: `docs/codegeist/sprints/CG-06.md`, ADR-029. Decision overlay on existing economics. Live operational calibration is still not claimed.
+
+CG-7 implementation: `docs/codegeist/sprints/CG-07.md`, ADR-030. Manual, Jira, and CSV baselines feed the existing engines. Financial evaluation requires signed evidence. Historical organizational calibration is still not claimed.

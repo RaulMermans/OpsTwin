@@ -117,6 +117,7 @@ ROWS = {
 def test_released_hours_are_not_cash_when_realization_is_none() -> None:
     assumptions = DecisionAssumptions(
         monthly_staff_cost_per_fte=1_000,
+        evaluation_basis="fixed_workload",
         evaluation_months=12,
         realization_mechanism="none",
         realization_rate=0,
@@ -138,21 +139,25 @@ def test_released_hours_are_not_cash_when_realization_is_none() -> None:
     human = next(item for item in result.strategies if item.strategy_id == "human-expansion")
     assert hybrid.released_human_hours == pytest.approx(1_000)
     assert hybrid.realizable_cash_benefit == 0
-    assert hybrid.net_benefit == pytest.approx(-8_000)
-    assert hybrid.roi == pytest.approx(-1)
-    assert hybrid.payback_status == "no_payback"
-    assert human.incremental_staffing_cost == pytest.approx(12_000)
+    assert hybrid.roi is None
+    assert hybrid.payback_status == "not_applicable"
+    assert human.incremental_staffing_cost == pytest.approx(0)
     assert human.average_cycle_time == pytest.approx(17.61)
-    assert human.decision_state == "not_justified_under_the_selected_assumptions"
     baseline = next(item for item in result.strategies if item.strategy_id == "baseline")
     assert baseline.roi is None
     assert baseline.incremental_investment == 0
 
 
 def test_known_roi_and_payback_with_explicit_realization() -> None:
+    # Independent golden: demand 20 cases/month, 12 months, simulated 20 completions → scale 12.
+    # Released hours 1000 × 12 = 12000; hourly 1600/160 = 10; realizable = 120000.
+    # AI subscription 500×12 = 6000; implementation 2000; incremental investment 8000.
+    # Net 112000; ROI 14; payback 2000 / ((120000-6000)/12) = 0.210526 months.
     assumptions = DecisionAssumptions(
         monthly_staff_cost_per_fte=1_600,
         paid_hours_per_month=160,
+        evaluation_basis="recurring_period",
+        expected_demand_per_month=20,
         evaluation_months=12,
         realization_mechanism="avoided_hiring",
         realization_rate=1,
@@ -172,20 +177,22 @@ def test_known_roi_and_payback_with_explicit_realization() -> None:
         )
     )
     hybrid = next(item for item in result.strategies if item.strategy_id == "hybrid")
-    assert hybrid.released_human_hours == pytest.approx(1_000)
-    assert hybrid.realizable_cash_benefit == pytest.approx(10_000)
+    assert hybrid.released_human_hours == pytest.approx(12_000)
+    assert hybrid.realizable_cash_benefit == pytest.approx(120_000)
     assert hybrid.incremental_investment == pytest.approx(8_000)
-    assert hybrid.net_benefit == pytest.approx(2_000)
-    assert hybrid.roi == pytest.approx(0.25)
+    assert hybrid.net_benefit == pytest.approx(112_000)
+    assert hybrid.roi == pytest.approx(14)
     assert hybrid.payback_status == "recovered_within_horizon"
-    assert hybrid.payback_months == pytest.approx(6)
-    assert hybrid.potential_capacity_value == pytest.approx(10_000)
+    assert hybrid.payback_months == pytest.approx(2_000 / 9_500)
+    assert hybrid.potential_capacity_value == pytest.approx(120_000)
 
 
 def test_break_even_subscription_matches_hand_calculation() -> None:
     assumptions = DecisionAssumptions(
         monthly_staff_cost_per_fte=1_600,
         paid_hours_per_month=160,
+        evaluation_basis="recurring_period",
+        expected_demand_per_month=20 / 12,
         evaluation_months=12,
         realization_mechanism="avoided_hiring",
         realization_rate=1,
@@ -204,7 +211,13 @@ def test_break_even_subscription_matches_hand_calculation() -> None:
             experiment_identity=identity,
             evidence=evidence,
             assumptions=assumptions,
-            explore={"parameter": "aiSubscriptionMonthly", "low": 0, "high": 1_000, "pointCount": 5},  # noqa: E501
+            explore={
+                "strategyId": "hybrid",
+                "parameter": "aiSubscriptionMonthly",
+                "low": 0,
+                "high": 1_000,
+                "pointCount": 5,
+            },
         )
     )
     assert result.break_even is not None

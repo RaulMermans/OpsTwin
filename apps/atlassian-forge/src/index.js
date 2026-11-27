@@ -5,6 +5,7 @@ import { installationRefFromContext, projectKeyFromContext, rejectBrowserProject
 import { ingestOperationalData } from "./jira/ingest.js";
 import { describeJiraPath } from "./jira/route.js";
 import { generateSynthetic } from "./operational/synthetic.js";
+import { minimizeSnapshot } from "./operational/minimize.js";
 import { validateEconomicEvidence, validateTransformEvidence } from "./remote/evidence.js";
 
 const Resolver = typeof ResolverModule === "function" ? ResolverModule : ResolverModule.default;
@@ -14,6 +15,7 @@ const COMPARE_PATH = "/api/integrations/atlassian/v1/compare";
 const CALIBRATE_PATH = "/api/integrations/atlassian/v1/calibrate";
 const TRANSFORM_PATH = "/api/integrations/atlassian/v1/transform";
 const ECONOMICS_PATH = "/api/integrations/atlassian/v1/evaluate-economics";
+const BASELINE_PATH = "/api/integrations/atlassian/v1/construct-baseline";
 
 async function readJson(response) {
   try {
@@ -72,7 +74,7 @@ resolver.define("getLabIdentity", (request) => {
   return {
     product: "OpsTwin for Jira",
     surface: "AI Transformation Lab",
-    sprint: "CG-6",
+    sprint: "CG-7",
     status: "Development integration",
     projectKey,
     accountIdPresent: Boolean(request.context?.accountId),
@@ -363,10 +365,13 @@ resolver.define("runTransformationExperiment", async (request) => {
         ? "cg3-partially-observable"
         : "cg3-golden-analytical";
   const multi = payload.contractVersion === "cg5.v1" && Array.isArray(payload.alternatives);
+  const sourceMode = payload.sourceMode === "manual" || payload.sourceMode === "jira" || payload.sourceMode === "csv" ? payload.sourceMode : "synthetic";
   const body = multi
     ? {
         contractVersion: "cg5.v1",
-        fixtureId,
+        fixtureId: sourceMode === "synthetic" ? fixtureId : undefined,
+        sourceMode,
+        baselineToken: payload.baselineToken,
         approveLabAssumptions: payload.approveLabAssumptions === true,
         randomSeed: payload.randomSeed ?? 20260327,
         alternatives: payload.alternatives,
@@ -377,6 +382,7 @@ resolver.define("runTransformationExperiment", async (request) => {
     : {
         contractVersion: "cg4.v1",
         fixtureId,
+        sourceMode: "synthetic",
         approveLabAssumptions: payload.approveLabAssumptions === true,
         randomSeed: payload.randomSeed ?? 20260327,
         intervention: payload.intervention,
@@ -444,12 +450,12 @@ resolver.define("runEconomicEvaluation", async (request) => {
     };
   }
   const body = {
-    contractVersion: "cg6.v1",
+    contractVersion: "cg7.v1",
     fixtureId: payload.fixtureId,
     alternatives: payload.alternatives,
     execution: payload.execution,
     experimentIdentity: payload.experimentIdentity,
-    evidence: payload.evidence,
+    evidenceToken: payload.evidenceToken,
     assumptions: payload.assumptions,
     constraints: payload.constraints ?? {},
     explore: payload.explore,
@@ -493,6 +499,78 @@ resolver.define("runEconomicEvaluation", async (request) => {
     return { status: "failed", classification: "invalid_response", message: validated.message };
   }
   return { status: "ok", evidence: remoteBody };
+});
+
+resolver.define("constructBaseline", async (request) => {
+  const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
+  if (substitution) return substitution;
+  const projectKey = projectKeyFromContext(request.context);
+  if (!projectKey) {
+    return {
+      status: "blocked",
+      kind: "missing_context",
+      message: "Forge did not provide a project key in the trusted invocation context.",
+    };
+  }
+  const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
+  const sourceMode = payload.sourceMode;
+  const body = { contractVersion: "cg7.v1", sourceMode };
+  if (sourceMode === "synthetic") {
+    body.fixtureId = payload.fixtureId;
+    body.approveLabAssumptions = payload.approveLabAssumptions === true;
+    body.randomSeed = payload.randomSeed ?? 20260327;
+  } else if (sourceMode === "manual") {
+    body.manual = payload.manual;
+  } else if (sourceMode === "jira") {
+    const snapshot = minimizeSnapshot(payload.snapshot);
+    if (!snapshot) {
+      return { status: "failed", classification: "invalid_request", message: "Import authorized Jira records before constructing a source-linked baseline." };
+    }
+    if (snapshot.sourceProject?.key && snapshot.sourceProject.key !== projectKey) {
+      return { status: "blocked", kind: "untrusted_project", message: "The snapshot does not belong to the current project." };
+    }
+    body.snapshot = snapshot;
+    body.calibration = payload.calibration;
+  } else if (sourceMode === "csv") {
+    body.csvText = payload.csvText;
+    body.snapshot = payload.snapshot ? minimizeSnapshot(payload.snapshot) : undefined;
+    body.calibration = payload.calibration;
+  } else {
+    return { status: "failed", classification: "invalid_request", message: "Unsupported baseline source." };
+  }
+  let remote;
+  try {
+    remote = await invokeRemote(REMOTE_KEY, {
+      path: BASELINE_PATH,
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    const classified = classifyNetworkFailure(error);
+    return { status: "failed", classification: classified.kind, message: classified.message };
+  }
+  const remoteBody = await readJson(remote);
+  if (remote.status === 401) {
+    return {
+      status: "failed",
+      classification: "authentication_failed",
+      message: "The remote could not verify the Forge Invocation Token.",
+    };
+  }
+  if (!remote.ok) {
+    const message =
+      remoteBody && remoteBody.error && typeof remoteBody.error.message === "string"
+        ? remoteBody.error.message
+        : "Baseline construction failed.";
+    return {
+      status: "failed",
+      classification: remote.status === 408 ? "timeout" : "remote_error",
+      httpStatus: remote.status,
+      message,
+    };
+  }
+  return { status: "ok", evidence: remoteBody, mode: sourceMode };
 });
 
 export const handler = resolver.getDefinitions();

@@ -1,5 +1,15 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-7 checkpoint — 2026-11-27
+
+- Branch `feat/codegeist-cg7-byod-production-hardening` from CG-6 `1784a20`. Recoverable `checkpoint/cg7-start`. Working tree uncommitted. Not pushed.
+- Hosted production `dpl_BsEjmQGguZYQSbdtR5FMjh7aXqJh` → `https://ops-twin.vercel.app`: health 200, unauth construct-baseline/transform 401 `FIT_INVALID` (no Vercel 403). Preview `dpl_4ttGhk4RNV97oiYFxYU2rcAkwfYc`.
+- HMAC secret present on Vercel production. Forge development **3.7.0**, install `b1bb872d-ce8d-4b4a-ba6b-d61fcd61b815`.
+- Manual/Jira/CSV baselines share Core calibration + comparison. Economics uses evaluation_basis + signed tokens. Break-even requires `strategyId`.
+- Local 20×2 seed 20261127: synthetic cycle 17.490/17.490/16.843/16.371; manualA 10.328 vs manualB 200.823 (distinct fingerprints). Golden recurring ROI 14.
+- Live Jira Custom UI journeys not clicked (cross-origin iframe). Second site not installed. Historical calibration not claimed.
+- `pnpm verify` and `pnpm verify:forge` passed. CG-8 not started.
+
 ## Codegeist CG-6 checkpoint — 2026-11-27
 
 - Branch `feat/codegeist-cg6-economic-decision-intelligence` from CG-5 `6a2f0f2`. Recoverable `checkpoint/cg6-start`. Not pushed.

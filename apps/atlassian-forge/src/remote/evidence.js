@@ -19,8 +19,8 @@ export function validateTransformEvidence(body, expected) {
   if (!body || typeof body !== "object") {
     return { ok: false, message: "The remote returned an empty experiment response." };
   }
-  if (body.synthetic !== true) {
-    return { ok: false, message: "The experiment response was not marked synthetic." };
+  if (typeof body.synthetic !== "boolean") {
+    return { ok: false, message: "The experiment response did not declare its evidence origin." };
   }
   if (body.identitiesAgree !== true) {
     return { ok: false, message: "The executed model did not match the calibrated identity." };
@@ -89,7 +89,7 @@ export function validateEconomicEvidence(body, expected) {
   if (!body || typeof body !== "object") {
     return { ok: false, message: "The remote returned an empty economic response." };
   }
-  if (body.contractVersion !== "cg6.v1" || body.synthetic !== true) {
+  if (!["cg6.v1", "cg7.v1"].includes(body.contractVersion) || typeof body.synthetic !== "boolean") {
     return { ok: false, message: "The economic response contract was invalid." };
   }
   if (body.integrityStatus !== "passed") {

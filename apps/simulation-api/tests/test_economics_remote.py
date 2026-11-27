@@ -34,4 +34,4 @@ def test_snapshot_payloads_are_rejected(authorized: None) -> None:
         json={"contractVersion": "cg6.v1", "snapshot": {"cases": []}, "fixtureId": "cg5-hybrid-support"},  # noqa: E501
     )
     assert response.status_code == 403
-    assert response.json()["error"]["code"] == "NON_SYNTHETIC_REJECTED"
+    assert response.json()["error"]["code"] == "UNTRUSTED_MODEL_REJECTED"

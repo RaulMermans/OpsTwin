@@ -148,7 +148,7 @@ def test_unsupported_algorithm_untrusted_key_and_logs_are_safe() -> None:
     assert error.value.code == "invalid_token"
 
     with pytest.raises(FitValidationError) as error:
-        assert_payload_bounds(b"x" * (65 * 1024))
+        assert_payload_bounds(b"x" * (193 * 1024))
     assert error.value.code == "payload_too_large"
     assert sanitize_remote_log("Bearer a.b.c") == "[redacted-token]"
     assert jwks_url_for_label(None).endswith("jwks.json")

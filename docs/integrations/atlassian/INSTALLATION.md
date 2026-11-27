@@ -45,7 +45,9 @@ Synchronous import budget: 20s deadline, 40 cases, 8 search pages, dedicated cha
 
 ## CG-1 remote hosting
 
-Forge `remotes.opstwin-simulation.baseUrl` is `https://ops-twin.vercel.app`. The new route is not live until the owner deploys this branch to that Vercel project. Required env (non-secret): `OPSTWIN_FORGE_APP_ID` may override the registered app ARI; default is the OpsTwin app id in the manifest. Do not disable authentication to reach a preview.
+Forge `remotes.opstwin-simulation.baseUrl` is `https://ops-twin.vercel.app`. Required env (non-secret): `OPSTWIN_FORGE_APP_ID` may override the registered app ARI. Required secret: `OPSTWIN_EVIDENCE_HMAC_KEY` for signed experiment evidence. Do not disable authentication to reach a preview.
+
+CG-7 may send minimized operational snapshots (no issue text) to `/api/integrations/atlassian/v1/construct-baseline` for source-linked calibration. Purpose: construct an exploratory operations model. Retention: session-only signed tokens (default 6 hours). Deletion: tokens expire; no durable snapshot store.
 
 ## Skills / MCP
 

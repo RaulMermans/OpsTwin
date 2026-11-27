@@ -17,6 +17,7 @@ from app.economics.sensitivity import run_economic_sensitivity
 from app.engine.integrity import SimulationIntegrityError
 from app.engine.repeated import RepeatedSimulationError, run_repeated_simulation
 from app.engine.simulator import run_simulation
+from app.integrations.remote_baseline import router as baseline_router
 from app.integrations.remote_calibrate import router as calibration_router
 from app.integrations.remote_compare import router as integration_router
 from app.integrations.remote_economics import router as economics_router
@@ -274,3 +275,4 @@ app.include_router(integration_router)
 app.include_router(calibration_router)
 app.include_router(transform_router)
 app.include_router(economics_router)
+app.include_router(baseline_router)

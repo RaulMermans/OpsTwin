@@ -11,13 +11,17 @@ import {
   afterFailedImport,
   afterFinancialChange,
   baselineStatusLabel,
+  CSV_TEMPLATE,
   calibrationPayload,
   comparisonPayload,
   defaultAssumptions,
   defaultConfig,
   defaultConstraints,
   defaultImportConfig,
+  defaultManualSpec,
   defaultTransform,
+  originForSource,
+  sourceLinkedCalibrationPayload,
   economicsPayload,
   hybridSupported,
   metricById,
@@ -55,6 +59,7 @@ export function App() {
     message: null,
     fixtureId: "cg5-hybrid-support",
     approveLabAssumptions: false,
+    sourceMode: "synthetic",
   });
   const [transform, setTransform] = useState(defaultTransform());
   const [experiment, setExperiment] = useState({ status: "ready", evidence: null, message: null, requestId: null });
@@ -62,7 +67,18 @@ export function App() {
   const [assumptions, setAssumptions] = useState(defaultAssumptions());
   const [constraints, setConstraints] = useState(defaultConstraints());
   const [exploreParameter, setExploreParameter] = useState("aiSubscriptionMonthly");
+  const [exploreStrategy, setExploreStrategy] = useState("hybrid");
   const [economics, setEconomics] = useState({ status: "ready", evidence: null, message: null, requestId: null });
+  const [sourceMode, setSourceMode] = useState("synthetic");
+  const [manualSpec, setManualSpec] = useState(defaultManualSpec());
+  const [csvText, setCsvText] = useState("");
+  const [jiraStaffing, setJiraStaffing] = useState({
+    triageCapacity: 2,
+    resolutionCapacity: 3,
+    triageMeanMinutes: 8,
+    resolutionMeanMinutes: 20,
+  });
+  const [mappingReviewed, setMappingReviewed] = useState(false);
   const calibrating = useRef(false);
   const experimenting = useRef(false);
   const [importState, setImportState] = useState({
@@ -230,41 +246,123 @@ export function App() {
     }
   }
 
-  async function runCalibration() {
-    if (calibrating.current || phase !== "ready") return;
-    calibrating.current = true;
-    setCalibration((current) => ({ ...current, status: "running", evidence: null, message: null }));
-    try {
-      const result = await invoke(
-        "runSyntheticCalibration",
-        calibrationPayload(calibration.fixtureId, calibration.approveLabAssumptions),
-      );
-      if (result?.status === "ok" && result.evidence) {
-        setCalibration((current) => ({
-          ...current,
-          status: "completed",
-          evidence: result.evidence,
-          message: result.evidence.disclosure,
-        }));
+  function applyBaselineResult(result, mode) {
+    if (result?.status === "ok" && result.evidence) {
+      setCalibration((current) => ({
+        ...current,
+        status: result.evidence.constructedModel ? "completed" : "preview",
+        evidence: result.evidence,
+        sourceMode: mode,
+        message: result.evidence.disclosure,
+      }));
+      if (result.evidence.constructedModel) {
         setAssumptions((current) => ({
           ...current,
+          origin: originForSource(mode),
           baselineTriageFte: result.evidence.baselineInventory?.triageCapacity ?? current.baselineTriageFte,
           baselineResolutionFte: result.evidence.baselineInventory?.resolutionCapacity ?? current.baselineResolutionFte,
         }));
-      } else {
-        setCalibration((current) => ({
-          ...current,
-          status: "failed",
-          evidence: null,
-          message: result?.message ?? "Synthetic calibration failed.",
-        }));
+        setExperiment({ status: "ready", evidence: null, message: "Baseline changed. Previous experiment results are stale.", requestId: null });
+        setEconomics({ status: "ready", evidence: null, message: null, requestId: null });
       }
+      return;
+    }
+    setCalibration((current) => ({
+      ...current,
+      status: "failed",
+      evidence: current.evidence,
+      message: result?.message ?? "Baseline construction failed.",
+    }));
+  }
+
+  async function runCalibration() {
+    if (calibrating.current || phase !== "ready") return;
+    calibrating.current = true;
+    setCalibration((current) => ({ ...current, status: "running", message: null, sourceMode: "synthetic" }));
+    try {
+      const result = await invoke("constructBaseline", {
+        ...calibrationPayload(calibration.fixtureId, calibration.approveLabAssumptions),
+        sourceMode: "synthetic",
+      });
+      applyBaselineResult(result, "synthetic");
     } catch (caught) {
       setCalibration((current) => ({
         ...current,
         status: "failed",
         evidence: null,
         message: caught instanceof Error ? caught.message : "Synthetic calibration failed.",
+      }));
+    } finally {
+      calibrating.current = false;
+    }
+  }
+
+  async function runManualBaseline() {
+    if (calibrating.current || phase !== "ready") return;
+    calibrating.current = true;
+    setCalibration((current) => ({ ...current, status: "running", message: null, sourceMode: "manual" }));
+    try {
+      const result = await invoke("constructBaseline", { sourceMode: "manual", manual: manualSpec });
+      applyBaselineResult(result, "manual");
+    } catch (caught) {
+      setCalibration((current) => ({
+        ...current,
+        status: "failed",
+        evidence: null,
+        message: caught instanceof Error ? caught.message : "Manual baseline failed.",
+      }));
+    } finally {
+      calibrating.current = false;
+    }
+  }
+
+  async function runJiraBaseline(construct) {
+    if (calibrating.current || phase !== "ready") return;
+    if (!importState.snapshot || importState.mode === "synthetic-demo") {
+      setCalibration((current) => ({
+        ...current,
+        status: "failed",
+        message: "Import authorized Jira records first. Synthetic demonstration data is not substituted.",
+      }));
+      return;
+    }
+    calibrating.current = true;
+    setCalibration((current) => ({ ...current, status: "running", message: null, sourceMode: "jira" }));
+    try {
+      const result = await invoke("constructBaseline", {
+        sourceMode: "jira",
+        snapshot: importState.snapshot,
+        calibration: construct ? sourceLinkedCalibrationPayload(calibration.evidence, jiraStaffing, mappingReviewed) : undefined,
+      });
+      applyBaselineResult(result, "jira");
+    } catch (caught) {
+      setCalibration((current) => ({
+        ...current,
+        status: "failed",
+        message: caught instanceof Error ? caught.message : "Source-linked baseline failed.",
+      }));
+    } finally {
+      calibrating.current = false;
+    }
+  }
+
+  async function runCsvBaseline(construct) {
+    if (calibrating.current || phase !== "ready") return;
+    calibrating.current = true;
+    setCalibration((current) => ({ ...current, status: "running", message: null, sourceMode: "csv" }));
+    try {
+      const result = await invoke("constructBaseline", {
+        sourceMode: "csv",
+        csvText: construct ? undefined : csvText,
+        snapshot: construct ? calibration.evidence?.snapshot : undefined,
+        calibration: construct ? sourceLinkedCalibrationPayload(calibration.evidence, jiraStaffing, mappingReviewed) : undefined,
+      });
+      applyBaselineResult(result, "csv");
+    } catch (caught) {
+      setCalibration((current) => ({
+        ...current,
+        status: "failed",
+        message: caught instanceof Error ? caught.message : "CSV baseline failed.",
       }));
     } finally {
       calibrating.current = false;
@@ -467,7 +565,7 @@ export function App() {
     phase !== "ready"
       ? "Resolve project access."
       : !calibration.evidence?.constructedModel
-        ? "Select a synthetic baseline, review assumptions, and construct the model."
+        ? "Choose a data source, construct a baseline, and review assumptions."
         : experiment.status !== "completed" && experiment.status !== "partial"
           ? "Configure alternatives in Transformation Lab and run the comparison."
           : economics.status === "completed"
@@ -476,12 +574,12 @@ export function App() {
 
   return (
     <main className="lab">
-      <p className="eyebrow">Development integration — CG-6</p>
+      <p className="eyebrow">Development integration — CG-7</p>
       <h1>OpsTwin for Jira</h1>
       <h2>AI Transformation Lab — Simulate before you automate</h2>
       <p>
-        Evaluate human capacity, AI-assisted processing, and hybrid automation against one shared baseline. Observed Jira
-        records are evidence, not a calibrated operations model. Synthetic experiments stay labeled synthetic.
+        Bring your own operation, compare human and AI strategies, and evaluate financial consequences before automating.
+        User-defined models are exploratory unless independent historical validation is shown.
       </p>
 
       <nav className="sections" aria-label="Product sections">
@@ -512,6 +610,10 @@ export function App() {
               {importState.status === "none"
                 ? "no live import"
                 : `${importState.status}${importState.mode === "synthetic-demo" ? " (synthetic demonstration)" : ""}`}
+            </div>
+            <div className="card">
+              <strong>Source</strong>
+              {calibration.sourceMode ?? sourceMode}
             </div>
             <div className="card">
               <strong>Baseline</strong>
@@ -549,6 +651,27 @@ export function App() {
                 ))}
             </div>
           ) : null}
+          <div className="grid">
+            {[
+              ["jira", "Connect Jira data", "Import the current project"],
+              ["manual", "Build your own operation", "Configure demand and staffing"],
+              ["csv", "Upload a dataset", "CSV event log template"],
+              ["synthetic", "Explore a demonstration", "Server-controlled synthetic fixture"],
+            ].map(([id, title, detail]) => (
+              <button
+                key={id}
+                type="button"
+                className="card"
+                onClick={() => {
+                  setSourceMode(id);
+                  setSection(id === "manual" || id === "synthetic" ? "baseline" : "data");
+                }}
+              >
+                <strong>{title}</strong>
+                {detail}
+              </button>
+            ))}
+          </div>
           <p className="next">
             <strong>Next:</strong> {nextAction}
           </p>
@@ -582,6 +705,19 @@ export function App() {
           </label>
           <button className="primary" type="button" onClick={runImport} disabled={importState.status === "running"}>
             {importState.status === "running" ? "Importing…" : "Import operational records"}
+          </button>
+          <p className="banner">
+            CSV and Jira imports stay minimized: no descriptions, comments, attachments, or personal names are sent to the simulation remote.
+          </p>
+          <label className="stack">
+            CSV event log
+            <textarea rows="6" value={csvText} onChange={(event) => setCsvText(event.target.value)} placeholder="Paste the supported CSV template" />
+          </label>
+          <button className="secondary" type="button" onClick={() => navigator.clipboard?.writeText(CSV_TEMPLATE)}>
+            Copy CSV template
+          </button>
+          <button className="secondary" type="button" onClick={() => runCsvBaseline(false)} disabled={calibration.status === "running"}>
+            Validate CSV
           </button>
           <button className="secondary" type="button" onClick={runSyntheticDemo} disabled={importState.status === "running"}>
             Load synthetic demonstration data
@@ -633,7 +769,12 @@ export function App() {
               {snapshot.readiness === "insufficient_for_calibration" ? (
                 <p>Evidence is insufficient for calibration: required process observations are missing or incomplete, so parameters cannot be estimated from this snapshot.</p>
               ) : null}
-              <p className="banner">Live Jira snapshots stay inside Forge. They are not sent to the simulation remote. Real-source calibration remains unavailable.</p>
+              <p className="banner">
+                Live Jira records are minimized before remote calibration. Status residence is not processing time. A successful import is not historical validation.
+              </p>
+              <button className="primary" type="button" onClick={() => runJiraBaseline(false)} disabled={calibration.status === "running"}>
+                Inspect source-linked mapping
+              </button>
             </>
           ) : (
             <p>No data imported.</p>
@@ -643,12 +784,69 @@ export function App() {
 
       {section === "baseline" && phase === "ready" ? (
         <section>
-          <h3>Baseline class</h3>
+          <h3>Choose how to build the baseline</h3>
           <p role="status">
-            Operational-evidence calibration is not enabled on the remote: imported OPS records are not transmitted for
-            model fitting. Use a server-controlled synthetic demonstration, or an explicit assumption-based laboratory
-            fixture.
+            Every source uses the same support-triage-resolution model. Manual and imported operations are labeled
+            exploratory unless holdout validation passes.
           </p>
+          <h3>Build your own operation</h3>
+          <div className="grid">
+            {[
+              ["expectedVolume", "Expected requests"],
+              ["observationDays", "Observation days"],
+              ["operatingHoursPerDay", "Operating hours / day"],
+              ["triageCapacity", "Triage staff"],
+              ["resolutionCapacity", "Resolution staff"],
+              ["triageMeanMinutes", "Triage minutes"],
+              ["resolutionMeanMinutes", "Resolution minutes"],
+              ["triageToResolutionProbability", "P(triage → resolution)"],
+              ["slaMinutes", "SLA minutes"],
+            ].map(([key, label]) => (
+              <label key={key} className="stack">
+                {label}
+                <input
+                  type="number"
+                  step="any"
+                  value={manualSpec[key]}
+                  onChange={(event) => setManualSpec((current) => ({ ...current, [key]: Number(event.target.value) }))}
+                />
+              </label>
+            ))}
+          </div>
+          <button className="primary" type="button" onClick={runManualBaseline} disabled={calibration.status === "running"}>
+            Construct user-defined baseline
+          </button>
+          {calibration.sourceMode === "jira" || calibration.sourceMode === "csv" || calibration.evidence?.suggestedMapping ? (
+            <>
+              <h3>Source-linked assumptions</h3>
+              <p>Capacity and processing times are not inferred from assignees or status residence.</p>
+              <div className="grid">
+                {[
+                  ["triageCapacity", "Triage staff"],
+                  ["resolutionCapacity", "Resolution staff"],
+                  ["triageMeanMinutes", "Triage minutes"],
+                  ["resolutionMeanMinutes", "Resolution minutes"],
+                ].map(([key, label]) => (
+                  <label key={key} className="stack">
+                    {label}
+                    <input
+                      type="number"
+                      value={jiraStaffing[key]}
+                      onChange={(event) => setJiraStaffing((current) => ({ ...current, [key]: Number(event.target.value) }))}
+                    />
+                  </label>
+                ))}
+              </div>
+              <label className="inline">
+                <input type="checkbox" checked={mappingReviewed} onChange={(event) => setMappingReviewed(event.target.checked)} />
+                I reviewed the suggested status mapping. Status residence is not processing time.
+              </label>
+              <button className="primary" type="button" onClick={() => (calibration.sourceMode === "csv" ? runCsvBaseline(true) : runJiraBaseline(true))} disabled={calibration.status === "running" || !mappingReviewed}>
+                Construct source-linked baseline
+              </button>
+            </>
+          ) : null}
+          <h3>Demonstration fixture</h3>
           <label className="stack">
             Synthetic demonstration baseline
             <select
@@ -950,6 +1148,7 @@ export function App() {
             const current = Number(assumptions[exploreParameter] ?? 0);
             const high = exploreParameter === "realizationRate" ? 1 : Math.max(current * 2, current + 1);
             runEconomics({
+              strategyId: exploreStrategy,
               parameter: exploreParameter,
               low: 0,
               high,
@@ -957,13 +1156,15 @@ export function App() {
             });
           }}
           onExploreParameter={setExploreParameter}
+          exploreStrategy={exploreStrategy}
+          onExploreStrategy={setExploreStrategy}
         />
       ) : null}
 
       <footer>
         <p>
-          Operational snapshots stay inside the Forge resolver. Calibration and experiments use synthetic fixture
-          identifiers, not live Jira records. A faster task is not automatically a better operation.
+          Minimized operational evidence may leave Forge for calibration and simulation. Arbitrary models are rejected.
+          A faster task is not automatically a better operation.
         </p>
       </footer>
     </main>

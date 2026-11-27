@@ -16,6 +16,44 @@ class MappingError(Exception):
         self.details = details or {}
 
 
+def suggest_status_mapping(snapshot: dict[str, Any]) -> dict[str, Any]:
+    suggestions = []
+    for status in snapshot.get("statuses") or []:
+        status_id = str(status.get("statusId") or "")
+        if not status_id:
+            continue
+        name = str(status.get("displayName") or "").lower()
+        category = str(status.get("sourceCategory") or "").lower()
+        role: StatusRole = "unknown"
+        stage_id = None
+        if category == "done" or any(token in name for token in ("done", "resolved", "closed", "complete")):  # noqa: E501
+            role = "completed"
+        elif category == "new" or any(token in name for token in ("open", "to do", "waiting for support", "new")):  # noqa: E501
+            role = "queue"
+        elif "triage" in name:
+            role = "processing"
+            stage_id = "triage"
+        elif any(token in name for token in ("progress", "pending", "work in")):
+            role = "processing"
+            stage_id = "resolution"
+        suggestions.append(
+            {
+                "statusId": status_id,
+                "role": role,
+                "stageId": stage_id,
+                "reviewed": False,
+                "displayName": status.get("displayName"),
+            }
+        )
+    return {
+        "mappingVersion": "status-role.1",
+        "statuses": suggestions,
+        "requestTypeClasses": {},
+        "reviewed": False,
+        "disclosure": "Suggested mapping is heuristic. Status residence is not processing time. Review is required.",  # noqa: E501
+    }
+
+
 def relevant_status_ids(snapshot: dict[str, Any]) -> set[str]:
     ids: set[str] = set()
     for status in snapshot.get("statuses") or []:
