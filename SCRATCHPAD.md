@@ -1,5 +1,26 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-3 checkpoint — 2026-11-27
+
+- Branch `feat/codegeist-cg3-model-calibration` from CG-2.1 `06d3e99`. Recoverable pointer `checkpoint/cg3-start`. Not pushed.
+- Offline calibration engine `cal.1.0.0` in `apps/simulation-api/app/calibration/`. Template `support-triage-resolution.1`. ADR-026.
+- Golden seed 21: arrival 30.358 vs 30 (rel err 1.2%), holdout `passed_for_defined_scope`, ~49 ms. Noisy incomplete extraction refused. Misspecified topology refused. Nonstationary Poisson refused.
+- Remote `POST /api/integrations/atlassian/v1/calibrate` is fixture-ID only. `/compare` unchanged besides rejecting `cases`/`snapshot`.
+- Live CG-1/CG-2 gates remain partial. Live operational calibration not claimed.
+- `cg1_live_closure_status`: PARTIAL PASS (prior FIT runs; not re-verified this session)
+- `cg2_evidence_integrity_status`: PASS (deadline remaining-ms function, schema field checks, desk/SLA pagination, worklog completeness, origin_mix, createmeta issue type)
+- `cg2_live_import_status`: PARTIAL PASS (not re-clicked)
+- `cg3_offline_readiness_status`: PASS
+- overall_sprint_status: **PARTIAL PASS**
+- `pnpm verify`: 288 pytest, 183 vitest. Forge tests: 79. Custom UI Vite build succeeded. Not committed. Not pushed.
+
+## Codegeist CG-2.1 checkpoint — 2026-11-27
+
+- Continue `feat/codegeist-cg2-operational-data` from `b5ccfb9`. Recoverable pointer `checkpoint/cg2.1-start`.
+- P0 connector defects: expanded changelog treated as complete; offset advanced by transformed events; missing continuation counted as success; labels omitted from search; ISO JQL timestamps; generic JSON success; mixed origin collapsed; unsalted assignee hashes; quality denominators; representativeness from page completion; no import deadline.
+- Runtime `os.1.0.0` validation is enforced on ingest. Do not start CG-3.
+- `pnpm verify` (this session): 288 pytest, 183 vitest, builds, smokes, source package, isolation. Forge node tests: 79 pass.
+
 ## Codegeist CG-2.1 checkpoint — 2026-11-27
 
 - Continue `feat/codegeist-cg2-operational-data` from `b5ccfb9`. Recoverable pointer `checkpoint/cg2.1-start`.

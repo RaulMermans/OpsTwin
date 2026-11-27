@@ -44,8 +44,16 @@ Durable integration rules:
 - Tenant and project authorization are separate concerns.
 - Snapshot fingerprints must be reproducible.
 - Calibration must remain distinct from ingestion.
+- Every calibrated parameter requires inspectable provenance.
+- Identifiability is evaluated before estimation.
+- Missing evidence never silently becomes a numerical assumption.
+- Status residence is not automatically service time.
+- Holdout observations cannot influence parameter fitting.
+- Historical validation does not establish causal intervention validity.
+- Synthetic recovery benchmarks do not prove real-world accuracy.
+- Material assumption changes invalidate dependent validation.
 
-Read `docs/codegeist/sprints/CG-02.md` and `docs/adrs/ADR-025-canonical-operational-snapshots.md` before changing operational ingest or snapshot contracts.
+Read `docs/codegeist/sprints/CG-02.md`, `docs/codegeist/sprints/CG-03.md`, `docs/adrs/ADR-025-canonical-operational-snapshots.md`, and `docs/adrs/ADR-026-operational-calibration-layer.md` before changing operational ingest, snapshots, or calibration.
 
 ## Context discipline
 

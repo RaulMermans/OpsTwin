@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { afterConfigChange, afterFailedImport, comparisonPayload, defaultConfig } from "../../static/transformation-lab/src/labState.js";
+import { afterCalibrationChange, afterConfigChange, afterFailedImport, calibrationPayload, comparisonPayload, defaultConfig } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
   const stale = afterConfigChange({
@@ -16,6 +16,15 @@ test("failed imports do not keep the previous snapshot as current", () => {
   const result = afterFailedImport({ snapshotId: "old" });
   assert.equal(result.snapshot, null);
   assert.equal(result.stale, true);
+});
+
+test("calibration payloads are fixture identifiers only", () => {
+  const payload = calibrationPayload("cg3-golden-analytical", true);
+  assert.equal(payload.fixtureId, "cg3-golden-analytical");
+  assert.equal("snapshot" in payload, false);
+  assert.equal("projectKey" in payload, false);
+  const stale = afterCalibrationChange({ evidence: { readinessStatus: "validated_for_defined_scope" }, status: "completed" });
+  assert.equal(stale.evidence, null);
 });
 
 test("payloads stay on the synthetic catalog and omit project identity", () => {

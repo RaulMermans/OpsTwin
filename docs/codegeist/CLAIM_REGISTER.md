@@ -16,3 +16,5 @@
 | Live CG-2 import inside Jira | Development **3.2.0**; resolver invoke recovered | Custom UI import still needs a click in the iframe |
 | Differentiation vs JSM WFM / VSA / Marketplace Monte Carlo | Source-verified research | `COMPETITIVE_ANALYSIS.md` |
 | Existing-engine interventions for capacity, times, arrivals, routes, failure | Source verified | `registry.py` + `SIMULATION_COMPATIBILITY.md` |
+| CG-3 offline calibration | Source + pytest | `app/calibration`, ADR-026 |
+| CG-3 live operational calibration | Not claimed | Live snapshot transfer not enabled |

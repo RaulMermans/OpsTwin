@@ -5,7 +5,8 @@
 - Never commit API tokens, OAuth headers, FIT values, or `.env` files.
 - Owner runs `forge login` in their own terminal. Tokens are not pasted into chat.
 - Resolvers use **user context** (`api.asUser()`) and the Forge **extension project key**, not client-supplied IDs.
-- Operational snapshots stay in the Forge resolver/UI session. They are not posted to the simulation remote.
+- Operational snapshots stay in the Forge resolver/UI session. They are not posted to `/compare` or `/calibrate`.
+- CG-3 remote calibration accepts catalog `fixtureId` values only. `snapshot`, `cases`, and Jira payloads are rejected.
 - Assignees are stored as `ref_` plus a truncated SHA-256 of installation-scoped `accountId`. Descriptions, comments, attachments, worklog comments, and emails are not requested. Raw account IDs do not enter the snapshot.
 - Display conditions are not authorization.
 - Do not log Authorization headers or JWTs (`sanitizeRemoteLog`).

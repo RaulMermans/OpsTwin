@@ -9,6 +9,8 @@ test("golden snapshot has exact descriptive counts", () => {
   const snapshot = generateSynthetic("golden", 20261127, new Date("2026-10-15T00:00:00.000Z"));
   const byId = Object.fromEntries(snapshot.descriptiveEvidence.map((item) => [item.metricId, item]));
   assert.equal(byId.observed_case_count.value, 3);
+  assert.equal(byId.origin_mix.value.synthetic, 3);
+  assert.match(byId.observed_case_count.population, /synthetic=/);
   assert.equal(byId.resolution_count.value, 1);
   assert.equal(byId.reopen_count.value, 1);
   assert.equal(byId.arrivals_in_window.value, 3);

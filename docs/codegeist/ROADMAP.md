@@ -38,6 +38,8 @@ Hackathon start 2026-10-27; internal freeze 2026-12-18; submit 2026-12-21.
 
 **Contingency:** runCount=5 summary comparisons; if hosting blocked, keep Remote library and treat live invoke as CG-1 blocker — do not ship an unauthenticated workaround.
 
-**Out of scope:** calibration, final UI, Marketplace.
+**Out of scope for CG-1:** calibration, final UI, Marketplace.
 
-CG-2 implementation: `docs/codegeist/sprints/CG-02.md`, snapshot `os.1.0.0`, ADR-025. Live CG-1 FIT unauthenticated 401 is closed; Forge-side live import still requires a development deploy of this branch.
+CG-2 implementation: `docs/codegeist/sprints/CG-02.md`, snapshot `os.1.0.0`, ADR-025.
+
+CG-3 implementation: `docs/codegeist/sprints/CG-03.md`, ADR-026, `docs/calibration/`. Offline engine on `feat/codegeist-cg3-model-calibration`. Live operational calibration is not claimed.

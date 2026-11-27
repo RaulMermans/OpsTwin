@@ -5,6 +5,8 @@ checkpoints recorded in `SCRATCHPAD.md` and `docs/sprints/`.
 
 ## Unreleased
 
+Codegeist CG-3: platform-independent calibration (`cal.1.0.0`) from operational snapshots to Core `0.2.0` models, identifiability and assumption gates, generative holdout, synthetic fixture remote at `POST /api/integrations/atlassian/v1/calibrate`. Compare remains synthetic-only. Live Jira snapshots are not calibrated remotely.
+
 Codegeist CG-2: versioned operational snapshot `os.1.0.0`, Jira/JSM bounded ingest with provenance and data quality, seeded synthetic lab, and an Operational Data section in the Forge Custom UI. Snapshots are not sent to the simulation remote. Public `/api/simulation/*` contracts are unchanged.
 
 Codegeist CG-1: FIT-authenticated synthetic comparison adapter at `POST /api/integrations/atlassian/v1/compare`, Forge Remote compute egress, JSM request-type resolver, and CG-0 security-defect closure. Public `/api/simulation/*` contracts are unchanged.

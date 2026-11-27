@@ -2,7 +2,9 @@
 
 CG-1 remote request `cg1.v1` selects a synthetic catalog experiment and intervention parameters. It is not an operational-model payload and must not include `baselineModel`, issues, or tokens.
 
-CG-2 operational snapshots use `contracts/operational-snapshot.schema.json` (`os.1.0.0`). They are not Core models and are not sent to `/api/integrations/atlassian/v1/compare`. Runtime ingest validates the snapshot against that contract before returning success.
+CG-2 operational snapshots use `contracts/operational-snapshot.schema.json` (`os.1.0.0`). They are not Core models and are not sent to `/api/integrations/atlassian/v1/compare`. Runtime ingest validates required canonical fields before returning success.
+
+CG-3 calibration artifacts use `cal.1.0.0` (`apps/simulation-api/app/calibration/contracts.py`). `POST /api/integrations/atlassian/v1/calibrate` accepts synthetic fixture identifiers only. Live snapshots are not a remote calibration input.
 
 JQL cohort filters use `yyyy-MM-dd HH:mm` in the caller's timezone (UTC padded ±1 day when timezone is unknown). Exact UTC window bounds are applied during normalization. Current `resolutiondate` does not reconstruct every historical open interval. Status residence is not processing time. Mixed synthetic/observed records keep per-case origin; live transport is not origin.
 

@@ -3,8 +3,10 @@ import { invoke, view } from "@forge/bridge";
 import {
   INTERVENTIONS,
   WINDOW_PRESETS,
+  afterCalibrationChange,
   afterConfigChange,
   afterFailedImport,
+  calibrationPayload,
   comparisonPayload,
   defaultConfig,
   defaultImportConfig,
@@ -30,6 +32,13 @@ export function App() {
   const [config, setConfig] = useState(defaultConfig());
   const [importConfig, setImportConfig] = useState(defaultImportConfig());
   const [run, setRun] = useState({ status: "ready", evidence: null, message: null, remoteStatus: "not checked" });
+  const [calibration, setCalibration] = useState({
+    status: "ready",
+    evidence: null,
+    message: null,
+    fixtureId: "cg3-golden-analytical",
+  });
+  const calibrating = useRef(false);
   const [importState, setImportState] = useState({
     status: "none",
     snapshot: null,
@@ -195,6 +204,39 @@ export function App() {
     }
   }
 
+  async function runCalibration() {
+    if (calibrating.current || phase !== "ready") return;
+    calibrating.current = true;
+    setCalibration((current) => ({ ...current, status: "running", evidence: null, message: null }));
+    try {
+      const result = await invoke("runSyntheticCalibration", calibrationPayload(calibration.fixtureId, true));
+      if (result?.status === "ok" && result.evidence) {
+        setCalibration((current) => ({
+          ...current,
+          status: "completed",
+          evidence: result.evidence,
+          message: result.evidence.disclosure,
+        }));
+      } else {
+        setCalibration((current) => ({
+          ...current,
+          status: "failed",
+          evidence: null,
+          message: result?.message ?? "Synthetic calibration failed.",
+        }));
+      }
+    } catch (caught) {
+      setCalibration((current) => ({
+        ...current,
+        status: "failed",
+        evidence: null,
+        message: caught instanceof Error ? caught.message : "Synthetic calibration failed.",
+      }));
+    } finally {
+      calibrating.current = false;
+    }
+  }
+
   const intervention = INTERVENTIONS[config.intervention];
   const projectOk = project?.classification === "ok";
   const jiraStatus = projectOk ? "connected" : phase === "loading-project" ? "checking" : "blocked";
@@ -207,16 +249,16 @@ export function App() {
   return (
     <main style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif", padding: "24px", maxWidth: "760px", color: "#172B4D" }}>
       <p style={{ letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "12px", color: "#44546F" }}>
-        Development integration — CG-2
+        Development integration — CG-3
       </p>
       <h1 style={{ margin: "8px 0 4px" }}>OpsTwin for Jira</h1>
       <h2 style={{ margin: "0 0 16px", fontWeight: 500 }}>AI Transformation Lab</h2>
       <p>Simulate before you automate. Observed Jira records are evidence, not a calibrated model. Synthetic simulation remains a separate lab.</p>
 
       <nav aria-label="Lab sections" style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-        {["overview", "data", "simulation"].map((id) => (
+        {["overview", "data", "calibration", "simulation"].map((id) => (
           <button key={id} type="button" onClick={() => setSection(id)} aria-current={section === id}>
-            {id === "overview" ? "Overview" : id === "data" ? "Operational Data" : "Simulation Lab"}
+            {id === "overview" ? "Overview" : id === "data" ? "Operational Data" : id === "calibration" ? "Model Calibration" : "Simulation Lab"}
           </button>
         ))}
       </nav>
@@ -353,6 +395,68 @@ export function App() {
         </section>
       ) : null}
 
+      {section === "calibration" && phase === "ready" ? (
+        <section>
+          <h3>Synthetic model calibration</h3>
+          <p role="status">
+            This path loads a controlled laboratory fixture on the remote. It does not send imported Jira snapshots and is not
+            organizational calibration.
+          </p>
+          <label>
+            Laboratory fixture
+            <select
+              value={calibration.fixtureId}
+              onChange={(event) => {
+                setCalibration((current) => afterCalibrationChange({ ...current, fixtureId: event.target.value }));
+              }}
+              disabled={calibration.status === "running"}
+            >
+              <option value="cg3-golden-analytical">Golden analytical (synthetic)</option>
+              <option value="cg3-partially-observable">Partially observable (assumptions required)</option>
+            </select>
+          </label>
+          <button type="button" onClick={runCalibration} disabled={calibration.status === "running"}>
+            {calibration.status === "running" ? "Calibrating…" : "Run synthetic calibration"}
+          </button>
+          {calibration.status === "failed" ? <p role="alert">{calibration.message}</p> : null}
+          {calibration.evidence ? (
+            <>
+              <h3>Evidence readiness</h3>
+              <dl>
+                <dt>Disclosure</dt>
+                <dd>{calibration.evidence.disclosure}</dd>
+                <dt>Readiness</dt>
+                <dd>{calibration.evidence.readinessStatus}</dd>
+                <dt>Failure class</dt>
+                <dd>{calibration.evidence.failureClass ?? "none"}</dd>
+                <dt>Snapshot fingerprint</dt>
+                <dd>{calibration.evidence.sourceSnapshotFingerprint}</dd>
+              </dl>
+              <h3>Assumptions and estimates</h3>
+              <ul>
+                {(calibration.evidence.parameterEstimates ?? []).map((item) => (
+                  <li key={item.parameterId}>
+                    {item.parameterId}: {String(item.value)} ({item.evidenceClass}, {item.identifiabilityStatus})
+                  </li>
+                ))}
+              </ul>
+              <h3>Constructed model</h3>
+              <p>
+                {calibration.evidence.constructedModel
+                  ? `Fingerprint ${calibration.evidence.modelFingerprint}. Construction succeeded; that is not historical validity.`
+                  : calibration.evidence.blockedReason ?? "No model was constructed."}
+              </p>
+              <h3>Historical validation</h3>
+              <p>
+                {calibration.evidence.validationReport
+                  ? `${calibration.evidence.validationReport.overallOutcome} (${calibration.evidence.validationReport.mode})`
+                  : "No independent holdout report."}
+              </p>
+            </>
+          ) : null}
+        </section>
+      ) : null}
+
       {section === "simulation" && phase === "ready" ? (
         <section>
           <h3>Experiment configuration</h3>
@@ -430,8 +534,8 @@ export function App() {
       <footer>
         <h3>Evidence</h3>
         <p>
-          Operational snapshots stay inside the Forge resolver. The simulation remote still accepts only the synthetic CG-1
-          catalog. A faster task is not automatically a better operation.
+          Operational snapshots stay inside the Forge resolver. Comparison remains synthetic-only. Calibration uses a separate
+          synthetic fixture identifier, not live Jira records. A faster task is not automatically a better operation.
         </p>
       </footer>
     </main>
