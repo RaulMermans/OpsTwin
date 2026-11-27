@@ -52,6 +52,7 @@ const plan = {
   site,
   project,
   count,
+  issueTypeDiscovery: "execute-time project createmeta; not hardcoded Task",
   requestTypes: ["Get IT help", "Report a system problem", "Request admin access"],
   labels: [LABEL, "opstwin-cg2"],
   summaryPrefix: SUMMARY_PREFIX,
@@ -113,6 +114,12 @@ const existing = await jira("GET", `/rest/api/3/search/jql?jql=${encodeURICompon
 const bySummary = new Map((existing.issues ?? []).map((issue) => [issue.fields?.summary, issue]));
 const created = [];
 const reused = [];
+const meta = await jira("GET", `/rest/api/3/issue/createmeta?projectKeys=${encodeURIComponent(project)}&expand=projects.issuetypes`);
+const types = meta.projects?.[0]?.issuetypes ?? [];
+const issueType = types.find((entry) => entry && entry.subtask !== true);
+if (!issueType?.id) {
+  throw new Error("No creatable issue type was discovered for the allowlisted project.");
+}
 for (const item of cases) {
   const found = bySummary.get(item.summary);
   if (found) {
@@ -123,7 +130,7 @@ for (const item of cases) {
     fields: {
       project: { key: project },
       summary: item.summary,
-      issuetype: { name: "Task" },
+      issuetype: { id: issueType.id },
       labels: [LABEL, "opstwin-cg2"],
     },
   });

@@ -114,6 +114,14 @@ const tasks = {
     requireEnvironment();
     run(python, ["-m", "app.comparison_benchmark", "--smoke"], simulationApi);
   },
+  "benchmark:calibration"() {
+    requireEnvironment();
+    run(python, ["-m", "app.calibration.benchmark"], simulationApi);
+  },
+  "benchmark:calibration-smoke"() {
+    requireEnvironment();
+    run(python, ["-m", "app.calibration.benchmark", "--smoke"], simulationApi);
+  },
   "benchmark:sensitivity"() {
     requireEnvironment();
     run(python, ["-m", "app.sensitivity_benchmark"], simulationApi);

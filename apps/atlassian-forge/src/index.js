@@ -10,6 +10,7 @@ const Resolver = typeof ResolverModule === "function" ? ResolverModule : Resolve
 const resolver = new Resolver();
 const REMOTE_KEY = "opstwin-simulation";
 const COMPARE_PATH = "/api/integrations/atlassian/v1/compare";
+const CALIBRATE_PATH = "/api/integrations/atlassian/v1/calibrate";
 
 async function readJson(response) {
   try {
@@ -38,7 +39,10 @@ async function requestJson(path, method = "GET", body) {
   const routes = {
     myself: () => route`/rest/api/3/myself`,
     field: () => route`/rest/api/3/field`,
-    servicedesk: () => route`/rest/servicedeskapi/servicedesk`,
+    servicedesk: () =>
+      p.start
+        ? route`/rest/servicedeskapi/servicedesk?start=${p.start}&limit=${p.limit}`
+        : route`/rest/servicedeskapi/servicedesk`,
     "search-jql": () =>
       method === "POST"
         ? route`/rest/api/3/search/jql`
@@ -51,7 +55,10 @@ async function requestJson(path, method = "GET", body) {
     worklog: () => route`/rest/api/3/issue/${described.issueKey}/worklog?startAt=${p.startAt}&maxResults=${p.maxResults}`,
     "request-type": () =>
       route`/rest/servicedeskapi/servicedesk/${described.serviceDeskId}/requesttype?start=${p.start}&limit=${p.limit}`,
-    sla: () => route`/rest/servicedeskapi/request/${described.issueKey}/sla`,
+    sla: () =>
+      p.start
+        ? route`/rest/servicedeskapi/request/${described.issueKey}/sla?start=${p.start}&limit=${p.limit}`
+        : route`/rest/servicedeskapi/request/${described.issueKey}/sla`,
   };
   const response = await api.asUser().requestJira(routes[described.kind](), options);
   return { status: response.status, body: await readJson(response), headers: headerMap(response) };
@@ -62,7 +69,7 @@ resolver.define("getLabIdentity", (request) => {
   return {
     product: "OpsTwin for Jira",
     surface: "AI Transformation Lab",
-    sprint: "CG-2",
+    sprint: "CG-3",
     status: "Development integration",
     projectKey,
     accountIdPresent: Boolean(request.context?.accountId),
@@ -276,6 +283,58 @@ resolver.define("runSyntheticComparison", async (request) => {
     };
   }
   return { status: "ok", evidence: remoteBody };
+});
+
+resolver.define("runSyntheticCalibration", async (request) => {
+  const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
+  if (substitution) return substitution;
+  if (!projectKeyFromContext(request.context)) {
+    return {
+      status: "blocked",
+      kind: "missing_context",
+      message: "Forge did not provide a project key in the trusted invocation context.",
+    };
+  }
+  const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
+  const body = {
+    contractVersion: "cg3.v1",
+    fixtureId: payload.fixtureId === "cg3-partially-observable" ? "cg3-partially-observable" : "cg3-golden-analytical",
+    approveLabAssumptions: payload.approveLabAssumptions !== false,
+    randomSeed: payload.randomSeed ?? 20260327,
+  };
+  let remote;
+  try {
+    remote = await invokeRemote(REMOTE_KEY, {
+      path: CALIBRATE_PATH,
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    const classified = classifyNetworkFailure(error);
+    return { status: "failed", classification: classified.kind, message: classified.message };
+  }
+  const remoteBody = await readJson(remote);
+  if (remote.status === 401) {
+    return {
+      status: "failed",
+      classification: "authentication_failed",
+      message: "The remote could not verify the Forge Invocation Token.",
+    };
+  }
+  if (!remote.ok) {
+    const message =
+      remoteBody && remoteBody.error && typeof remoteBody.error.message === "string"
+        ? remoteBody.error.message
+        : "The remote calibration failed.";
+    return {
+      status: "failed",
+      classification: remote.status === 408 ? "timeout" : "remote_error",
+      httpStatus: remote.status,
+      message,
+    };
+  }
+  return { status: "ok", evidence: remoteBody, mode: "synthetic-demo" };
 });
 
 export const handler = resolver.getDefinitions();

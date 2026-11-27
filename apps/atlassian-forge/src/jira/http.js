@@ -5,6 +5,11 @@ function retryAfterMs(headers, attempt) {
   return Math.min(5000, 250 * 2 ** attempt);
 }
 
+function remainingOf(remainingMs) {
+  if (typeof remainingMs === "function") return remainingMs();
+  return remainingMs;
+}
+
 export async function fetchWithRetry(
   send,
   { maxRetries = 3, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), remainingMs } = {},
@@ -13,6 +18,10 @@ export async function fetchWithRetry(
   let retries = 0;
   let last;
   while (attempt <= maxRetries) {
+    const remaining = remainingOf(remainingMs);
+    if (typeof remaining === "number" && remaining <= 0) {
+      return { ...(last ?? { status: 0 }), retries, stopped: "deadline" };
+    }
     last = await send();
     if (last.status === 401 || last.status === 403) {
       return { ...last, retries, stopped: "authorization" };
@@ -20,7 +29,8 @@ export async function fetchWithRetry(
     const retryable = last.status === 429 || last.status >= 500 || last.networkError;
     if (retryable && attempt < maxRetries) {
       const delay = retryAfterMs(last.headers, attempt);
-      if (typeof remainingMs === "number" && delay > remainingMs) {
+      const leftover = remainingOf(remainingMs);
+      if (typeof leftover === "number" && delay > leftover) {
         return { ...last, retries, stopped: "retry_exceeds_deadline" };
       }
       retries += 1;

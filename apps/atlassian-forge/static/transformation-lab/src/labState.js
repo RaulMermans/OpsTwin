@@ -55,3 +55,21 @@ export function afterFailedImport(previousSnapshot) {
 export function metricById(snapshot, metricId) {
   return snapshot?.descriptiveEvidence?.find((item) => item.metricId === metricId) ?? null;
 }
+
+export function calibrationPayload(fixtureId, approveLabAssumptions = true) {
+  return {
+    fixtureId,
+    approveLabAssumptions,
+    randomSeed: 20260327,
+  };
+}
+
+export function afterCalibrationChange(previous) {
+  if (!previous?.evidence) return previous;
+  return {
+    ...previous,
+    evidence: null,
+    status: "ready",
+    message: "Previous calibration results are stale because the configuration changed.",
+  };
+}

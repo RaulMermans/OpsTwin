@@ -246,6 +246,9 @@ export function descriptiveEvidence(normalized, window, provenanceBase) {
   const worklogCases = new Set(events.filter((item) => item.eventType === "worklog_recorded").map((item) => item.caseId)).size;
   const residenceAll = intervals.filter((item) => item.intervalType === "status_residence").length;
   const workAll = intervals.filter((item) => item.intervalType === "recorded_work").length;
+  const syntheticCases = cases.filter((item) => item.syntheticOrigin === true).length;
+  const observedCases = cases.filter((item) => item.syntheticOrigin === false && item.provenance?.evidenceClass === "observed").length;
+  const unknownOrigin = cases.length - syntheticCases - observedCases;
 
   function boundedShare(numerator, denominator) {
     if (!denominator) return null;
@@ -271,7 +274,17 @@ export function descriptiveEvidence(normalized, window, provenanceBase) {
   }
 
   return [
-    metric("observed_case_count", "Number of normalized cases in the snapshot.", cases.length, "cases", "all snapshot cases", cases.length, 0, "Count is not staffing capacity."),
+    metric(
+      "origin_mix",
+      "Case counts by evidence origin. Mixed-origin totals are not a single population.",
+      { synthetic: syntheticCases, observed: observedCases, unknown: unknownOrigin, total: cases.length },
+      "counts",
+      `synthetic=${syntheticCases}; observed=${observedCases}; unknown=${unknownOrigin}`,
+      cases.length,
+      0,
+      "Do not interpret mixed-origin totals as one operational population.",
+    ),
+    metric("observed_case_count", "Number of normalized cases in the snapshot.", cases.length, "cases", `all snapshot cases (synthetic=${syntheticCases}, observed=${observedCases}, unknown=${unknownOrigin})`, cases.length, 0, "Count is not staffing capacity. Mixed origins are not one population."),
     metric("arrivals_in_window", "Cases whose created timestamp falls inside the observation window.", arrivals, "cases", "created in window", arrivals, cases.length - arrivals, "Excludes cases already open at window start."),
     metric("request_type_distribution", "Counts by request type reference.", countBy(cases, (item) => item.requestTypeReference), "counts", "all snapshot cases", cases.length, 0, "Missing request types are grouped as unclassified. Issue type is a different concept."),
     metric("priority_distribution", "Counts by source priority reference.", countBy(cases, (item) => item.priorityReference), "counts", "all snapshot cases", cases.length, 0, "Priority names are source labels, not simulated classes."),

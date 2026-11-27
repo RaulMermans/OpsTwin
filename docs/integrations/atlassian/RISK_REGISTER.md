@@ -26,3 +26,9 @@
 | R12 | MCP not loaded in agent session | Low | High | Weaker Forge docs lookup | Eng | New session after `.cursor/mcp.json` | MCP tools absent | Official docs already retrieved | Open |
 | R13 | Judges treat product as dashboard wrapper | High | Medium | Scoring on implementation | Product | Live paired run in Jira, not screenshots of Vercel | Demo script | CG-5 native UX | Open |
 | R14 | Billing/subscription change on opstwin-dev | Medium | Low | Policy breach | Owner | No plan changes without approval | Admin console prompts | Stop | Constraint |
+| R25 | Unidentifiable service times treated as dwell | High | High | Invalid model | Eng | Refuse status-residence estimates | CG-3 mapping | Assumption or refuse | Mitigated in CG-3 tests |
+| R26 | Capacity inferred from assignees | High | Medium | False staffing | Eng | Assumption-only capacity | Assignee counts used as FTE | Refuse | Mitigated |
+| R27 | Holdout leakage | High | Medium | Fake validation | Eng | Training-only estimation tests | Thresholds changed after eval | Fail the sprint | Mitigated |
+| R28 | Synthetic circularity | Medium | High | Overclaim | Eng | Misspecified/nonstationary profiles | Recovery treated as reality | Claim register | Mitigated |
+| R29 | Unsafe snapshot egress | High | Medium | Privacy | Eng | Fixture-ID remote only | Snapshot field on /calibrate | Keep 403 | Mitigated |
+| R30 | Deadline-driven scope into CG-4 | Medium | High | Unvalidated interventions | Eng | Stop after CG-3 | Intervention code in this branch | Revert | Open |

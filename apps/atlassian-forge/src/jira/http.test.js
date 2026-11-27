@@ -22,6 +22,21 @@ test("429 retries then exhausts", async () => {
   assert.equal(result.stopped, "retry_exhausted");
 });
 
+test("a live remaining-ms function stops further sends after the deadline", async () => {
+  let calls = 0;
+  let remaining = 1;
+  const result = await fetchWithRetry(
+    async () => {
+      calls += 1;
+      remaining = 0;
+      return { status: 429, headers: { "retry-after": "0" }, body: {} };
+    },
+    { maxRetries: 3, remainingMs: () => remaining, sleep: async () => {} },
+  );
+  assert.equal(calls, 1);
+  assert.equal(result.stopped, "deadline");
+});
+
 test("Retry-After longer than the remaining budget does not retry", async () => {
   let calls = 0;
   const result = await fetchWithRetry(

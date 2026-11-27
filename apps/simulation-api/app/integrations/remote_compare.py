@@ -97,7 +97,7 @@ async def compare(request: Request) -> JSONResponse:
 
     if not isinstance(payload, dict):
         return _error(400, "INVALID_JSON", "The request body must be a JSON object.")
-    forbidden = {"baselineModel", "model", "issues", "jira", "oauth", "token"}
+    forbidden = {"baselineModel", "model", "issues", "jira", "oauth", "token", "cases", "snapshot"}
     if forbidden.intersection(payload):
         emit(
             "simulation.request.validated",

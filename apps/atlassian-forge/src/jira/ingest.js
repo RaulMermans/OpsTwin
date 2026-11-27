@@ -117,6 +117,13 @@ export function issueToRecord(issue, projectKey, requestTypeFieldId) {
   };
 }
 
+function withLastPage(body) {
+  if (!body || typeof body !== "object") return { values: [], isLastPage: true };
+  if (body.isLast === true || body.isLastPage === true) return body;
+  if (Number.isFinite(body.total)) return body;
+  return { ...body, isLastPage: true };
+}
+
 function completenessOf(result, optional = false) {
   if (!result) return optional ? "unavailable" : "incomplete";
   if (result === "forbidden") return "forbidden";
@@ -189,9 +196,13 @@ export async function ingestOperationalData({
           return { status: 0, body: null, networkError: true, classification: classified };
         }
       },
-      { remainingMs: remainingMs(), ...(retrySleep ? { sleep: retrySleep } : {}) },
+      { remainingMs, ...(retrySleep ? { sleep: retrySleep } : {}) },
     );
     retryCount += result.retries ?? 0;
+    if (result.stopped === "deadline") {
+      truncatedReason = truncatedReason ?? "deadline";
+      return { error: failed("deadline", "Import stopped because the execution budget was exhausted.") };
+    }
     if (result.stopped === "retry_exceeds_deadline") {
       truncatedReason = truncatedReason ?? "retry_exceeds_deadline";
       return { error: failed("retry_exceeds_deadline", "Retry-After exceeds the remaining import deadline.") };
@@ -229,10 +240,22 @@ export async function ingestOperationalData({
   const timeZone = null;
 
   const endDesks = markStage("service_desk");
-  const desks = await call("/rest/servicedeskapi/servicedesk", "servicedesk-collection");
+  const desksPaged = await paginateOffset({
+    maxPages: limits.pageLimit,
+    maxRecords: 80,
+    pageSize: 50,
+    identity: (item) => String(item.id),
+    getItems: (page) => page.values ?? [],
+    fetchPage: async (start, limit) => {
+      const result = await call(`/rest/servicedeskapi/servicedesk?start=${start}&limit=${limit}`, "servicedesk-collection");
+      if (result.error) return { error: result.error.classification, values: [] };
+      return withLastPage(result.body);
+    },
+  });
   endDesks();
-  const deskValues = Array.isArray(desks.body?.values) ? desks.body.values : [];
-  const desk = desks.error ? null : deskValues.find((item) => item.projectKey === projectKey) ?? null;
+  pageCount += desksPaged.pages;
+  const desk = desksPaged.items.find((item) => item.projectKey === projectKey) ?? null;
+  if (!desksPaged.complete && !desk) truncatedReason = truncatedReason ?? desksPaged.reason ?? "incomplete_servicedesk";
   sourceProject.serviceDeskId = desk?.id !== undefined && desk?.id !== null ? String(desk.id) : null;
 
   let requestTypes = [];
@@ -426,6 +449,10 @@ export async function ingestOperationalData({
       created: item.created,
       timeSpentSeconds: item.timeSpentSeconds,
     }));
+    if (!paged.complete) {
+      worklogCompleteness = "incomplete";
+      truncatedReason = truncatedReason ?? paged.reason ?? "incomplete_worklog";
+    }
   }
   endWorklogs();
   if (records.length === 0 && worklogCompleteness === "complete") worklogCompleteness = "empty";
@@ -435,32 +462,51 @@ export async function ingestOperationalData({
   let slaCompleteness = desk ? "complete" : "unavailable";
   if (desk) {
     for (const record of records.slice(0, limits.enrichLimit)) {
-      const result = await call(`/rest/servicedeskapi/request/${record.key}/sla`, "sla-collection", "GET", undefined, "sla");
-      if (result.error) {
-        if (result.error.classification === "permission_denied" || result.error.classification === "authentication_failed") {
-          slaCapability = "forbidden";
-          slaCompleteness = "forbidden";
-          break;
-        }
-        if (result.error.classification === "not_found") {
-          slaCapability = "unavailable";
-          slaCompleteness = "unavailable";
-          break;
-        }
-        if (result.error.classification === "malformed" || result.error.classification === "partial") {
-          slaCapability = "unavailable";
-          slaCompleteness = "unavailable";
-          continue;
-        }
-        if (result.error.classification === "deadline" || result.error.classification === "retry_exceeds_deadline") {
-          slaCapability = "unavailable";
-          slaCompleteness = "incomplete";
-          truncatedReason = truncatedReason ?? result.error.classification;
-          break;
-        }
+      const paged = await paginateOffset({
+        maxPages: 3,
+        maxRecords: 50,
+        pageSize: 50,
+        identity: (item) => String(item.id ?? item.name),
+        getItems: (page) => page.values ?? [],
+        fetchPage: async (start, limit) => {
+          const result = await call(
+            `/rest/servicedeskapi/request/${record.key}/sla?start=${start}&limit=${limit}`,
+            "sla-collection",
+            "GET",
+            undefined,
+            "sla",
+          );
+          if (result.error) return { error: result.error.classification, values: [] };
+          return withLastPage(result.body);
+        },
+      });
+      pageCount += paged.pages;
+      if (paged.reason === "permission_denied" || paged.reason === "authentication_failed") {
+        slaCapability = "forbidden";
+        slaCompleteness = "forbidden";
+        break;
+      }
+      if (paged.reason === "not_found") {
+        slaCapability = "unavailable";
+        slaCompleteness = "unavailable";
+        break;
+      }
+      if (paged.reason === "malformed" || paged.reason === "partial") {
+        slaCapability = "unavailable";
+        slaCompleteness = "unavailable";
         continue;
       }
-      record.sla = (result.body?.values ?? []).flatMap((item) => slaCycles(item));
+      if (paged.reason === "deadline" || paged.reason === "retry_exceeds_deadline" || paged.reason === "stage_budget") {
+        slaCapability = "unavailable";
+        slaCompleteness = "incomplete";
+        truncatedReason = truncatedReason ?? paged.reason;
+        break;
+      }
+      record.sla = paged.items.flatMap((item) => slaCycles(item));
+      if (!paged.complete) {
+        slaCompleteness = "incomplete";
+        truncatedReason = truncatedReason ?? paged.reason ?? "incomplete_sla";
+      }
     }
   }
   endSla();

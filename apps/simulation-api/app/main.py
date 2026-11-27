@@ -17,6 +17,7 @@ from app.economics.sensitivity import run_economic_sensitivity
 from app.engine.integrity import SimulationIntegrityError
 from app.engine.repeated import RepeatedSimulationError, run_repeated_simulation
 from app.engine.simulator import run_simulation
+from app.integrations.remote_calibrate import router as calibration_router
 from app.integrations.remote_compare import router as integration_router
 from app.scenarios.coordinator import (
     ComparisonWorkBudgetError,
@@ -268,3 +269,4 @@ def analyze_economic_sensitivity(
 
 app.include_router(router)
 app.include_router(integration_router)
+app.include_router(calibration_router)
