@@ -11,6 +11,7 @@ const resolver = new Resolver();
 const REMOTE_KEY = "opstwin-simulation";
 const COMPARE_PATH = "/api/integrations/atlassian/v1/compare";
 const CALIBRATE_PATH = "/api/integrations/atlassian/v1/calibrate";
+const TRANSFORM_PATH = "/api/integrations/atlassian/v1/transform";
 
 async function readJson(response) {
   try {
@@ -69,7 +70,7 @@ resolver.define("getLabIdentity", (request) => {
   return {
     product: "OpsTwin for Jira",
     surface: "AI Transformation Lab",
-    sprint: "CG-3",
+    sprint: "CG-4",
     status: "Development integration",
     projectKey,
     accountIdPresent: Boolean(request.context?.accountId),
@@ -335,6 +336,60 @@ resolver.define("runSyntheticCalibration", async (request) => {
     };
   }
   return { status: "ok", evidence: remoteBody, mode: "synthetic-demo" };
+});
+
+resolver.define("runTransformationExperiment", async (request) => {
+  const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
+  if (substitution) return substitution;
+  if (!projectKeyFromContext(request.context)) {
+    return {
+      status: "blocked",
+      kind: "missing_context",
+      message: "Forge did not provide a project key in the trusted invocation context.",
+    };
+  }
+  const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
+  const body = {
+    contractVersion: "cg4.v1",
+    fixtureId: payload.fixtureId === "cg3-partially-observable" ? "cg3-partially-observable" : "cg3-golden-analytical",
+    approveLabAssumptions: payload.approveLabAssumptions === true,
+    randomSeed: payload.randomSeed ?? 20260327,
+    intervention: payload.intervention,
+    execution: payload.execution ?? { itemCount: 40, runCount: 5, baseSeed: 20261127 },
+  };
+  let remote;
+  try {
+    remote = await invokeRemote(REMOTE_KEY, {
+      path: TRANSFORM_PATH,
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    const classified = classifyNetworkFailure(error);
+    return { status: "failed", classification: classified.kind, message: classified.message };
+  }
+  const remoteBody = await readJson(remote);
+  if (remote.status === 401) {
+    return {
+      status: "failed",
+      classification: "authentication_failed",
+      message: "The remote could not verify the Forge Invocation Token.",
+    };
+  }
+  if (!remote.ok) {
+    const message =
+      remoteBody && remoteBody.error && typeof remoteBody.error.message === "string"
+        ? remoteBody.error.message
+        : "The transformation experiment failed.";
+    return {
+      status: "failed",
+      classification: remote.status === 408 ? "timeout" : "remote_error",
+      httpStatus: remote.status,
+      message,
+    };
+  }
+  return { status: "ok", evidence: remoteBody };
 });
 
 export const handler = resolver.getDefinitions();

@@ -10,7 +10,9 @@ import {
   comparisonPayload,
   defaultConfig,
   defaultImportConfig,
+  defaultTransform,
   metricById,
+  transformPayload,
 } from "./labState.js";
 
 function metric(value) {
@@ -39,7 +41,10 @@ export function App() {
     fixtureId: "cg3-golden-analytical",
     approveLabAssumptions: false,
   });
+  const [transform, setTransform] = useState(defaultTransform());
+  const [experiment, setExperiment] = useState({ status: "ready", evidence: null, message: null });
   const calibrating = useRef(false);
+  const experimenting = useRef(false);
   const [importState, setImportState] = useState({
     status: "none",
     snapshot: null,
@@ -241,6 +246,49 @@ export function App() {
     }
   }
 
+  function updateTransform(patch) {
+    setTransform((current) => ({ ...current, ...patch }));
+    setExperiment((previous) =>
+      previous.evidence
+        ? { status: "ready", evidence: null, message: "Previous results are stale because the configuration changed." }
+        : previous,
+    );
+  }
+
+  async function runExperiment() {
+    if (experimenting.current || phase !== "ready") return;
+    if (!calibration.evidence?.constructedModel) {
+      setExperiment({
+        status: "failed",
+        evidence: null,
+        message: "Calibrate a constructed baseline first. Interventions are not run against structurally invalid models.",
+      });
+      return;
+    }
+    experimenting.current = true;
+    setExperiment({ status: "running", evidence: null, message: null });
+    try {
+      const result = await invoke("runTransformationExperiment", transformPayload(calibration, transform));
+      if (result?.status === "ok" && result.evidence) {
+        setExperiment({ status: "completed", evidence: result.evidence, message: result.evidence.disclosure });
+      } else {
+        setExperiment({
+          status: "failed",
+          evidence: null,
+          message: result?.message ?? "The transformation experiment failed.",
+        });
+      }
+    } catch (caught) {
+      setExperiment({
+        status: "failed",
+        evidence: null,
+        message: caught instanceof Error ? caught.message : "The transformation experiment failed.",
+      });
+    } finally {
+      experimenting.current = false;
+    }
+  }
+
   const intervention = INTERVENTIONS[config.intervention];
   const projectOk = project?.classification === "ok";
   const jiraStatus = projectOk ? "connected" : phase === "loading-project" ? "checking" : "blocked";
@@ -253,16 +301,24 @@ export function App() {
   return (
     <main style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif", padding: "24px", maxWidth: "760px", color: "#172B4D" }}>
       <p style={{ letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "12px", color: "#44546F" }}>
-        Development integration — CG-3
+        Development integration — CG-4
       </p>
       <h1 style={{ margin: "8px 0 4px" }}>OpsTwin for Jira</h1>
       <h2 style={{ margin: "0 0 16px", fontWeight: 500 }}>AI Transformation Lab</h2>
       <p>Simulate before you automate. Observed Jira records are evidence, not a calibrated model. Synthetic simulation remains a separate lab.</p>
 
       <nav aria-label="Lab sections" style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-        {["overview", "data", "calibration", "simulation"].map((id) => (
+        {["overview", "data", "calibration", "experiments", "simulation"].map((id) => (
           <button key={id} type="button" onClick={() => setSection(id)} aria-current={section === id}>
-            {id === "overview" ? "Overview" : id === "data" ? "Operational Data" : id === "calibration" ? "Model Calibration" : "Simulation Lab"}
+            {id === "overview"
+              ? "Overview"
+              : id === "data"
+                ? "Operational Data"
+                : id === "calibration"
+                  ? "Model Calibration"
+                  : id === "experiments"
+                    ? "Experiments"
+                    : "Connectivity Lab"}
           </button>
         ))}
       </nav>
@@ -412,6 +468,7 @@ export function App() {
               value={calibration.fixtureId}
               onChange={(event) => {
                 setCalibration((current) => afterCalibrationChange({ ...current, fixtureId: event.target.value }));
+                setExperiment({ status: "ready", evidence: null, message: "Calibration changed. Previous experiment results are stale." });
               }}
               disabled={calibration.status === "running"}
             >
@@ -427,6 +484,7 @@ export function App() {
                 setCalibration((current) =>
                   afterCalibrationChange({ ...current, approveLabAssumptions: event.target.checked }),
                 );
+                setExperiment({ status: "ready", evidence: null, message: "Calibration changed. Previous experiment results are stale." });
               }}
               disabled={calibration.status === "running"}
             />
@@ -494,6 +552,200 @@ export function App() {
                   : "No independent holdout report. Failed and inconclusive outcomes stay failed or inconclusive."}
               </p>
             </>
+          ) : null}
+        </section>
+      ) : null}
+
+      {section === "experiments" && phase === "ready" ? (
+        <section>
+          <h3>Human-only baseline</h3>
+          <p>
+            The comparison baseline is the calibrated operation with no new AI intervention. Canonical models keep
+            itemCount=1 as a structural placeholder. Experiments use a separate execution volume.
+          </p>
+          {!calibration.evidence?.constructedModel ? (
+            <p role="status">Run synthetic calibration first. A constructed model is required before interventions.</p>
+          ) : (
+            <dl>
+              <dt>Baseline class</dt>
+              <dd>{calibration.evidence.readinessStatus}</dd>
+              <dt>Historically adequate</dt>
+              <dd>{calibration.evidence.readinessStatus === "validated_for_defined_scope" ? "for recorded holdout scope only" : "no — exploratory if executed"}</dd>
+              <dt>Model fingerprint</dt>
+              <dd>{calibration.evidence.modelFingerprint}</dd>
+              <dt>Triage / resolution means</dt>
+              <dd>
+                {(calibration.evidence.parameterEstimates ?? [])
+                  .filter((item) => item.parameterId?.includes("processing_time.mean") && item.consumedByModel !== false)
+                  .map((item) => `${item.parameterId}=${item.value}`)
+                  .join("; ") || "see calibration"}
+              </dd>
+              <dt>Capacities</dt>
+              <dd>
+                {(calibration.evidence.parameterEstimates ?? [])
+                  .filter((item) => item.parameterId?.startsWith("resource.") && item.consumedByModel !== false)
+                  .map((item) => `${item.parameterId}=${item.value}`)
+                  .join("; ")}
+              </dd>
+            </dl>
+          )}
+          <h3>Intervention</h3>
+          <label>
+            Kind
+            <select value={transform.kind} onChange={(event) => updateTransform({ kind: event.target.value })} disabled={experiment.status === "running"}>
+              <option value="capacity">Human capacity expansion</option>
+              <option value="ai_assisted">AI-assisted processing (effective mean)</option>
+              <option value="hybrid">Hybrid automation (existing route shift)</option>
+            </select>
+          </label>
+          {transform.kind === "capacity" ? (
+            <>
+              <label>
+                Additional triage staff
+                <select value={transform.extraTriageCapacity} onChange={(event) => updateTransform({ extraTriageCapacity: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[0, 1, 2, 3].map((value) => (
+                    <option key={value} value={value}>
+                      +{value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Additional resolution staff
+                <select value={transform.extraResolutionCapacity} onChange={(event) => updateTransform({ extraResolutionCapacity: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[0, 1, 2, 3].map((value) => (
+                    <option key={value} value={value}>
+                      +{value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
+          {transform.kind === "ai_assisted" ? (
+            <>
+              <p>Effective-mean model, not per-case AI execution or mixture tails.</p>
+              <label>
+                Stage
+                <select value={transform.stageId} onChange={(event) => updateTransform({ stageId: event.target.value })} disabled={experiment.status === "running"}>
+                  <option value="triage">Triage</option>
+                  <option value="resolution">Resolution</option>
+                </select>
+              </label>
+              <label>
+                Coverage
+                <select value={transform.coverage} onChange={(event) => updateTransform({ coverage: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[0.25, 0.5, 0.75, 1].map((value) => (
+                    <option key={value} value={value}>
+                      {Math.round(value * 100)}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Processing-time reduction on covered work
+                <select value={transform.processingReduction} onChange={(event) => updateTransform({ processingReduction: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[0.2, 0.4, 0.6].map((value) => (
+                    <option key={value} value={value}>
+                      {Math.round(value * 100)}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Review overhead (minutes)
+                <select value={transform.reviewOverheadMinutes} onChange={(event) => updateTransform({ reviewOverheadMinutes: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[0, 0.25, 0.5].map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
+          {transform.kind === "hybrid" ? (
+            <>
+              <p>
+                Auto-complete shifts the existing triage success route toward completion. It does not add an automation
+                stage. Refused when that completion option is not already in the model.
+              </p>
+              <label>
+                Auto-complete fraction
+                <select value={transform.autoCompleteFraction} onChange={(event) => updateTransform({ autoCompleteFraction: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[0.1, 0.25, 0.4].map((value) => (
+                    <option key={value} value={value}>
+                      {Math.round(value * 100)}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
+          <h3>Experiment execution</h3>
+          <p>
+            Demand volume {transform.itemCount} items, {transform.runCount} paired replications, seed 20261127. Empty
+            system, no warm-up. This is not the calibration placeholder itemCount.
+          </p>
+          <label>
+            Items
+            <select value={transform.itemCount} onChange={(event) => updateTransform({ itemCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
+              {[20, 40, 80].map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Replications
+            <select value={transform.runCount} onChange={(event) => updateTransform({ runCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
+              {[2, 5, 8].map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" onClick={runExperiment} disabled={experiment.status === "running"}>
+            {experiment.status === "running" ? "Running experiment…" : "Run comparative experiment"}
+          </button>
+          {experiment.status === "failed" ? <p role="alert">{experiment.message}</p> : null}
+          {experiment.status === "ready" && experiment.message ? <p>{experiment.message}</p> : null}
+          {experiment.evidence ? (
+            <section>
+              <h3>Comparative evidence</h3>
+              <dl>
+                <dt>Baseline class</dt>
+                <dd>
+                  {experiment.evidence.baselineClass}
+                  {experiment.evidence.exploratory ? " (exploratory)" : ""}
+                </dd>
+                <dt>Approximations</dt>
+                <dd>{(experiment.evidence.approximations ?? []).join(", ") || "none (capacity replacement)"}</dd>
+                <dt>Identities agree</dt>
+                <dd>{experiment.evidence.identitiesAgree ? "yes" : "no"}</dd>
+                <dt>Executed item count</dt>
+                <dd>{experiment.evidence.experiment?.itemCount}</dd>
+                <dt>Baseline cycle time (mean, minutes)</dt>
+                <dd>{metric(experiment.evidence.baselineCycleTime?.mean)}</dd>
+                <dt>Intervention cycle time (mean, minutes)</dt>
+                <dd>{metric(experiment.evidence.scenarioCycleTime?.mean)}</dd>
+                <dt>Paired difference (mean)</dt>
+                <dd>{metric(experiment.evidence.pairedDifference?.mean)}</dd>
+                <dt>Improvement probability</dt>
+                <dd>{metric(experiment.evidence.probabilityOfImprovement)}</dd>
+                <dt>Integrity</dt>
+                <dd>{experiment.evidence.integrityStatus}</dd>
+              </dl>
+              <p>{experiment.evidence.improvementInterpretation}</p>
+              <h3>Disclosures</h3>
+              <ul>
+                {(experiment.evidence.disclosures ?? []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </section>
           ) : null}
         </section>
       ) : null}
@@ -575,8 +827,9 @@ export function App() {
       <footer>
         <h3>Evidence</h3>
         <p>
-          Operational snapshots stay inside the Forge resolver. Comparison remains synthetic-only. Calibration uses a separate
-          synthetic fixture identifier, not live Jira records. A faster task is not automatically a better operation.
+          Operational snapshots stay inside the Forge resolver. Calibration and experiments use synthetic fixture identifiers,
+          not live Jira records. Experiments execute the existing comparison engine. A faster task is not automatically a
+          better operation.
         </p>
       </footer>
     </main>

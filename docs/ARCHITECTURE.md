@@ -20,6 +20,10 @@ Repeated request -> deterministic seed schedule -> sequential summary runs
                                                   -> risks + convergence
                                                   -> one representative rerun -> result JSON
 
+Intervention experiment -> calibrated constructed model + catalog adapter
+                         -> experiment execution volume (not placeholder itemCount)
+                         -> existing comparison coordinator -> disclosed comparative evidence
+
 Comparison request -> immutable baseline + identity overrides -> validated variants
                    -> shared seed schedule -> baseline then scenarios per run index
                    -> paired intersections/deltas/risks -> guardrails + ranking

@@ -1,5 +1,15 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-4 checkpoint — 2026-11-27
+
+- Branch `feat/codegeist-cg4-ai-interventions` from `checkpoint/cg3.1-complete` (`482675b`). See `docs/codegeist/sprints/CG-04.md` for live evidence.
+- Adapters in `app/interventions/`; remote `POST /api/integrations/atlassian/v1/transform`; Experiments UI. ADR-027.
+- Hosted production `https://ops-twin.vercel.app` deploy `dpl_5cTJgujgEgUKGGZ2mBss6ahvn8XU`: health 200; unauthenticated transform 401 `FIT_INVALID` (no longer 404).
+- Forge development **3.4.0** on `opstwin-dev.atlassian.net` / install `b1bb872d-...` (list shows major 3, Up-to-date).
+- Local: 326 pytest, 81 Forge tests.
+- Live Jira 2026-11-27: OPS queue page, CG-4 lab. Golden fixture + approved lab assumptions → `validated_for_defined_scope`, constructed fingerprint `32206b92…`, holdout `passed_for_defined_scope` (empty-system generative). Capacity still assumption-bound (4). Experiments: human capacity +1/+1, 40 items × 5 paired runs, comparative evidence + disclosures returned. Synthetic fixtures only; not this project's history.
+- Live operational calibration still not claimed.
+
 ## Codegeist CG-3.1 checkpoint — 2026-11-27
 
 - Continue `feat/codegeist-cg3-model-calibration` from `d7774de`. Recoverable pointer `checkpoint/cg3.1-start` (= `d7774de`). Not pushed.

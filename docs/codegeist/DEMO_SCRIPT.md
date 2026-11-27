@@ -2,10 +2,10 @@
 
 Under 5 minutes. Do not record until a live OPS install exists.
 
-1. JSM project OPS → Queues → Apps → **OpsTwin for Jira**.
-2. Show that the lab names missing evidence rather than inventing AI speedups.
-3. Compare **add capacity** vs **faster triage** vs **automation with rework** using paired runs.
-4. Point at a result where local speed does not dominate system SLA or cost, **only if the engine shows it**.
-5. End on inspectable assumptions and the standalone engine provenance.
+1. JSM project OPS → Queues → **OpsTwin for Jira**.
+2. **Model Calibration**: golden analytical, tick **Accept laboratory assumptions**, run. Show constructed fingerprint and that capacity is an approved assumption, not assignee counts. Unchecked run refuses construction.
+3. **Experiments**: human-only baseline disclosure, then **Human capacity expansion**. 40 items × 5 paired runs. Read cycle times, integrity, and disclosures.
+4. Optionally **AI-assisted processing** (effective-mean label) or **hybrid** (existing route shift only).
+5. End on: not this project's history; holdout does not validate the intervention; a faster task is not automatically a better operation.
 
-CG-0 cannot execute this script.
+CG-4 live path on development 3.4.0 used steps 1–3 on 2026-11-27.
