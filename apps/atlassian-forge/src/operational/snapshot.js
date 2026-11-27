@@ -2,6 +2,7 @@ import { contentFingerprint, stableId } from "./fingerprint.js";
 import { CONNECTOR_VERSION, SCHEMA_VERSION, provenance } from "./provenance.js";
 import { normalizeIssues } from "./normalize.js";
 import { assessDataQuality, classifyReadiness, descriptiveEvidence } from "./quality.js";
+import { validateSnapshot } from "./validate.js";
 
 export function dedupeSourceIssues(issues) {
   const seen = new Set();
@@ -40,6 +41,7 @@ export function buildSnapshot({
     transportAuthenticity,
     observationWindowLabel: `${window.start}/${window.end}`,
     observedAt: importCompletedAt ?? importStartedAt ?? null,
+    installationRef: authorizedInstallationRef,
   };
   const normalized = normalizeIssues(uniqueIssues, meta, window, statuses, requestTypes);
   const dataQuality = assessDataQuality(normalized, extraction, window);
@@ -98,8 +100,20 @@ export function buildSnapshot({
       worklogCapability: extraction.worklogCapability ?? "not_requested",
       slaCapability: extraction.slaCapability ?? "not_requested",
       changelogCapability: extraction.changelogCapability ?? "retrieved",
+      searchCompleteness: extraction.searchCompleteness ?? null,
+      changelogCompleteness: extraction.changelogCompleteness ?? null,
+      requestTypeCompleteness: extraction.requestTypeCompleteness ?? null,
+      worklogCompleteness: extraction.worklogCompleteness ?? null,
+      slaCompleteness: extraction.slaCompleteness ?? null,
     },
   };
   snapshot.contentFingerprint = contentFingerprint(snapshot);
+  const contract = validateSnapshot(snapshot);
+  if (!contract.ok) {
+    snapshot.completenessStatus = "invalid";
+    snapshot.readiness = "invalid";
+    snapshot.limitations = [...snapshot.limitations, `Snapshot failed the os.1.0.0 contract at ${contract.path}: ${contract.message}`];
+    snapshot.contentFingerprint = contentFingerprint(snapshot);
+  }
   return snapshot;
 }

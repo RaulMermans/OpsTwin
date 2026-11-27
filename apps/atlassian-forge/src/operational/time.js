@@ -49,8 +49,54 @@ export function inWindow(iso, window) {
   return parsed.utcMs >= start && parsed.utcMs < end;
 }
 
-export function cohortJql(projectKey, window) {
-  const start = window.start;
-  const end = window.end;
-  return `project = "${projectKey}" AND created < "${end}" AND (resolved IS EMPTY OR resolved >= "${start}")`;
+export function jqlDateTime(iso, timeZone = "UTC") {
+  const parsed = parseTimestamp(iso);
+  if (!parsed.ok) return null;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(parsed.utcMs));
+  const get = (type) => parts.find((part) => part.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+}
+
+export function jqlQueryWindow(window, timeZone) {
+  if (timeZone) {
+    return {
+      start: jqlDateTime(window.start, timeZone),
+      end: jqlDateTime(window.end, timeZone),
+      padded: false,
+      timeZone,
+    };
+  }
+  const startMs = Date.parse(window.start) - 24 * 60 * 60 * 1000;
+  const endMs = Date.parse(window.end) + 24 * 60 * 60 * 1000;
+  return {
+    start: jqlDateTime(new Date(startMs).toISOString(), "UTC"),
+    end: jqlDateTime(new Date(endMs).toISOString(), "UTC"),
+    padded: true,
+    timeZone: "UTC",
+  };
+}
+
+export function overlapsObservationWindow(createdIso, resolvedIso, window) {
+  const created = parseTimestamp(createdIso);
+  if (!created.ok) return false;
+  const start = Date.parse(window.start);
+  const end = Date.parse(window.end);
+  if (created.utcMs >= end) return false;
+  if (resolvedIso === null || resolvedIso === undefined || resolvedIso === "") return true;
+  const resolved = parseTimestamp(resolvedIso);
+  if (!resolved.ok) return true;
+  return resolved.utcMs >= start;
+}
+
+export function cohortJql(projectKey, window, timeZone) {
+  const query = jqlQueryWindow(window, timeZone);
+  return `project = "${projectKey}" AND created < "${query.end}" AND (resolved IS EMPTY OR resolved >= "${query.start}") ORDER BY created ASC, key ASC`;
 }

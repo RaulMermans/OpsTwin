@@ -22,6 +22,19 @@ test("429 retries then exhausts", async () => {
   assert.equal(result.stopped, "retry_exhausted");
 });
 
+test("Retry-After longer than the remaining budget does not retry", async () => {
+  let calls = 0;
+  const result = await fetchWithRetry(
+    async () => {
+      calls += 1;
+      return { status: 429, headers: { "retry-after": "30" }, body: {} };
+    },
+    { maxRetries: 3, remainingMs: 1000, sleep: async () => {} },
+  );
+  assert.equal(calls, 1);
+  assert.equal(result.stopped, "retry_exceeds_deadline");
+});
+
 test("5xx recovers and malformed network retries", async () => {
   let calls = 0;
   const recovered = await fetchWithRetry(

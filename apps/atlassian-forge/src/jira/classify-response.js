@@ -6,20 +6,29 @@ function hasRequiredStrings(body, fields) {
   return fields.every((field) => typeof body[field] === "string" && body[field].trim() !== "");
 }
 
-function classifyCollection(body, itemFields) {
-  if (!isRecord(body) || !Array.isArray(body.values)) {
-    return { kind: "malformed", message: "The collection envelope is missing a values array." };
+function itemHas(item, fields) {
+  return isRecord(item) && fields.every((field) => item[field] !== undefined && item[field] !== null);
+}
+
+function classifyArrayCollection(body, arrayKey, itemFields) {
+  if (!isRecord(body) || !Array.isArray(body[arrayKey])) {
+    return { kind: "malformed", message: `The collection envelope is missing a ${arrayKey} array.` };
   }
-  if (body.values.length === 0) {
+  if (body[arrayKey].length === 0) {
     return { kind: "empty", message: "The endpoint succeeded and returned an empty collection." };
   }
-  const valid = body.values.every(
-    (item) => isRecord(item) && itemFields.every((field) => item[field] !== undefined && item[field] !== null),
-  );
-  if (!valid) {
+  const validCount = body[arrayKey].filter((item) => itemHas(item, itemFields)).length;
+  if (validCount === 0) {
     return { kind: "malformed", message: "A collection item is missing required fields." };
   }
+  if (validCount < body[arrayKey].length) {
+    return { kind: "partial", message: "The collection contains a mix of valid and malformed items." };
+  }
   return { kind: "ok", message: "The endpoint succeeded with a nonempty collection." };
+}
+
+function classifyCollection(body, itemFields) {
+  return classifyArrayCollection(body, "values", itemFields);
 }
 
 export function classifyNetworkFailure(error) {
@@ -60,6 +69,13 @@ export function classifyJiraResponse(status, body, schema = "unspecified") {
     return { kind: "ok", message: "The endpoint succeeded with a valid project object." };
   }
 
+  if (schema === "myself") {
+    if (!isRecord(body) || typeof body.timeZone !== "string" || body.timeZone.trim() === "") {
+      return { kind: "malformed", message: "The caller profile is missing a timezone." };
+    }
+    return { kind: "ok", message: "The endpoint succeeded with a caller profile." };
+  }
+
   if (schema === "servicedesk-collection") {
     return classifyCollection(body, ["id", "projectKey"]);
   }
@@ -72,10 +88,70 @@ export function classifyJiraResponse(status, body, schema = "unspecified") {
     if (!isRecord(body) || !Array.isArray(body.issues)) {
       return { kind: "malformed", message: "The search payload is missing an issues array." };
     }
+    if (body.nextPageToken !== undefined && body.nextPageToken !== null && typeof body.nextPageToken !== "string") {
+      return { kind: "malformed", message: "Search continuation metadata is malformed." };
+    }
+    if (body.isLast !== undefined && typeof body.isLast !== "boolean") {
+      return { kind: "malformed", message: "Search isLast must be a boolean when present." };
+    }
     if (body.issues.length === 0) {
       return { kind: "empty", message: "The endpoint succeeded and returned no operational records." };
     }
+    const valid = body.issues.every((item) => isRecord(item) && (item.id || item.key) && isRecord(item.fields));
+    if (!valid) {
+      return { kind: "malformed", message: "A search issue is missing identity or fields." };
+    }
     return { kind: "ok", message: "The endpoint succeeded with a nonempty collection." };
+  }
+
+  if (schema === "changelog-collection") {
+    return classifyCollection(body, ["id", "created"]);
+  }
+
+  if (schema === "worklog-collection") {
+    return classifyArrayCollection(body, "worklogs", ["id"]);
+  }
+
+  if (schema === "sla-collection") {
+    if (!isRecord(body) || !Array.isArray(body.values)) {
+      return { kind: "malformed", message: "The SLA envelope is missing a values array." };
+    }
+    if (body.values.length === 0) {
+      return { kind: "empty", message: "The endpoint succeeded and returned an empty collection." };
+    }
+    const valid = body.values.every((item) => isRecord(item) && item.id !== undefined && item.id !== null);
+    if (!valid) {
+      return { kind: "malformed", message: "An SLA item is missing required fields." };
+    }
+    return { kind: "ok", message: "The endpoint succeeded with a nonempty collection." };
+  }
+
+  if (schema === "project-statuses") {
+    if (!Array.isArray(body)) {
+      return { kind: "malformed", message: "Project statuses must be an array of issue-type status groups." };
+    }
+    if (body.length === 0) {
+      return { kind: "empty", message: "The endpoint succeeded and returned no statuses." };
+    }
+    return { kind: "ok", message: "The endpoint succeeded with project statuses." };
+  }
+
+  if (schema === "field-metadata") {
+    if (!Array.isArray(body)) {
+      return { kind: "malformed", message: "Field metadata must be an array." };
+    }
+    if (body.length === 0) {
+      return { kind: "empty", message: "The endpoint succeeded and returned no fields." };
+    }
+    const valid = body.every((item) => isRecord(item) && typeof item.id === "string");
+    if (!valid) {
+      return { kind: "malformed", message: "A field record is missing an id." };
+    }
+    return { kind: "ok", message: "The endpoint succeeded with field metadata." };
+  }
+
+  if (schema === "unspecified") {
+    return { kind: "malformed", message: "Operational endpoints require an explicit response schema." };
   }
 
   if (!isRecord(body) && !Array.isArray(body)) {
