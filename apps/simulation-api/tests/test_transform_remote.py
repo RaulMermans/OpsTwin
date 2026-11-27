@@ -93,3 +93,41 @@ def test_synthetic_capacity_experiment_returns_paired_evidence(authorized: None)
     assert "not this jira" in body["disclosure"].lower()
     assert body["validPairedRunCount"] == 2
     assert "authorization" not in str(body).lower() or "Forge Invocation" not in str(body)
+
+
+def test_multi_experiment_returns_shared_baseline_metrics(authorized: None) -> None:
+    response = TestClient(app).post(
+        PATH,
+        json={
+            "contractVersion": "cg5.v1",
+            "fixtureId": "cg5-hybrid-support",
+            "approveLabAssumptions": True,
+            "randomSeed": 21,
+            "experimentId": "demo-support-20261127",
+            "requestId": "req-live-1",
+            "alternatives": [
+                {
+                    "alternativeId": "human-expansion",
+                    "intervention": {"kind": "capacity", "extraResolutionCapacity": 1},
+                },
+                {
+                    "alternativeId": "ai-assisted",
+                    "intervention": {
+                        "kind": "ai_assisted",
+                        "stageId": "triage",
+                        "coverage": 0.5,
+                        "processingReduction": 0.4,
+                        "reviewOverheadMinutes": 0.25,
+                    },
+                },
+            ],
+            "execution": {"itemCount": 20, "runCount": 2, "baseSeed": 20261127},
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["contractVersion"] == "cg5.v1"
+    assert body["experimentStatus"] == "complete"
+    assert body["requestId"] == "req-live-1"
+    assert body["baselineMetrics"]["averageCycleTime"]["unit"] == "minutes"
+    assert len(body["alternatives"]) == 2

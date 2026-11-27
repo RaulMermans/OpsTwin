@@ -5,6 +5,7 @@ import { installationRefFromContext, projectKeyFromContext, rejectBrowserProject
 import { ingestOperationalData } from "./jira/ingest.js";
 import { describeJiraPath } from "./jira/route.js";
 import { generateSynthetic } from "./operational/synthetic.js";
+import { validateTransformEvidence } from "./remote/evidence.js";
 
 const Resolver = typeof ResolverModule === "function" ? ResolverModule : ResolverModule.default;
 const resolver = new Resolver();
@@ -70,7 +71,7 @@ resolver.define("getLabIdentity", (request) => {
   return {
     product: "OpsTwin for Jira",
     surface: "AI Transformation Lab",
-    sprint: "CG-4",
+    sprint: "CG-5",
     status: "Development integration",
     projectKey,
     accountIdPresent: Boolean(request.context?.accountId),
@@ -299,7 +300,12 @@ resolver.define("runSyntheticCalibration", async (request) => {
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
   const body = {
     contractVersion: "cg3.v1",
-    fixtureId: payload.fixtureId === "cg3-partially-observable" ? "cg3-partially-observable" : "cg3-golden-analytical",
+    fixtureId:
+      payload.fixtureId === "cg5-hybrid-support"
+        ? "cg5-hybrid-support"
+        : payload.fixtureId === "cg3-partially-observable"
+          ? "cg3-partially-observable"
+          : "cg3-golden-analytical",
     approveLabAssumptions: payload.approveLabAssumptions === true,
     randomSeed: payload.randomSeed ?? 20260327,
   };
@@ -349,14 +355,32 @@ resolver.define("runTransformationExperiment", async (request) => {
     };
   }
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
-  const body = {
-    contractVersion: "cg4.v1",
-    fixtureId: payload.fixtureId === "cg3-partially-observable" ? "cg3-partially-observable" : "cg3-golden-analytical",
-    approveLabAssumptions: payload.approveLabAssumptions === true,
-    randomSeed: payload.randomSeed ?? 20260327,
-    intervention: payload.intervention,
-    execution: payload.execution ?? { itemCount: 40, runCount: 5, baseSeed: 20261127 },
-  };
+  const fixtureId =
+    payload.fixtureId === "cg5-hybrid-support"
+      ? "cg5-hybrid-support"
+      : payload.fixtureId === "cg3-partially-observable"
+        ? "cg3-partially-observable"
+        : "cg3-golden-analytical";
+  const multi = payload.contractVersion === "cg5.v1" && Array.isArray(payload.alternatives);
+  const body = multi
+    ? {
+        contractVersion: "cg5.v1",
+        fixtureId,
+        approveLabAssumptions: payload.approveLabAssumptions === true,
+        randomSeed: payload.randomSeed ?? 20260327,
+        alternatives: payload.alternatives,
+        execution: payload.execution ?? { itemCount: 20, runCount: 5, baseSeed: 20261127 },
+        experimentId: payload.experimentId,
+        requestId: payload.requestId,
+      }
+    : {
+        contractVersion: "cg4.v1",
+        fixtureId,
+        approveLabAssumptions: payload.approveLabAssumptions === true,
+        randomSeed: payload.randomSeed ?? 20260327,
+        intervention: payload.intervention,
+        execution: payload.execution ?? { itemCount: 40, runCount: 5, baseSeed: 20261127 },
+      };
   let remote;
   try {
     remote = await invokeRemote(REMOTE_KEY, {
@@ -388,6 +412,13 @@ resolver.define("runTransformationExperiment", async (request) => {
       httpStatus: remote.status,
       message,
     };
+  }
+  const validated = validateTransformEvidence(remoteBody, {
+    requestId: payload.requestId,
+    experimentId: payload.experimentId,
+  });
+  if (!validated.ok) {
+    return { status: "failed", classification: "invalid_response", message: validated.message };
   }
   return { status: "ok", evidence: remoteBody };
 });

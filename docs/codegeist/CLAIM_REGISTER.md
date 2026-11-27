@@ -22,3 +22,5 @@
 | CG-4 intervention adapters over existing comparison | Source + pytest | `app/interventions`, ADR-027 |
 | CG-4 live Jira experiment on OPS | Owner-clicked 2026-11-27 | Golden + assumptions → constructed `32206b92…`; capacity +1/+1, 40×5 paired runs; hosted transform 401 without FIT; Forge development 3.4.0 |
 | CG-4 live operational calibration of OPS history | Not claimed | Transform/calibrate remotes remain synthetic fixture-ID only |
+| CG-5 multi-scenario native lab | Source + pytest + Forge 3.5.0 + Overview screenshot | `cg5.v1`, `cg5-hybrid-support`; live Overview in OPS 2026-11-27; full experiment click inside Custom UI iframe not completed by agent |
+| CG-5 live operational calibration of OPS history | Not claimed | Snapshots stay in Forge; remotes remain fixture-ID only |

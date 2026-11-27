@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { afterCalibrationChange, afterConfigChange, afterFailedImport, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, transformPayload } from "../../static/transformation-lab/src/labState.js";
+import { afterCalibrationChange, afterConfigChange, afterFailedImport, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, hybridSupported, selectedAlternatives, transformPayload } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
   const stale = afterConfigChange({
@@ -40,14 +40,24 @@ test("payloads stay on the synthetic catalog and omit project identity", () => {
 
 test("transformation payloads stay on fixture identifiers and experiment volume", () => {
   const payload = transformPayload(
-    { fixtureId: "cg3-golden-analytical", approveLabAssumptions: true },
+    { fixtureId: "cg5-hybrid-support", approveLabAssumptions: true, evidence: { hybridCompatible: true, constructedModel: {} } },
     defaultTransform(),
+    "req-1",
   );
-  assert.equal(payload.contractVersion, undefined);
-  assert.equal(payload.fixtureId, "cg3-golden-analytical");
-  assert.equal(payload.execution.itemCount, 40);
+  assert.equal(payload.contractVersion, "cg5.v1");
+  assert.equal(payload.fixtureId, "cg5-hybrid-support");
+  assert.equal(payload.execution.itemCount, 20);
   assert.notEqual(payload.execution.itemCount, 1);
+  assert.equal(payload.alternatives.length, 3);
+  assert.equal(payload.requestId, "req-1");
   assert.equal("snapshot" in payload, false);
   assert.equal("baselineModel" in payload, false);
   assert.equal("projectKey" in payload, false);
+});
+
+test("hybrid is omitted when the baseline has no completion route", () => {
+  const calibration = { fixtureId: "cg3-golden-analytical", evidence: { hybridCompatible: false } };
+  assert.equal(hybridSupported(calibration), false);
+  const alternatives = selectedAlternatives(defaultTransform(), calibration);
+  assert.equal(alternatives.some((item) => item.alternativeId === "hybrid"), false);
 });

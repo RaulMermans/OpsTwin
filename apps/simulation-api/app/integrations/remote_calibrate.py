@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import Field, ValidationError
 
-from app.calibration.catalog import FIXTURE_IDS, load_fixture, request_for_fixture
+from app.calibration.catalog import LABORATORY_FIXTURES, load_fixture, request_for_fixture
 from app.calibration.workflow import calibrate
 from app.domain.models import ContractModel
 from app.integrations.fit import (
@@ -33,6 +33,7 @@ FixtureId = Literal[
     "cg3-misspecified",
     "cg3-mixed-origin",
     "cg3-temporal-shift",
+    "cg5-hybrid-support",
 ]
 
 
@@ -102,7 +103,7 @@ async def calibrate_remote(request: Request) -> JSONResponse:
         calibrate_request = AtlassianCalibrateRequest.model_validate(payload)
     except ValidationError:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
-    if calibrate_request.fixture_id not in FIXTURE_IDS:
+    if calibrate_request.fixture_id not in LABORATORY_FIXTURES:
         return _error(422, "UNKNOWN_FIXTURE", "The fixture identifier is not in the synthetic catalog.")  # noqa: E501
     snapshot = load_fixture(calibrate_request.fixture_id, calibrate_request.random_seed)
     engine_request = request_for_fixture(
@@ -122,10 +123,15 @@ async def calibrate_remote(request: Request) -> JSONResponse:
             "synthetic": True,
         },
     )
+    from app.interventions.catalog import hybrid_compatible
+
     body = artifact.model_dump(by_alias=True, exclude_none=True)
     body["synthetic"] = True
     body["fixtureId"] = calibrate_request.fixture_id
     body["disclosure"] = "Synthetic laboratory calibration. Not this Jira project's history."
+    body["hybridCompatible"] = bool(
+        artifact.constructed_model is not None and hybrid_compatible(artifact.constructed_model)
+    )
     if body.get("schemaVersion") != "cal.1.0.0" or body.get("synthetic") is not True:
         return _error(500, "RESPONSE_VALIDATION_FAILED", "Calibration response contract was invalid.")  # noqa: E501
     return JSONResponse(content=body)

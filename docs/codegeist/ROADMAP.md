@@ -45,3 +45,5 @@ CG-2 implementation: `docs/codegeist/sprints/CG-02.md`, snapshot `os.1.0.0`, ADR
 CG-3 implementation: `docs/codegeist/sprints/CG-03.md`, ADR-026, `docs/calibration/`. Offline engine on `feat/codegeist-cg3-model-calibration`. Live operational calibration is not claimed.
 
 CG-4 implementation: `docs/codegeist/sprints/CG-04.md`, ADR-027, `apps/simulation-api/app/interventions/`. Adapters over existing comparison. Live operational calibration is still not claimed.
+
+CG-5 implementation: `docs/codegeist/sprints/CG-05.md`, ADR-028. Native multi-scenario lab. Live operational calibration is still not claimed.

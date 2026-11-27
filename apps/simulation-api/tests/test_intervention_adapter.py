@@ -12,10 +12,16 @@ from app.interventions.catalog import (
     ExperimentExecution,
     HybridIntervention,
     InterventionError,
+    NamedAlternative,
     effective_mean,
+    hybrid_compatible,
     materialize_overrides,
 )
-from app.interventions.execute import bind_execution_model, run_intervention_experiment
+from app.interventions.execute import (
+    bind_execution_model,
+    run_intervention_experiment,
+    run_multi_intervention_experiment,
+)
 
 
 def golden_artifact():  # noqa: ANN201
@@ -121,5 +127,87 @@ def test_hybrid_refuses_when_completion_route_is_absent() -> None:
         assert "success_route_probability_shift" in evidence.approximations
         assert evidence.applied_overrides[0]["entityType"] == "route"
         return
-    with pytest.raises(InterventionError, match="Hybrid"):
+    with pytest.raises(InterventionError, match="automated resolution"):
         materialize_overrides(artifact.constructed_model, HybridIntervention())
+
+
+def hybrid_artifact():  # noqa: ANN201
+    snapshot = load_fixture("cg5-hybrid-support", 21)
+    return calibrate(snapshot, request_for_fixture("cg5-hybrid-support", snapshot, approve=True))
+
+
+def test_hybrid_fixture_has_completion_route() -> None:
+    artifact = hybrid_artifact()
+    assert artifact.constructed_model is not None
+    assert hybrid_compatible(artifact.constructed_model) is True
+    evidence = run_intervention_experiment(
+        artifact,
+        HybridIntervention(auto_complete_fraction=0.25),
+        ExperimentExecution(item_count=20, run_count=2, base_seed=20261127),
+        fixture_id="cg5-hybrid-support",
+    )
+    assert "success_route_probability_shift" in evidence.approximations
+    assert evidence.applied_overrides[0]["entityType"] == "route"
+
+
+def test_multi_experiment_shares_baseline_and_reports_partial_failure() -> None:
+    artifact = hybrid_artifact()
+    evidence = run_multi_intervention_experiment(
+        artifact,
+        [
+            NamedAlternative(
+                alternative_id="human-expansion",
+                intervention=CapacityIntervention(
+                    extra_triage_capacity=1, extra_resolution_capacity=1
+                ),
+            ),
+            NamedAlternative(
+                alternative_id="ai-assisted",
+                intervention=AssistedIntervention(
+                    stage_id="triage",
+                    coverage=0.5,
+                    processing_reduction=0.4,
+                    review_overhead_minutes=0.25,
+                ),
+            ),
+            NamedAlternative(
+                alternative_id="hybrid",
+                intervention=HybridIntervention(auto_complete_fraction=0.25),
+            ),
+        ],
+        ExperimentExecution(item_count=20, run_count=2, base_seed=20261127),
+        fixture_id="cg5-hybrid-support",
+        experiment_id="demo-support-20261127",
+        request_id="req-1",
+    )
+    assert evidence.experiment_status == "complete"
+    assert evidence.comparison_baseline_hash is not None
+    assert evidence.identities_agree is True
+    assert len(evidence.alternatives) == 3
+    assert all(item.status == "valid" for item in evidence.alternatives)
+    assert evidence.baseline_metrics["averageCycleTime"] is not None
+    assert "triage" in evidence.baseline_stage_metrics
+    assert evidence.alternatives[0].system_metrics["averageCycleTime"] is not None
+    golden = golden_artifact()
+    refused = run_multi_intervention_experiment(
+        golden,
+        [
+            NamedAlternative(
+                alternative_id="human-expansion",
+                intervention=CapacityIntervention(extra_resolution_capacity=1),
+            ),
+            NamedAlternative(
+                alternative_id="hybrid",
+                intervention=HybridIntervention(auto_complete_fraction=0.25),
+            ),
+        ],
+        ExperimentExecution(item_count=20, run_count=2, base_seed=20261127),
+        fixture_id="cg3-golden-analytical",
+        experiment_id="partial-hybrid",
+        request_id="req-2",
+    )
+    assert refused.experiment_status == "partial"
+    hybrid = next(item for item in refused.alternatives if item.alternative_id == "hybrid")
+    assert hybrid.status == "failed"
+    human = next(item for item in refused.alternatives if item.alternative_id == "human-expansion")
+    assert human.status == "valid"

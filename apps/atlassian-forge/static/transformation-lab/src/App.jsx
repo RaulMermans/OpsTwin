@@ -1,17 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke, view } from "@forge/bridge";
+import { ResultsPanel } from "./results.jsx";
 import {
   INTERVENTIONS,
+  SECTIONS,
   WINDOW_PRESETS,
   afterCalibrationChange,
   afterConfigChange,
   afterFailedImport,
+  baselineStatusLabel,
   calibrationPayload,
   comparisonPayload,
   defaultConfig,
   defaultImportConfig,
   defaultTransform,
+  hybridSupported,
   metricById,
+  selectedAlternatives,
+  sensitivityPayload,
   transformPayload,
 } from "./labState.js";
 
@@ -23,6 +29,10 @@ function metric(value) {
 function qualityLine(item) {
   const measured = item.value === null || item.value === undefined ? "n/a" : Number(item.value).toFixed(3);
   return `${item.metricId}: ${item.status} (${measured}) — ${item.explanation}`;
+}
+
+function newRequestId() {
+  return `req-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
 export function App() {
@@ -38,11 +48,12 @@ export function App() {
     status: "ready",
     evidence: null,
     message: null,
-    fixtureId: "cg3-golden-analytical",
+    fixtureId: "cg5-hybrid-support",
     approveLabAssumptions: false,
   });
   const [transform, setTransform] = useState(defaultTransform());
-  const [experiment, setExperiment] = useState({ status: "ready", evidence: null, message: null });
+  const [experiment, setExperiment] = useState({ status: "ready", evidence: null, message: null, requestId: null });
+  const [sensitivity, setSensitivity] = useState({ status: "ready", evidence: null, message: null, requestId: null });
   const calibrating = useRef(false);
   const experimenting = useRef(false);
   const [importState, setImportState] = useState({
@@ -250,7 +261,7 @@ export function App() {
     setTransform((current) => ({ ...current, ...patch }));
     setExperiment((previous) =>
       previous.evidence
-        ? { status: "ready", evidence: null, message: "Previous results are stale because the configuration changed." }
+        ? { status: "stale", evidence: previous.evidence, message: "Results are stale because the configuration changed.", requestId: previous.requestId }
         : previous,
     );
   }
@@ -259,31 +270,88 @@ export function App() {
     if (experimenting.current || phase !== "ready") return;
     if (!calibration.evidence?.constructedModel) {
       setExperiment({
-        status: "failed",
+        status: "invalid",
         evidence: null,
-        message: "Calibrate a constructed baseline first. Interventions are not run against structurally invalid models.",
+        message: "Construct a baseline first. Interventions are not run against structurally invalid models.",
+        requestId: null,
       });
       return;
     }
+    const alternatives = selectedAlternatives(transform, calibration);
+    if (alternatives.length === 0) {
+      setExperiment({
+        status: "invalid",
+        evidence: null,
+        message: "Select at least one compatible alternative.",
+        requestId: null,
+      });
+      return;
+    }
+    const requestId = newRequestId();
     experimenting.current = true;
-    setExperiment({ status: "running", evidence: null, message: null });
+    setExperiment({ status: "running", evidence: null, message: null, requestId });
     try {
-      const result = await invoke("runTransformationExperiment", transformPayload(calibration, transform));
-      if (result?.status === "ok" && result.evidence) {
-        setExperiment({ status: "completed", evidence: result.evidence, message: result.evidence.disclosure });
-      } else {
-        setExperiment({
-          status: "failed",
+      const result = await invoke("runTransformationExperiment", transformPayload(calibration, transform, requestId));
+      setExperiment((current) => {
+        if (current.requestId !== requestId) {
+          return current;
+        }
+        if (result?.status === "ok" && result.evidence) {
+          return { status: result.evidence.experimentStatus === "partial" ? "partial" : "completed", evidence: result.evidence, message: result.evidence.disclosure, requestId };
+        }
+        return {
+          status: result?.classification === "timeout" ? "timeout" : "failed",
           evidence: null,
           message: result?.message ?? "The transformation experiment failed.",
-        });
-      }
-    } catch (caught) {
-      setExperiment({
-        status: "failed",
-        evidence: null,
-        message: caught instanceof Error ? caught.message : "The transformation experiment failed.",
+          requestId,
+        };
       });
+      if (result?.status === "ok") setSection("results");
+    } catch (caught) {
+      setExperiment((current) =>
+        current.requestId !== requestId
+          ? current
+          : {
+              status: /timed out/i.test(String(caught)) ? "timeout" : "failed",
+              evidence: null,
+              message: caught instanceof Error ? caught.message : "The transformation experiment failed.",
+              requestId,
+            },
+      );
+    } finally {
+      experimenting.current = false;
+    }
+  }
+
+  async function runSensitivity() {
+    if (experimenting.current || phase !== "ready" || !calibration.evidence?.constructedModel) return;
+    if (transform.sensitivityParameter === "autoCompleteFraction" && !hybridSupported(calibration)) {
+      setSensitivity({
+        status: "invalid",
+        evidence: null,
+        message: "This baseline does not support automated resolution. Select the hybrid-capable transformation baseline.",
+        requestId: null,
+      });
+      return;
+    }
+    const requestId = newRequestId();
+    experimenting.current = true;
+    setSensitivity({ status: "running", evidence: null, message: null, requestId });
+    try {
+      const result = await invoke("runTransformationExperiment", sensitivityPayload(calibration, transform, requestId));
+      setSensitivity((current) => {
+        if (current.requestId !== requestId) return current;
+        if (result?.status === "ok" && result.evidence) {
+          return { status: "completed", evidence: result.evidence, message: null, requestId };
+        }
+        return { status: "failed", evidence: null, message: result?.message ?? "Sensitivity run failed.", requestId };
+      });
+    } catch (caught) {
+      setSensitivity((current) =>
+        current.requestId !== requestId
+          ? current
+          : { status: "failed", evidence: null, message: caught instanceof Error ? caught.message : "Sensitivity run failed.", requestId },
+      );
     } finally {
       experimenting.current = false;
     }
@@ -297,59 +365,98 @@ export function App() {
   const snapshot = importState.snapshot;
   const cases = metricById(snapshot, "observed_case_count");
   const cycle = metricById(snapshot, "cycle_time_minutes");
+  const liveEmpty = importState.status === "completed" && snapshot?.completenessStatus === "empty";
+  const hybridOk = hybridSupported(calibration);
+  const nextAction =
+    phase !== "ready"
+      ? "Resolve project access."
+      : !calibration.evidence?.constructedModel
+        ? "Select a synthetic baseline, review assumptions, and construct the model."
+        : experiment.status !== "completed" && experiment.status !== "partial"
+          ? "Configure alternatives in Transformation Lab and run the comparison."
+          : "Inspect Results & Evidence, then optionally rerun with a changed assumption.";
 
   return (
-    <main style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif", padding: "24px", maxWidth: "760px", color: "#172B4D" }}>
-      <p style={{ letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "12px", color: "#44546F" }}>
-        Development integration — CG-4
+    <main className="lab">
+      <p className="eyebrow">Development integration — CG-5</p>
+      <h1>OpsTwin for Jira</h1>
+      <h2>AI Transformation Lab — Simulate before you automate</h2>
+      <p>
+        Evaluate human capacity, AI-assisted processing, and hybrid automation against one shared baseline. Observed Jira
+        records are evidence, not a calibrated operations model. Synthetic experiments stay labeled synthetic.
       </p>
-      <h1 style={{ margin: "8px 0 4px" }}>OpsTwin for Jira</h1>
-      <h2 style={{ margin: "0 0 16px", fontWeight: 500 }}>AI Transformation Lab</h2>
-      <p>Simulate before you automate. Observed Jira records are evidence, not a calibrated model. Synthetic simulation remains a separate lab.</p>
 
-      <nav aria-label="Lab sections" style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-        {["overview", "data", "calibration", "experiments", "simulation"].map((id) => (
-          <button key={id} type="button" onClick={() => setSection(id)} aria-current={section === id}>
-            {id === "overview"
-              ? "Overview"
-              : id === "data"
-                ? "Operational Data"
-                : id === "calibration"
-                  ? "Model Calibration"
-                  : id === "experiments"
-                    ? "Experiments"
-                    : "Connectivity Lab"}
+      <nav className="sections" aria-label="Product sections">
+        {SECTIONS.map((item) => (
+          <button key={item.id} type="button" onClick={() => setSection(item.id)} aria-current={section === item.id}>
+            {item.label}
           </button>
         ))}
       </nav>
 
       {phase === "loading-project" ? <p>Loading project…</p> : null}
-      {phase === "project-denied" ? (
-        <p role="alert">{project?.message ?? "This user cannot access the current project."}</p>
-      ) : null}
-      {phase === "failed" ? <p role="alert">{run.message}</p> : null}
+      {phase === "project-denied" ? <p className="alert" role="alert">{project?.message ?? "This user cannot access the current project."}</p> : null}
+      {phase === "failed" ? <p className="alert" role="alert">{run.message}</p> : null}
 
       {section === "overview" ? (
         <section>
-          <h3>Connection status</h3>
-          <dl>
-            <dt>Project</dt>
-            <dd>{projectOk ? `${project.name} (${project.projectKey})` : identity?.projectKey ?? "not provided by Forge context"}</dd>
-            <dt>Jira connection</dt>
-            <dd>{jiraStatus}</dd>
-            <dt>Request types</dt>
-            <dd>
-              {requestTypes?.classification === "empty"
-                ? "none visible"
-                : requestTypes?.requestTypes?.length
-                  ? requestTypes.requestTypes.map((item) => item.name).join(", ")
-                  : requestTypes?.message ?? "not loaded"}
-            </dd>
-            <dt>Operational snapshot</dt>
-            <dd>{importState.status === "none" ? "no data imported" : `${importState.status}${importState.mode === "synthetic-demo" ? " (synthetic demonstration)" : ""}`}</dd>
-            <dt>Remote connection</dt>
-            <dd>{run.remoteStatus}</dd>
-          </dl>
+          <div className="grid">
+            <div className="card">
+              <strong>Project</strong>
+              {projectOk ? `${project.name} (${project.projectKey})` : identity?.projectKey ?? "not provided"}
+            </div>
+            <div className="card">
+              <strong>Jira connection</strong>
+              {jiraStatus}
+            </div>
+            <div className="card">
+              <strong>Operational snapshot</strong>
+              {importState.status === "none"
+                ? "no live import"
+                : `${importState.status}${importState.mode === "synthetic-demo" ? " (synthetic demonstration)" : ""}`}
+            </div>
+            <div className="card">
+              <strong>Baseline</strong>
+              {baselineStatusLabel(calibration.evidence)}
+            </div>
+            <div className="card">
+              <strong>Latest experiment</strong>
+              {experiment.status === "completed" || experiment.status === "partial" ? experiment.status : "none in this session"}
+            </div>
+          </div>
+          {importState.mode !== "synthetic-demo" && snapshot && !liveEmpty ? (
+            <dl>
+              <dt>Cases observed</dt>
+              <dd>{cases?.value ?? snapshot.cases.length}</dd>
+              <dt>Cycle time p50 (minutes)</dt>
+              <dd>{cycle?.value?.p50 ?? "unavailable"}</dd>
+              <dt>Open at window end</dt>
+              <dd>{metricById(snapshot, "open_cases_at_window_end")?.value ?? "unavailable"}</dd>
+              <dt>Resolved</dt>
+              <dd>{metricById(snapshot, "resolution_count")?.value ?? "unavailable"}</dd>
+            </dl>
+          ) : (
+            <p className="banner">
+              {liveEmpty
+                ? "The authorized query succeeded and observed no cases. Synthetic numbers are not substituted into this overview."
+                : "No live operational history is shown here. Use Operational Data to import OPS records, or construct a synthetic demonstration baseline."}
+            </p>
+          )}
+          {(snapshot?.dataQuality ?? []).filter((item) => item.status === "fail" || item.status === "warning").length ? (
+            <div className="status">
+              {(snapshot.dataQuality ?? [])
+                .filter((item) => item.status === "fail" || item.status === "warning")
+                .map((item) => (
+                  <p key={item.metricId}>{qualityLine(item)}</p>
+                ))}
+            </div>
+          ) : null}
+          <p className="next">
+            <strong>Next:</strong> {nextAction}
+          </p>
+          <button className="primary" type="button" onClick={() => setSection(!calibration.evidence?.constructedModel ? "baseline" : "lab")}>
+            Continue
+          </button>
         </section>
       ) : null}
 
@@ -360,13 +467,8 @@ export function App() {
             Connected project {project?.name} ({project?.projectKey}). Service desk{" "}
             {requestTypes?.serviceDeskId ?? "not visible"}. Authorization follows the signed-in Jira user.
           </p>
-          <h3>Import configuration</h3>
-          <p>
-            This reads Jira/JSM issues for the connected project. Simulation Lab results are not operational records and
-            cannot be imported here.
-          </p>
-          <p>Read-only import of issue metadata, changelogs, worklogs, and SLA cycles. Descriptions, comments, and attachments are not retrieved.</p>
-          <label>
+          <p>Read-only import of issue metadata, changelogs, worklogs, and SLA cycles. Descriptions, comments, and attachments are not retrieved. Missing values are not shown as zero. Status residence is not processing time. Assignee counts are not staffing capacity.</p>
+          <label className="stack">
             Observation window
             <select
               value={importConfig.windowDays}
@@ -380,31 +482,27 @@ export function App() {
               ))}
             </select>
           </label>
-          <p>Record limit 40 cases. Cohort includes cases open during the window, not only those created in it.</p>
-          <button type="button" onClick={runImport} disabled={importState.status === "running"}>
+          <button className="primary" type="button" onClick={runImport} disabled={importState.status === "running"}>
             {importState.status === "running" ? "Importing…" : "Import operational records"}
           </button>
-          <button type="button" onClick={runSyntheticDemo} disabled={importState.status === "running"}>
-            Load synthetic demonstration
+          <button className="secondary" type="button" onClick={runSyntheticDemo} disabled={importState.status === "running"}>
+            Load synthetic demonstration data
           </button>
           {importState.status === "running" ? <p>Import in progress{importState.stage ? `: ${importState.stage}` : ""}.</p> : null}
           {importState.status === "failed" || importState.status === "rate_limited" || importState.status === "timeout" ? (
-            <p role="alert">
+            <p className="alert" role="alert">
               {importState.status}: {importState.message}
               {importState.stale ? " The previous snapshot is not shown as current." : ""}
             </p>
           ) : null}
-          {importState.status === "none" ? <p>No data imported.</p> : null}
           {snapshot ? (
             <>
               {importState.mode === "synthetic-demo" ? (
-                <p role="status">Synthetic demonstration. These records are not this project&apos;s live history.</p>
+                <p className="status" role="status">Synthetic demonstration. These records are not this project&apos;s live history.</p>
               ) : null}
               {snapshot.completenessStatus === "empty" ? <p>Valid empty dataset: the query succeeded and observed no cases.</p> : null}
-              {importState.status === "partial" ? <p role="status">Partial import. Extraction was truncated.</p> : null}
-              {snapshot.readiness === "invalid" ? <p role="alert">Invalid snapshot.</p> : null}
-              {snapshot.readiness === "insufficient_for_calibration" ? <p>Insufficient evidence for future calibration assessment.</p> : null}
-              <h3>Snapshot overview</h3>
+              {importState.status === "partial" ? <p className="status" role="status">Partial import. Extraction was truncated. This is not a complete dataset.</p> : null}
+              <h3>Descriptive evidence</h3>
               <dl>
                 <dt>Cases observed</dt>
                 <dd>{cases?.value ?? snapshot.cases.length}</dd>
@@ -415,15 +513,17 @@ export function App() {
                   {snapshot.observationWindow.start} → {snapshot.observationWindow.end}
                 </dd>
                 <dt>Request-type mix</dt>
-                <dd>
-                  {JSON.stringify(metricById(snapshot, "request_type_distribution")?.value ?? [])}
-                </dd>
+                <dd>{JSON.stringify(metricById(snapshot, "request_type_distribution")?.value ?? [])}</dd>
                 <dt>Cycle time (p50 minutes)</dt>
                 <dd>{cycle?.value?.p50 ?? "unavailable"}</dd>
                 <dt>Open at window end</dt>
                 <dd>{metricById(snapshot, "open_cases_at_window_end")?.value ?? "unavailable"}</dd>
                 <dt>Resolved</dt>
                 <dd>{metricById(snapshot, "resolution_count")?.value ?? "unavailable"}</dd>
+                <dt>Worklog coverage</dt>
+                <dd>{snapshot.extraction?.worklogCompleteness ?? "unavailable"}</dd>
+                <dt>SLA evidence</dt>
+                <dd>{snapshot.extraction?.slaCompleteness ?? "unavailable"}</dd>
               </dl>
               <h3>Data quality</h3>
               <ul>
@@ -431,52 +531,49 @@ export function App() {
                   <li key={item.metricId}>{qualityLine(item)}</li>
                 ))}
               </ul>
-              <h3>Provenance</h3>
-              <dl>
-                <dt>Source</dt>
-                <dd>
-                  {snapshot.sourceSystem} / {snapshot.sourceProject.key} ({snapshot.provenance.evidenceClass},{" "}
-                  {snapshot.provenance.transportAuthenticity})
-                </dd>
-                <dt>Import time</dt>
-                <dd>{snapshot.importTimestamp}</dd>
-                <dt>Snapshot ID</dt>
-                <dd>{snapshot.snapshotId}</dd>
-                <dt>Content fingerprint</dt>
-                <dd>{snapshot.contentFingerprint}</dd>
-                <dt>Completeness</dt>
-                <dd>
-                  {snapshot.completenessStatus} / {snapshot.readiness}
-                </dd>
-              </dl>
               <p>{snapshot.limitations.join(" ")}</p>
+              {snapshot.readiness === "insufficient_for_calibration" ? (
+                <p>Evidence is insufficient for calibration: required process observations are missing or incomplete, so parameters cannot be estimated from this snapshot.</p>
+              ) : null}
+              <p className="banner">Live Jira snapshots stay inside Forge. They are not sent to the simulation remote. Real-source calibration remains unavailable.</p>
             </>
-          ) : null}
+          ) : (
+            <p>No data imported.</p>
+          )}
         </section>
       ) : null}
 
-      {section === "calibration" && phase === "ready" ? (
+      {section === "baseline" && phase === "ready" ? (
         <section>
-          <h3>Synthetic model calibration</h3>
+          <h3>Baseline class</h3>
           <p role="status">
-            This path loads a controlled laboratory fixture on the remote. It does not send imported Jira snapshots and is not
-            organizational calibration.
+            Operational-evidence calibration is not enabled on the remote: imported OPS records are not transmitted for
+            model fitting. Use a server-controlled synthetic demonstration, or an explicit assumption-based laboratory
+            fixture.
           </p>
-          <label>
-            Laboratory fixture
+          <label className="stack">
+            Synthetic demonstration baseline
             <select
               value={calibration.fixtureId}
               onChange={(event) => {
                 setCalibration((current) => afterCalibrationChange({ ...current, fixtureId: event.target.value }));
-                setExperiment({ status: "ready", evidence: null, message: "Calibration changed. Previous experiment results are stale." });
+                setExperiment({ status: "ready", evidence: null, message: "Calibration changed. Previous experiment results are stale.", requestId: null });
               }}
               disabled={calibration.status === "running"}
             >
-              <option value="cg3-golden-analytical">Golden analytical (synthetic)</option>
+              <option value="cg5-hybrid-support">Hybrid-capable support operation (synthetic)</option>
+              <option value="cg3-golden-analytical">Golden analytical (synthetic, no auto-complete route)</option>
               <option value="cg3-partially-observable">Partially observable (assumptions required)</option>
             </select>
           </label>
-          <label>
+          <p>
+            {calibration.fixtureId === "cg5-hybrid-support"
+              ? "This template includes an existing triage route to both resolution and completion, so hybrid automation can shift that route."
+              : calibration.fixtureId === "cg3-golden-analytical"
+                ? "Golden routing completes only through resolution. Hybrid automation is structurally unavailable."
+                : "This fixture cannot construct a model until laboratory assumptions are explicitly accepted."}
+          </p>
+          <label className="inline">
             <input
               type="checkbox"
               checked={calibration.approveLabAssumptions}
@@ -484,352 +581,267 @@ export function App() {
                 setCalibration((current) =>
                   afterCalibrationChange({ ...current, approveLabAssumptions: event.target.checked }),
                 );
-                setExperiment({ status: "ready", evidence: null, message: "Calibration changed. Previous experiment results are stale." });
+                setExperiment({ status: "ready", evidence: null, message: "Calibration changed. Previous experiment results are stale.", requestId: null });
               }}
               disabled={calibration.status === "running"}
             />
-            Accept laboratory assumptions for this synthetic fixture
+            I explicitly accept laboratory assumptions for this synthetic fixture
           </label>
-          <button type="button" onClick={runCalibration} disabled={calibration.status === "running"}>
-            {calibration.status === "running" ? "Calibrating…" : "Run synthetic calibration"}
+          <button className="primary" type="button" onClick={runCalibration} disabled={calibration.status === "running"}>
+            {calibration.status === "running" ? "Constructing baseline…" : "Construct baseline"}
           </button>
-          {calibration.status === "failed" ? <p role="alert">{calibration.message}</p> : null}
+          {calibration.status === "failed" ? <p className="alert" role="alert">{calibration.message}</p> : null}
           {calibration.evidence ? (
             <>
-              <h3>Evidence readiness</h3>
+              <h3>Baseline status</h3>
               <dl>
-                <dt>Disclosure</dt>
-                <dd>{calibration.evidence.disclosure}</dd>
+                <dt>Status</dt>
+                <dd>{baselineStatusLabel(calibration.evidence)}</dd>
                 <dt>Readiness</dt>
                 <dd>{calibration.evidence.readinessStatus}</dd>
-                <dt>Historically adequate</dt>
-                <dd>{calibration.evidence.readinessStatus === "validated_for_defined_scope" ? "yes, for the recorded scope" : "no"}</dd>
-                <dt>Failure class</dt>
-                <dd>{calibration.evidence.failureClass ?? "none"}</dd>
-                <dt>Snapshot fingerprint</dt>
-                <dd>{calibration.evidence.sourceSnapshotFingerprint}</dd>
+                <dt>Hybrid compatible</dt>
+                <dd>{calibration.evidence.hybridCompatible ? "yes" : "no"}</dd>
+                <dt>Model fingerprint</dt>
+                <dd>{calibration.evidence.modelFingerprint ?? "none"}</dd>
               </dl>
-              <h3>Estimated parameters</h3>
-              <ul>
-                {(calibration.evidence.parameterEstimates ?? [])
-                  .filter((item) => item.origin === "empirical_estimate" && item.consumedByModel !== false)
-                  .map((item) => (
-                    <li key={item.parameterId}>
-                      {item.parameterId}: {String(item.value)} ({item.identifiabilityStatus})
-                    </li>
+              <h3>Assumption review</h3>
+              <p>Assumptions are not auto-approved. Unchecked construction refuses missing capacity/service parameters.</p>
+              <table className="compare">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                    <th>Unit</th>
+                    <th>Origin</th>
+                    <th>Identifiability</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(calibration.evidence.parameterEstimates ?? []).map((item) => (
+                    <tr key={item.parameterId}>
+                      <td>{item.parameterId}</td>
+                      <td>{item.value == null ? "unknown" : String(item.value)}</td>
+                      <td>{item.unit ?? "—"}</td>
+                      <td>{item.origin}</td>
+                      <td>{item.identifiabilityStatus}</td>
+                    </tr>
                   ))}
-              </ul>
-              <h3>Assumptions</h3>
-              <ul>
-                {(calibration.evidence.parameterEstimates ?? [])
-                  .filter((item) => item.origin === "approved_assumption" || item.origin === "structural_constraint")
-                  .map((item) => (
-                    <li key={item.parameterId}>
-                      {item.parameterId}: {String(item.value)} ({item.origin})
-                    </li>
-                  ))}
-              </ul>
-              <h3>Unknown or diagnostic parameters</h3>
-              <ul>
-                {(calibration.evidence.parameterEstimates ?? [])
-                  .filter((item) => item.value == null || item.consumedByModel === false)
-                  .map((item) => (
-                    <li key={item.parameterId}>
-                      {item.parameterId}: unknown ({item.identifiabilityStatus})
-                    </li>
-                  ))}
-              </ul>
-              <h3>Constructed model</h3>
-              <p>
-                {calibration.evidence.constructedModel
-                  ? `Fingerprint ${calibration.evidence.modelFingerprint}. A constructed model is not a historically adequate model.`
-                  : calibration.evidence.blockedReason ?? "No model was constructed."}
-              </p>
+                </tbody>
+              </table>
               <h3>Historical validation</h3>
               <p>
                 {calibration.evidence.validationReport
                   ? `${calibration.evidence.validationReport.overallOutcome} (${calibration.evidence.validationReport.validationClass ?? calibration.evidence.validationReport.mode})`
-                  : "No independent holdout report. Failed and inconclusive outcomes stay failed or inconclusive."}
+                  : "No independent holdout report."}
               </p>
+              {calibration.evidence.constructedModel ? (
+                <button className="primary" type="button" onClick={() => setSection("lab")}>
+                  Configure transformation experiment
+                </button>
+              ) : (
+                <p>{calibration.evidence.blockedReason ?? "No model was constructed."}</p>
+              )}
             </>
           ) : null}
         </section>
       ) : null}
 
-      {section === "experiments" && phase === "ready" ? (
+      {section === "lab" && phase === "ready" ? (
         <section>
-          <h3>Human-only baseline</h3>
-          <p>
-            The comparison baseline is the calibrated operation with no new AI intervention. Canonical models keep
-            itemCount=1 as a structural placeholder. Experiments use a separate execution volume.
-          </p>
           {!calibration.evidence?.constructedModel ? (
-            <p role="status">Run synthetic calibration first. A constructed model is required before interventions.</p>
+            <p className="status" role="status">Construct a baseline first. The lab compares alternatives against one immutable constructed model.</p>
           ) : (
-            <dl>
-              <dt>Baseline class</dt>
-              <dd>{calibration.evidence.readinessStatus}</dd>
-              <dt>Historically adequate</dt>
-              <dd>{calibration.evidence.readinessStatus === "validated_for_defined_scope" ? "for recorded holdout scope only" : "no — exploratory if executed"}</dd>
-              <dt>Model fingerprint</dt>
-              <dd>{calibration.evidence.modelFingerprint}</dd>
-              <dt>Triage / resolution means</dt>
-              <dd>
-                {(calibration.evidence.parameterEstimates ?? [])
-                  .filter((item) => item.parameterId?.includes("processing_time.mean") && item.consumedByModel !== false)
-                  .map((item) => `${item.parameterId}=${item.value}`)
-                  .join("; ") || "see calibration"}
-              </dd>
-              <dt>Capacities</dt>
-              <dd>
-                {(calibration.evidence.parameterEstimates ?? [])
-                  .filter((item) => item.parameterId?.startsWith("resource.") && item.consumedByModel !== false)
-                  .map((item) => `${item.parameterId}=${item.value}`)
-                  .join("; ")}
-              </dd>
-            </dl>
-          )}
-          <h3>Intervention</h3>
-          <label>
-            Kind
-            <select value={transform.kind} onChange={(event) => updateTransform({ kind: event.target.value })} disabled={experiment.status === "running"}>
-              <option value="capacity">Human capacity expansion</option>
-              <option value="ai_assisted">AI-assisted processing (effective mean)</option>
-              <option value="hybrid">Hybrid automation (existing route shift)</option>
-            </select>
-          </label>
-          {transform.kind === "capacity" ? (
             <>
-              <label>
-                Additional triage staff
-                <select value={transform.extraTriageCapacity} onChange={(event) => updateTransform({ extraTriageCapacity: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[0, 1, 2, 3].map((value) => (
-                    <option key={value} value={value}>
-                      +{value}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Additional resolution staff
-                <select value={transform.extraResolutionCapacity} onChange={(event) => updateTransform({ extraResolutionCapacity: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[0, 1, 2, 3].map((value) => (
-                    <option key={value} value={value}>
-                      +{value}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
-          {transform.kind === "ai_assisted" ? (
-            <>
-              <p>Effective-mean model, not per-case AI execution or mixture tails.</p>
-              <label>
-                Stage
-                <select value={transform.stageId} onChange={(event) => updateTransform({ stageId: event.target.value })} disabled={experiment.status === "running"}>
-                  <option value="triage">Triage</option>
-                  <option value="resolution">Resolution</option>
-                </select>
-              </label>
-              <label>
-                Coverage
-                <select value={transform.coverage} onChange={(event) => updateTransform({ coverage: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[0.25, 0.5, 0.75, 1].map((value) => (
-                    <option key={value} value={value}>
-                      {Math.round(value * 100)}%
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Processing-time reduction on covered work
-                <select value={transform.processingReduction} onChange={(event) => updateTransform({ processingReduction: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[0.2, 0.4, 0.6].map((value) => (
-                    <option key={value} value={value}>
-                      {Math.round(value * 100)}%
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Review overhead (minutes)
-                <select value={transform.reviewOverheadMinutes} onChange={(event) => updateTransform({ reviewOverheadMinutes: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[0, 0.25, 0.5].map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
-          {transform.kind === "hybrid" ? (
-            <>
-              <p>
-                Auto-complete shifts the existing triage success route toward completion. It does not add an automation
-                stage. Refused when that completion option is not already in the model.
-              </p>
-              <label>
-                Auto-complete fraction
-                <select value={transform.autoCompleteFraction} onChange={(event) => updateTransform({ autoCompleteFraction: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[0.1, 0.25, 0.4].map((value) => (
-                    <option key={value} value={value}>
-                      {Math.round(value * 100)}%
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
-          <h3>Experiment execution</h3>
-          <p>
-            Demand volume {transform.itemCount} items, {transform.runCount} paired replications, seed 20261127. Empty
-            system, no warm-up. This is not the calibration placeholder itemCount.
-          </p>
-          <label>
-            Items
-            <select value={transform.itemCount} onChange={(event) => updateTransform({ itemCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
-              {[20, 40, 80].map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Replications
-            <select value={transform.runCount} onChange={(event) => updateTransform({ runCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
-              {[2, 5, 8].map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="button" onClick={runExperiment} disabled={experiment.status === "running"}>
-            {experiment.status === "running" ? "Running experiment…" : "Run comparative experiment"}
-          </button>
-          {experiment.status === "failed" ? <p role="alert">{experiment.message}</p> : null}
-          {experiment.status === "ready" && experiment.message ? <p>{experiment.message}</p> : null}
-          {experiment.evidence ? (
-            <section>
-              <h3>Comparative evidence</h3>
               <dl>
-                <dt>Baseline class</dt>
-                <dd>
-                  {experiment.evidence.baselineClass}
-                  {experiment.evidence.exploratory ? " (exploratory)" : ""}
-                </dd>
-                <dt>Approximations</dt>
-                <dd>{(experiment.evidence.approximations ?? []).join(", ") || "none (capacity replacement)"}</dd>
-                <dt>Identities agree</dt>
-                <dd>{experiment.evidence.identitiesAgree ? "yes" : "no"}</dd>
-                <dt>Executed item count</dt>
-                <dd>{experiment.evidence.experiment?.itemCount}</dd>
-                <dt>Baseline cycle time (mean, minutes)</dt>
-                <dd>{metric(experiment.evidence.baselineCycleTime?.mean)}</dd>
-                <dt>Intervention cycle time (mean, minutes)</dt>
-                <dd>{metric(experiment.evidence.scenarioCycleTime?.mean)}</dd>
-                <dt>Paired difference (mean)</dt>
-                <dd>{metric(experiment.evidence.pairedDifference?.mean)}</dd>
-                <dt>Improvement probability</dt>
-                <dd>{metric(experiment.evidence.probabilityOfImprovement)}</dd>
-                <dt>Integrity</dt>
-                <dd>{experiment.evidence.integrityStatus}</dd>
+                <dt>Shared baseline</dt>
+                <dd>{baselineStatusLabel(calibration.evidence)}</dd>
+                <dt>Fingerprint</dt>
+                <dd>{calibration.evidence.modelFingerprint}</dd>
               </dl>
-              <p>{experiment.evidence.improvementInterpretation}</p>
-              <h3>Disclosures</h3>
-              <ul>
-                {(experiment.evidence.disclosures ?? []).map((item) => (
-                  <li key={item}>{item}</li>
+              <h3>Alternatives</h3>
+              <label className="inline">
+                <input type="checkbox" checked={transform.includeCapacity} onChange={(event) => updateTransform({ includeCapacity: event.target.checked })} disabled={experiment.status === "running"} />
+                Human capacity expansion
+              </label>
+              {transform.includeCapacity ? (
+                <>
+                  <label className="stack">
+                    Additional triage staff
+                    <select value={transform.extraTriageCapacity} onChange={(event) => updateTransform({ extraTriageCapacity: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                      {[0, 1, 2, 3].map((value) => (
+                        <option key={value} value={value}>+{value}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="stack">
+                    Additional resolution staff
+                    <select value={transform.extraResolutionCapacity} onChange={(event) => updateTransform({ extraResolutionCapacity: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                      {[0, 1, 2, 3].map((value) => (
+                        <option key={value} value={value}>+{value}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : null}
+              <label className="inline">
+                <input type="checkbox" checked={transform.includeAssisted} onChange={(event) => updateTransform({ includeAssisted: event.target.checked })} disabled={experiment.status === "running"} />
+                AI-assisted processing (effective-mean model)
+              </label>
+              {transform.includeAssisted ? (
+                <>
+                  <label className="stack">
+                    Stage
+                    <select value={transform.stageId} onChange={(event) => updateTransform({ stageId: event.target.value })} disabled={experiment.status === "running"}>
+                      <option value="triage">Triage</option>
+                      <option value="resolution">Resolution</option>
+                    </select>
+                  </label>
+                  <label className="stack">
+                    Coverage
+                    <select value={transform.coverage} onChange={(event) => updateTransform({ coverage: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                      {[0.25, 0.5, 0.75, 1].map((value) => (
+                        <option key={value} value={value}>{Math.round(value * 100)}%</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="stack">
+                    Processing-time reduction
+                    <select value={transform.processingReduction} onChange={(event) => updateTransform({ processingReduction: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                      {[0.2, 0.4, 0.6].map((value) => (
+                        <option key={value} value={value}>{Math.round(value * 100)}%</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : null}
+              <label className="inline">
+                <input
+                  type="checkbox"
+                  checked={transform.includeHybrid && hybridOk}
+                  onChange={(event) => updateTransform({ includeHybrid: event.target.checked })}
+                  disabled={experiment.status === "running" || !hybridOk}
+                />
+                Hybrid automation (existing completion route)
+              </label>
+              {hybridOk ? (
+                transform.includeHybrid ? (
+                  <label className="stack">
+                    Auto-complete fraction of the existing triage completion option
+                    <select value={transform.autoCompleteFraction} onChange={(event) => updateTransform({ autoCompleteFraction: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                      {[0.1, 0.25, 0.4].map((value) => (
+                        <option key={value} value={value}>{Math.round(value * 100)}%</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null
+              ) : (
+                <p className="status">
+                  This baseline does not support automated resolution. Select the hybrid-capable transformation baseline.
+                  <button className="secondary" type="button" onClick={() => { setSection("baseline"); }}>
+                    Open baseline selection
+                  </button>
+                </p>
+              )}
+              <h3>Execution</h3>
+              <p>Shared demand, empty system, seed 20261127. {transform.runCount < 8 ? "Evidence is exploratory at this replication count." : ""} Session-only: refreshing Jira discards results.</p>
+              <label className="stack">
+                Items
+                <select value={transform.itemCount} onChange={(event) => updateTransform({ itemCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[20, 40].map((value) => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="stack">
+                Replications
+                <select value={transform.runCount} onChange={(event) => updateTransform({ runCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
+                  {[2, 5].map((value) => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+              <button className="primary" type="button" onClick={runExperiment} disabled={experiment.status === "running"}>
+                {experiment.status === "running" ? "Running comparison…" : "Run multi-scenario experiment"}
+              </button>
+              {experiment.status === "running" ? <p className="banner">Simulation is running. The interface is waiting for the remote, not frozen.</p> : null}
+              {experiment.status === "failed" || experiment.status === "timeout" || experiment.status === "invalid" ? (
+                <p className="alert" role="alert">{experiment.message}</p>
+              ) : null}
+              {experiment.status === "stale" ? <p className="status">{experiment.message}</p> : null}
+              <h3>Assumption sensitivity</h3>
+              <p>One parameter, three catalog values, same comparison engine. Distinct from Monte Carlo variability.</p>
+              <label className="stack">
+                Parameter
+                <select value={transform.sensitivityParameter} onChange={(event) => updateTransform({ sensitivityParameter: event.target.value })} disabled={experiment.status === "running"}>
+                  <option value="coverage">AI coverage</option>
+                  <option value="processingReduction">AI processing-time reduction</option>
+                  <option value="autoCompleteFraction">Automated completion fraction</option>
+                  <option value="extraResolutionCapacity">Human resolution capacity</option>
+                </select>
+              </label>
+              <button className="secondary" type="button" onClick={runSensitivity} disabled={experiment.status === "running" || sensitivity.status === "running"}>
+                {sensitivity.status === "running" ? "Running sensitivity…" : "Run sensitivity experiment"}
+              </button>
+              {sensitivity.status === "failed" || sensitivity.status === "invalid" ? <p className="alert" role="alert">{sensitivity.message}</p> : null}
+              {sensitivity.evidence ? <ResultsPanel evidence={sensitivity.evidence} transform={transform} /> : null}
+            </>
+          )}
+          <details>
+            <summary>Legacy connectivity comparison (CG-1)</summary>
+            <p>Synthetic Support Operations Product Baseline. This path does not use the calibrated model.</p>
+            <label className="stack">
+              Intervention
+              <select value={config.intervention} onChange={(event) => updateConfig({ intervention: event.target.value })} disabled={run.status === "running"}>
+                {Object.values(INTERVENTIONS).map((item) => (
+                  <option key={item.id} value={item.id}>{item.label}</option>
                 ))}
-              </ul>
-            </section>
-          ) : null}
-        </section>
-      ) : null}
-
-      {section === "simulation" && phase === "ready" ? (
-        <section>
-          <h3>Experiment configuration</h3>
-          <p>Synthetic baseline: Support Operations Product Baseline (100 items, seed {config.runCount === 5 ? "20260716" : config.runCount}). This path does not send imported Jira records to the simulation engine.</p>
-          <label>
-            Intervention
-            <select
-              value={config.intervention}
-              onChange={(event) => updateConfig({ intervention: event.target.value })}
-              disabled={run.status === "running"}
-            >
-              {Object.values(INTERVENTIONS).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {config.intervention === "add-capacity" ? "Additional Level 1 capacity" : "Triage duration reduction"}
-            <select
-              value={parameterValue}
-              onChange={(event) =>
-                updateConfig(
-                  config.intervention === "add-capacity"
-                    ? { extraCapacity: Number(event.target.value) }
-                    : { triageReductionPercent: Number(event.target.value) },
-                )
-              }
-              disabled={run.status === "running"}
-            >
-              {intervention.options.map((option) => (
-                <option key={option} value={option}>
-                  {config.intervention === "add-capacity" ? `+${option}` : `${option}%`}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p>Paired runs: {config.runCount}. This is a connectivity-sized workload, not a statistically robust operational study.</p>
-          <button type="button" onClick={runComparison} disabled={run.status === "running"}>
-            {run.status === "running" ? "Running comparison…" : "Run comparison"}
-          </button>
-          {run.status === "running" ? <p>Running…</p> : null}
-          {run.status === "timeout" ? <p role="alert">The comparison timed out. {run.message}</p> : null}
-          {run.status === "failed" ? <p role="alert">{run.message}</p> : null}
-          {run.status === "ready" && run.message ? <p>{run.message}</p> : null}
-          {run.status === "completed" && run.evidence ? (
-            <section>
-              <h3>Results</h3>
+              </select>
+            </label>
+            <label className="stack">
+              {config.intervention === "add-capacity" ? "Additional Level 1 capacity" : "Triage duration reduction"}
+              <select
+                value={parameterValue}
+                onChange={(event) =>
+                  updateConfig(
+                    config.intervention === "add-capacity"
+                      ? { extraCapacity: Number(event.target.value) }
+                      : { triageReductionPercent: Number(event.target.value) },
+                  )
+                }
+                disabled={run.status === "running"}
+              >
+                {intervention.options.map((option) => (
+                  <option key={option} value={option}>
+                    {config.intervention === "add-capacity" ? `+${option}` : `${option}%`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="secondary" type="button" onClick={runComparison} disabled={run.status === "running"}>
+              {run.status === "running" ? "Running comparison…" : "Run connectivity comparison"}
+            </button>
+            {run.status === "completed" && run.evidence ? (
               <dl>
-                <dt>Baseline cycle time (mean, minutes)</dt>
+                <dt>Baseline cycle time</dt>
                 <dd>{metric(run.evidence.baselineCycleTime?.mean)}</dd>
-                <dt>Intervention cycle time (mean, minutes)</dt>
+                <dt>Intervention cycle time</dt>
                 <dd>{metric(run.evidence.scenarioCycleTime?.mean)}</dd>
-                <dt>Paired difference (mean)</dt>
-                <dd>{metric(run.evidence.pairedDifference?.mean)}</dd>
-                <dt>Improvement probability</dt>
-                <dd>{metric(run.evidence.probabilityOfImprovement)}</dd>
-                <dt>95% CI for the paired difference</dt>
-                <dd>
-                  {metric(run.evidence.pairedDifference?.lower)} to {metric(run.evidence.pairedDifference?.upper)}
-                  {run.evidence.pairedDifference?.reliableSampleSize ? "" : " (sample size below the reliability threshold)"}
-                </dd>
-                <dt>Valid paired runs</dt>
-                <dd>{run.evidence.validPairedRunCount}</dd>
                 <dt>Integrity</dt>
                 <dd>{run.evidence.integrityStatus}</dd>
               </dl>
-              <p>{run.evidence.improvementInterpretation}</p>
-            </section>
-          ) : null}
+            ) : null}
+          </details>
         </section>
       ) : null}
 
+      {section === "results" && phase === "ready" ? (
+        <ResultsPanel evidence={experiment.evidence} transform={transform} />
+      ) : null}
+
       <footer>
-        <h3>Evidence</h3>
         <p>
-          Operational snapshots stay inside the Forge resolver. Calibration and experiments use synthetic fixture identifiers,
-          not live Jira records. Experiments execute the existing comparison engine. A faster task is not automatically a
-          better operation.
+          Operational snapshots stay inside the Forge resolver. Calibration and experiments use synthetic fixture
+          identifiers, not live Jira records. A faster task is not automatically a better operation.
         </p>
       </footer>
     </main>
