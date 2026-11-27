@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { afterCalibrationChange, afterConfigChange, afterFailedImport, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, hybridSupported, selectedAlternatives, transformPayload } from "../../static/transformation-lab/src/labState.js";
+import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, hybridSupported, selectedAlternatives, transformPayload } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
   const stale = afterConfigChange({
@@ -49,10 +49,26 @@ test("transformation payloads stay on fixture identifiers and experiment volume"
   assert.equal(payload.execution.itemCount, 20);
   assert.notEqual(payload.execution.itemCount, 1);
   assert.equal(payload.alternatives.length, 3);
+  const changed = transformPayload(
+    { fixtureId: "cg5-hybrid-support", approveLabAssumptions: true, evidence: { hybridCompatible: true, constructedModel: {} } },
+    { ...defaultTransform(), coverage: 0.75 },
+    "req-1",
+  );
+  assert.notEqual(payload.experimentId, changed.experimentId);
   assert.equal(payload.requestId, "req-1");
   assert.equal("snapshot" in payload, false);
   assert.equal("baselineModel" in payload, false);
   assert.equal("projectKey" in payload, false);
+});
+
+test("financial assumption changes keep operational evidence stale-only", () => {
+  const stale = afterFinancialChange({
+    evidence: { operationalExperimentIdentity: "abc" },
+    status: "completed",
+    message: null,
+  });
+  assert.equal(stale.evidence.operationalExperimentIdentity, "abc");
+  assert.equal(stale.status, "stale");
 });
 
 test("hybrid is omitted when the baseline has no completion route", () => {

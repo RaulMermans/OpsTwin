@@ -19,6 +19,7 @@ from app.engine.repeated import RepeatedSimulationError, run_repeated_simulation
 from app.engine.simulator import run_simulation
 from app.integrations.remote_calibrate import router as calibration_router
 from app.integrations.remote_compare import router as integration_router
+from app.integrations.remote_economics import router as economics_router
 from app.integrations.remote_transform import router as transform_router
 from app.scenarios.coordinator import (
     ComparisonWorkBudgetError,
@@ -272,3 +273,4 @@ app.include_router(router)
 app.include_router(integration_router)
 app.include_router(calibration_router)
 app.include_router(transform_router)
+app.include_router(economics_router)

@@ -42,6 +42,7 @@ def extract_metric_snapshot(run_index: int, result: SimulationResult) -> MetricS
             "completedItems": float(system.completed_items),
             "terminallyFailedItems": float(system.terminally_failed_items),
             "eventCount": float(system.event_count),
+            "measurementDuration": result.observation.measurement_duration,
         },
         stages={
             stage.stage_id: {
@@ -63,6 +64,7 @@ def extract_metric_snapshot(run_index: int, result: SimulationResult) -> MetricS
                 "meanRequestWait": resource.mean_request_wait,
                 "maximumConcurrentUsage": float(resource.maximum_concurrent_usage),
                 "requestCount": float(resource.total_requests),
+                "busyTime": resource.busy_time,
             }
             for resource in result.resource_pool_metrics
         },

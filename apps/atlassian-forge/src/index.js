@@ -5,7 +5,7 @@ import { installationRefFromContext, projectKeyFromContext, rejectBrowserProject
 import { ingestOperationalData } from "./jira/ingest.js";
 import { describeJiraPath } from "./jira/route.js";
 import { generateSynthetic } from "./operational/synthetic.js";
-import { validateTransformEvidence } from "./remote/evidence.js";
+import { validateEconomicEvidence, validateTransformEvidence } from "./remote/evidence.js";
 
 const Resolver = typeof ResolverModule === "function" ? ResolverModule : ResolverModule.default;
 const resolver = new Resolver();
@@ -13,6 +13,7 @@ const REMOTE_KEY = "opstwin-simulation";
 const COMPARE_PATH = "/api/integrations/atlassian/v1/compare";
 const CALIBRATE_PATH = "/api/integrations/atlassian/v1/calibrate";
 const TRANSFORM_PATH = "/api/integrations/atlassian/v1/transform";
+const ECONOMICS_PATH = "/api/integrations/atlassian/v1/evaluate-economics";
 
 async function readJson(response) {
   try {
@@ -71,7 +72,7 @@ resolver.define("getLabIdentity", (request) => {
   return {
     product: "OpsTwin for Jira",
     surface: "AI Transformation Lab",
-    sprint: "CG-5",
+    sprint: "CG-6",
     status: "Development integration",
     projectKey,
     accountIdPresent: Boolean(request.context?.accountId),
@@ -416,6 +417,77 @@ resolver.define("runTransformationExperiment", async (request) => {
   const validated = validateTransformEvidence(remoteBody, {
     requestId: payload.requestId,
     experimentId: payload.experimentId,
+    alternativeIds: multi ? payload.alternatives?.map((item) => item.alternativeId) : undefined,
+  });
+  if (!validated.ok) {
+    return { status: "failed", classification: "invalid_response", message: validated.message };
+  }
+  return { status: "ok", evidence: remoteBody };
+});
+
+resolver.define("runEconomicEvaluation", async (request) => {
+  const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
+  if (substitution) return substitution;
+  if (!projectKeyFromContext(request.context)) {
+    return {
+      status: "blocked",
+      kind: "missing_context",
+      message: "Forge did not provide a project key in the trusted invocation context.",
+    };
+  }
+  const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
+  if (payload.evidence?.experimentStatus === "failed") {
+    return {
+      status: "failed",
+      classification: "invalid_request",
+      message: "A failed experiment cannot produce an economic comparison.",
+    };
+  }
+  const body = {
+    contractVersion: "cg6.v1",
+    fixtureId: payload.fixtureId,
+    alternatives: payload.alternatives,
+    execution: payload.execution,
+    experimentIdentity: payload.experimentIdentity,
+    evidence: payload.evidence,
+    assumptions: payload.assumptions,
+    constraints: payload.constraints ?? {},
+    explore: payload.explore,
+  };
+  let remote;
+  try {
+    remote = await invokeRemote(REMOTE_KEY, {
+      path: ECONOMICS_PATH,
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    const classified = classifyNetworkFailure(error);
+    return { status: "failed", classification: classified.kind, message: classified.message };
+  }
+  const remoteBody = await readJson(remote);
+  if (remote.status === 401) {
+    return {
+      status: "failed",
+      classification: "authentication_failed",
+      message: "The remote could not verify the Forge Invocation Token.",
+    };
+  }
+  if (!remote.ok) {
+    const message =
+      remoteBody && remoteBody.error && typeof remoteBody.error.message === "string"
+        ? remoteBody.error.message
+        : "The economic evaluation failed.";
+    return {
+      status: "failed",
+      classification: remote.status === 408 ? "timeout" : "remote_error",
+      httpStatus: remote.status,
+      message,
+    };
+  }
+  const validated = validateEconomicEvidence(remoteBody, {
+    experimentIdentity: payload.experimentIdentity,
   });
   if (!validated.ok) {
     return { status: "failed", classification: "invalid_response", message: validated.message };

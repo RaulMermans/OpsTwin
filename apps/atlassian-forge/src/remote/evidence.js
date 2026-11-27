@@ -42,8 +42,17 @@ export function validateTransformEvidence(body, expected) {
       if (body.alternatives.some((item) => item.status !== "valid")) {
         return { ok: false, message: "A complete experiment cannot include failed alternatives." };
       }
-      if (typeof body.integrityStatus !== "string") {
-        return { ok: false, message: "Integrity status was missing from a complete experiment." };
+      if (body.integrityStatus !== "passed") {
+        return { ok: false, message: "A complete experiment requires passed integrity." };
+      }
+    }
+    if (typeof body.experimentIdentity !== "string" || body.experimentIdentity.length < 16) {
+      return { ok: false, message: "Experiment identity was missing." };
+    }
+    if (expected?.alternativeIds) {
+      const ids = body.alternatives.map((item) => item.alternativeId);
+      if (ids.join("|") !== expected.alternativeIds.join("|")) {
+        return { ok: false, message: "The experiment alternatives did not match the current request." };
       }
     }
     for (const alternative of body.alternatives) {
@@ -72,6 +81,30 @@ export function validateTransformEvidence(body, expected) {
   }
   if (!probabilityOk(body.probabilityOfImprovement)) {
     return { ok: false, message: "Improvement frequency was outside [0, 1]." };
+  }
+  return { ok: true };
+}
+
+export function validateEconomicEvidence(body, expected) {
+  if (!body || typeof body !== "object") {
+    return { ok: false, message: "The remote returned an empty economic response." };
+  }
+  if (body.contractVersion !== "cg6.v1" || body.synthetic !== true) {
+    return { ok: false, message: "The economic response contract was invalid." };
+  }
+  if (body.integrityStatus !== "passed") {
+    return { ok: false, message: "Economic evaluation integrity did not pass." };
+  }
+  if (expected?.experimentIdentity && body.operationalExperimentIdentity !== expected.experimentIdentity) {
+    return { ok: false, message: "Economic results did not match the current operational experiment." };
+  }
+  if (!Array.isArray(body.strategies) || body.strategies.length < 1) {
+    return { ok: false, message: "Economic evaluation did not include strategies." };
+  }
+  for (const strategy of body.strategies) {
+    if (strategy.roi === 0 && strategy.incrementalInvestment === 0) {
+      return { ok: false, message: "ROI cannot be zero when investment is unavailable." };
+    }
   }
   return { ok: true };
 }

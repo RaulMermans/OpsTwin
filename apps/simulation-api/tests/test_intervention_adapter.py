@@ -181,6 +181,8 @@ def test_multi_experiment_shares_baseline_and_reports_partial_failure() -> None:
         request_id="req-1",
     )
     assert evidence.experiment_status == "complete"
+    assert evidence.measurement_mode == "fixed_workload"
+    assert evidence.experiment_identity
     assert evidence.comparison_baseline_hash is not None
     assert evidence.identities_agree is True
     assert len(evidence.alternatives) == 3
