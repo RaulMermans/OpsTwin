@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke, view } from "@forge/bridge";
+import { DecisionPanel } from "./decision.jsx";
 import { ResultsPanel } from "./results.jsx";
 import {
   INTERVENTIONS,
@@ -8,12 +9,16 @@ import {
   afterCalibrationChange,
   afterConfigChange,
   afterFailedImport,
+  afterFinancialChange,
   baselineStatusLabel,
   calibrationPayload,
   comparisonPayload,
+  defaultAssumptions,
   defaultConfig,
+  defaultConstraints,
   defaultImportConfig,
   defaultTransform,
+  economicsPayload,
   hybridSupported,
   metricById,
   selectedAlternatives,
@@ -54,6 +59,10 @@ export function App() {
   const [transform, setTransform] = useState(defaultTransform());
   const [experiment, setExperiment] = useState({ status: "ready", evidence: null, message: null, requestId: null });
   const [sensitivity, setSensitivity] = useState({ status: "ready", evidence: null, message: null, requestId: null });
+  const [assumptions, setAssumptions] = useState(defaultAssumptions());
+  const [constraints, setConstraints] = useState(defaultConstraints());
+  const [exploreParameter, setExploreParameter] = useState("aiSubscriptionMonthly");
+  const [economics, setEconomics] = useState({ status: "ready", evidence: null, message: null, requestId: null });
   const calibrating = useRef(false);
   const experimenting = useRef(false);
   const [importState, setImportState] = useState({
@@ -237,6 +246,11 @@ export function App() {
           evidence: result.evidence,
           message: result.evidence.disclosure,
         }));
+        setAssumptions((current) => ({
+          ...current,
+          baselineTriageFte: result.evidence.baselineInventory?.triageCapacity ?? current.baselineTriageFte,
+          baselineResolutionFte: result.evidence.baselineInventory?.resolutionCapacity ?? current.baselineResolutionFte,
+        }));
       } else {
         setCalibration((current) => ({
           ...current,
@@ -264,6 +278,21 @@ export function App() {
         ? { status: "stale", evidence: previous.evidence, message: "Results are stale because the configuration changed.", requestId: previous.requestId }
         : previous,
     );
+    setEconomics((previous) =>
+      previous.evidence
+        ? { ...previous, status: "stale", message: "Economic results are stale because operational inputs changed." }
+        : previous,
+    );
+  }
+
+  function updateAssumptions(patch) {
+    setAssumptions((current) => ({ ...current, ...patch }));
+    setEconomics((previous) => afterFinancialChange(previous));
+  }
+
+  function updateConstraints(patch) {
+    setConstraints((current) => ({ ...current, ...patch }));
+    setEconomics((previous) => afterFinancialChange(previous));
   }
 
   async function runExperiment() {
@@ -297,7 +326,15 @@ export function App() {
           return current;
         }
         if (result?.status === "ok" && result.evidence) {
-          return { status: result.evidence.experimentStatus === "partial" ? "partial" : "completed", evidence: result.evidence, message: result.evidence.disclosure, requestId };
+          return {
+            status:
+              result.evidence.experimentStatus === "complete"
+                ? "completed"
+                : result.evidence.experimentStatus,
+            evidence: result.evidence,
+            message: result.evidence.disclosure,
+            requestId,
+          };
         }
         return {
           status: result?.classification === "timeout" ? "timeout" : "failed",
@@ -306,7 +343,10 @@ export function App() {
           requestId,
         };
       });
-      if (result?.status === "ok") setSection("results");
+      if (result?.status === "ok") {
+        setEconomics({ status: "ready", evidence: null, message: "Operational evidence updated. Evaluate investment to refresh economics.", requestId: null });
+        setSection("results");
+      }
     } catch (caught) {
       setExperiment((current) =>
         current.requestId !== requestId
@@ -357,6 +397,62 @@ export function App() {
     }
   }
 
+  async function runEconomics(explore) {
+    if (experimenting.current || phase !== "ready") return;
+    if (!experiment.evidence || experiment.status === "stale" || experiment.status === "failed") {
+      setEconomics({
+        status: "invalid",
+        evidence: economics.evidence,
+        message: "Run a current transformation experiment before economic evaluation.",
+        requestId: economics.requestId,
+      });
+      return;
+    }
+    if (experiment.evidence.experimentStatus === "failed") {
+      setEconomics({
+        status: "failed",
+        evidence: null,
+        message: "A failed experiment cannot produce an economic comparison.",
+        requestId: null,
+      });
+      return;
+    }
+    const requestId = newRequestId();
+    experimenting.current = true;
+    setEconomics({ status: "running", evidence: economics.evidence, message: null, requestId });
+    try {
+      const result = await invoke(
+        "runEconomicEvaluation",
+        economicsPayload(calibration, transform, experiment, assumptions, constraints, requestId, explore),
+      );
+      setEconomics((current) => {
+        if (current.requestId !== requestId) return current;
+        if (result?.status === "ok" && result.evidence) {
+          return { status: "completed", evidence: result.evidence, message: null, requestId };
+        }
+        return {
+          status: "failed",
+          evidence: current.evidence,
+          message: result?.message ?? "The economic evaluation failed.",
+          requestId,
+        };
+      });
+    } catch (caught) {
+      setEconomics((current) =>
+        current.requestId !== requestId
+          ? current
+          : {
+              status: "failed",
+              evidence: current.evidence,
+              message: caught instanceof Error ? caught.message : "The economic evaluation failed.",
+              requestId,
+            },
+      );
+    } finally {
+      experimenting.current = false;
+    }
+  }
+
   const intervention = INTERVENTIONS[config.intervention];
   const projectOk = project?.classification === "ok";
   const jiraStatus = projectOk ? "connected" : phase === "loading-project" ? "checking" : "blocked";
@@ -374,11 +470,13 @@ export function App() {
         ? "Select a synthetic baseline, review assumptions, and construct the model."
         : experiment.status !== "completed" && experiment.status !== "partial"
           ? "Configure alternatives in Transformation Lab and run the comparison."
-          : "Inspect Results & Evidence, then optionally rerun with a changed assumption.";
+          : economics.status === "completed"
+            ? "Review the Investment Decision workspace."
+            : "Inspect Results & Evidence, then evaluate investment assumptions.";
 
   return (
     <main className="lab">
-      <p className="eyebrow">Development integration — CG-5</p>
+      <p className="eyebrow">Development integration — CG-6</p>
       <h1>OpsTwin for Jira</h1>
       <h2>AI Transformation Lab — Simulate before you automate</h2>
       <p>
@@ -836,6 +934,30 @@ export function App() {
 
       {section === "results" && phase === "ready" ? (
         <ResultsPanel evidence={experiment.evidence} transform={transform} />
+      ) : null}
+
+      {section === "decision" && phase === "ready" ? (
+        <DecisionPanel
+          experiment={experiment}
+          economics={economics}
+          assumptions={assumptions}
+          constraints={constraints}
+          exploreParameter={exploreParameter}
+          onAssumptions={updateAssumptions}
+          onConstraints={updateConstraints}
+          onEvaluate={() => runEconomics()}
+          onExplore={() => {
+            const current = Number(assumptions[exploreParameter] ?? 0);
+            const high = exploreParameter === "realizationRate" ? 1 : Math.max(current * 2, current + 1);
+            runEconomics({
+              parameter: exploreParameter,
+              low: 0,
+              high,
+              pointCount: 7,
+            });
+          }}
+          onExploreParameter={setExploreParameter}
+        />
       ) : null}
 
       <footer>

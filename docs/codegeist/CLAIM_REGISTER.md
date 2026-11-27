@@ -24,3 +24,5 @@
 | CG-4 live operational calibration of OPS history | Not claimed | Transform/calibrate remotes remain synthetic fixture-ID only |
 | CG-5 multi-scenario native lab | Source + pytest + Forge 3.5.0 + Overview screenshot | `cg5.v1`, `cg5-hybrid-support`; live Overview in OPS 2026-11-27; full experiment click inside Custom UI iframe not completed by agent |
 | CG-5 live operational calibration of OPS history | Not claimed | Snapshots stay in Forge; remotes remain fixture-ID only |
+| CG-6 decision overlay (cash vs capacity, ROI, payback, break-even) | Source + pytest + Forge 3.6.0 | `app/economics/decision.py`, `cg6.v1`; hosted `dpl_GHxMygNfRXUrCosM8Q8AAcjFNhvK`; live Jira economic click not completed |
+| CG-6 live organizational ROI | Not claimed | Synthetic demonstration assumptions only |

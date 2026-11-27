@@ -47,3 +47,5 @@ CG-3 implementation: `docs/codegeist/sprints/CG-03.md`, ADR-026, `docs/calibrati
 CG-4 implementation: `docs/codegeist/sprints/CG-04.md`, ADR-027, `apps/simulation-api/app/interventions/`. Adapters over existing comparison. Live operational calibration is still not claimed.
 
 CG-5 implementation: `docs/codegeist/sprints/CG-05.md`, ADR-028. Native multi-scenario lab. Live operational calibration is still not claimed.
+
+CG-6 implementation: `docs/codegeist/sprints/CG-06.md`, ADR-029. Decision overlay on existing economics. Live operational calibration is still not claimed.

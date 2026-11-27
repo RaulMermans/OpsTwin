@@ -19,6 +19,7 @@ from app.interventions.catalog import (
     baseline_inventory,
     materialize_overrides,
 )
+from app.interventions.identity import MEASUREMENT_MODE, operational_experiment_identity
 from app.scenarios.coordinator import run_scenario_comparison
 from app.scenarios.materializer import canonical_model_hash
 
@@ -249,6 +250,7 @@ SYSTEM_METRIC_UNITS = {
     "slaAttainment": "proportion",
     "timeWeightedQueueLength": "items",
     "timeWeightedWip": "items",
+    "measurementDuration": "minutes",
 }
 
 STAGE_METRIC_UNITS = {
@@ -263,6 +265,7 @@ RESOURCE_METRIC_UNITS = {
     "idleProportion": "proportion",
     "meanRequestWait": "minutes",
     "requestCount": "requests",
+    "busyTime": "minutes",
 }
 
 
@@ -279,6 +282,7 @@ class AlternativeEvidence(ContractModel):
     alternative_id: str
     intervention_kind: str
     intervention_name: str
+    intervention: dict[str, Any] = {}
     status: Literal["valid", "failed"]
     message: str | None = None
     approximations: list[str] = []
@@ -296,8 +300,21 @@ class MultiExperimentEvidence(ContractModel):
     synthetic: Literal[True] = True
     fixture_id: str | None = None
     experiment_id: str
+    experiment_identity: str
     request_id: str | None = None
     experiment_status: Literal["complete", "partial", "failed"]
+    measurement_mode: Literal["fixed_workload"] = "fixed_workload"
+    demand_exposure: Literal["finite_poisson_arrivals"] = "finite_poisson_arrivals"
+    drain_after_boundary: Literal[True] = True
+    comparable_population: str = (
+        "Successful and unsuccessful completions of the same finite arrival workload."
+    )
+    incomparable_without_shared_horizon: list[str] = [
+        "completionRate",
+        "utilization",
+        "timeWeightedQueueLength",
+        "resource_provisioning_cost",
+    ]
     approximations: list[str]
     baseline_readiness: str
     baseline_class: str
@@ -436,6 +453,10 @@ def _disclosures(
             "It does not add an automation stage or explicit per-case bot execution. "
             "A completion route is successful automated handling only when that route already exists in the model."  # noqa: E501
         )
+    disclosures.append(
+        "Measurement is a shared finite arrival workload that drains until empty. "
+        "Completions are comparable; throughput, utilization, and time-dependent provisioning costs use scenario-specific horizons and are not cash denominators."  # noqa: E501
+    )
     if exploratory:
         disclosures.append(
             f"Exploratory comparison on a {baseline_class.replace('_', ' ')}. "
@@ -477,6 +498,13 @@ def run_multi_intervention_experiment(
             "model_identity_violation",
             "The model presented by calibration is not the model bound for execution.",
         )
+    identity = operational_experiment_identity(
+        fixture_id=fixture_id,
+        model_fingerprint=artifact.model_fingerprint,
+        alternatives=alternatives,
+        execution=execution,
+        measurement_mode=MEASUREMENT_MODE,
+    )
     failed: list[AlternativeEvidence] = []
     scenarios: list[dict[str, Any]] = []
     prepared: dict[str, tuple[NamedAlternative, list[dict[str, Any]], list[str], str]] = {}
@@ -491,6 +519,7 @@ def run_multi_intervention_experiment(
                     alternative_id=alternative.alternative_id,
                     intervention_kind=alternative.intervention.kind,
                     intervention_name=alternative.intervention.kind,
+                    intervention=alternative.intervention.model_dump(by_alias=True),
                     status="failed",
                     message=error.message,
                 )
@@ -503,6 +532,7 @@ def run_multi_intervention_experiment(
         return MultiExperimentEvidence(
             fixture_id=fixture_id,
             experiment_id=experiment_id,
+            experiment_identity=identity,
             request_id=request_id,
             experiment_status="failed",
             approximations=all_approximations,
@@ -540,6 +570,7 @@ def run_multi_intervention_experiment(
                     alternative_id=entry.scenario_id,
                     intervention_kind=alternative.intervention.kind,
                     intervention_name=name,
+                    intervention=alternative.intervention.model_dump(by_alias=True),
                     status="failed",
                     message="The comparison did not produce valid paired evidence for this alternative.",  # noqa: E501
                     approximations=approximations,
@@ -553,6 +584,7 @@ def run_multi_intervention_experiment(
                 alternative_id=entry.scenario_id,
                 intervention_kind=alternative.intervention.kind,
                 intervention_name=name,
+                intervention=alternative.intervention.model_dump(by_alias=True),
                 status="valid",
                 approximations=approximations,
                 applied_overrides=overrides,
@@ -582,6 +614,7 @@ def run_multi_intervention_experiment(
     return MultiExperimentEvidence(
         fixture_id=fixture_id,
         experiment_id=experiment_id,
+        experiment_identity=identity,
         request_id=request_id,
         experiment_status=status,
         approximations=all_approximations,

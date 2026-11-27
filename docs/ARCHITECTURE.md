@@ -92,6 +92,8 @@ Sensitivity is a sibling orchestration boundary, not an extension of scenario co
 
 ## Economic evidence boundary (`0.7.0`)
 
+CG-6 adds a Jira decision overlay (`app/economics/decision.py`, contract `cg6.v1`) on validated multi-scenario evidence. It does not replace this sidecar, rerun a second engine, or treat utilization as payroll. ROI, payback, and break-even are deterministic functions of explicit assumptions plus summarized operational means (ADR-029).
+
 Economics is a sidecar over successful summary runs. Optional observers on the existing comparison and sensitivity coordinators evaluate one pure scalar cost snapshot before each ordinary result is discarded. `app/economics/registry.py` owns formulas and source metadata; the evaluator owns missing-evidence semantics; aggregation reuses existing statistical primitives. Economic comparison consumes operational objective evidence already returned by comparison and cannot change its ranking. Economic sensitivity calls the 0.6.0 coordinator exactly once. One-time intervention amounts remain separate unless a positive amortization period is explicit. No events, persistence, inferred assumptions, or finance forecast enter this boundary. An unexpected observer evaluation failure no longer disappears silently: `EconomicExecutionMetadata.observerFailures` records a bounded, categorized, safe-message entry per failed run without ever exposing a traceback or path, and without affecting the operational comparison it observes.
 
 ## Playback presentation boundary (Sprint 10)

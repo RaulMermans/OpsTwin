@@ -199,6 +199,23 @@ async def transform_remote(request: Request) -> JSONResponse:
     body["disclosure"] = "Synthetic laboratory experiment. Not this Jira project's history."
     if body.get("synthetic") is not True or body.get("identitiesAgree") is not True:
         return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")
-    if transform_request.contract_version == "cg5.v1" and body.get("contractVersion") != "cg5.v1":
-        return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")
+    if transform_request.contract_version == "cg5.v1":
+        if body.get("contractVersion") != "cg5.v1":
+            return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")  # noqa: E501
+        if not body.get("experimentIdentity"):
+            return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")  # noqa: E501
+        if body.get("experimentStatus") == "complete":
+            if body.get("integrityStatus") != "passed":
+                return _error(
+                    500,
+                    "RESPONSE_VALIDATION_FAILED",
+                    "A complete experiment cannot be returned without passed integrity.",
+                )
+            alternatives = body.get("alternatives") or []
+            if any(item.get("status") != "valid" for item in alternatives):
+                return _error(
+                    500,
+                    "RESPONSE_VALIDATION_FAILED",
+                    "A complete experiment cannot include failed alternatives.",
+                )
     return JSONResponse(content=body)

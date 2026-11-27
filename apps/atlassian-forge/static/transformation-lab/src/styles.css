@@ -203,6 +203,20 @@ table.compare th:first-child, table.compare td:first-child {
   border-radius: 3px;
 }
 
+input[type="number"], textarea, pre.brief {
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+pre.brief {
+  white-space: pre-wrap;
+  background: var(--surface-sunken);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 details {
   margin-top: 12px;
   border: 1px solid var(--border);

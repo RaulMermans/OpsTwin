@@ -19,6 +19,7 @@ export const SECTIONS = [
   { id: "baseline", label: "Baseline Model" },
   { id: "lab", label: "Transformation Lab" },
   { id: "results", label: "Results & Evidence" },
+  { id: "decision", label: "Investment Decision" },
 ];
 
 export const COLORS = {
@@ -156,8 +157,97 @@ export function experimentIdFor(calibration, transform, alternatives) {
     calibration.fixtureId,
     transform.itemCount,
     transform.runCount,
-    alternatives.map((item) => item.alternativeId).join("+"),
+    JSON.stringify(alternatives),
   ].join(":");
+}
+
+export function defaultAssumptions(inventory) {
+  return {
+    schemaVersion: "cg6.v1",
+    currency: "EUR",
+    origin: "synthetic_demonstration",
+    evaluationMonths: 12,
+    monthlyStaffCostPerFte: 6500,
+    paidHoursPerMonth: 160,
+    baselineTriageFte: inventory?.triageCapacity ?? 1,
+    baselineResolutionFte: inventory?.resolutionCapacity ?? 1,
+    aiSubscriptionMonthly: 800,
+    aiCostPerAutomatedCase: 0,
+    implementationCost: 12000,
+    realizationMechanism: "none",
+    realizationRate: 0,
+    valueReleasedCapacity: false,
+  };
+}
+
+export function defaultConstraints() {
+  return {
+    maximumImplementationCost: "",
+    maximumRecurringMonthly: "",
+    maximumCycleTime: "",
+    minimumCompletions: "",
+    maximumPaybackMonths: "",
+  };
+}
+
+export function economicsPayload(calibration, transform, experiment, assumptions, constraints, requestId, explore) {
+  const alternatives = selectedAlternatives(transform, calibration);
+  const payload = {
+    contractVersion: "cg6.v1",
+    fixtureId: calibration.fixtureId,
+    alternatives,
+    execution: {
+      itemCount: transform.itemCount,
+      runCount: transform.runCount,
+      baseSeed: 20261127,
+    },
+    experimentIdentity: experiment.evidence.experimentIdentity,
+    evidence: experiment.evidence,
+    assumptions,
+    constraints: Object.fromEntries(
+      Object.entries(constraints)
+        .filter(([, value]) => value !== "" && value != null)
+        .map(([key, value]) => [key, Number(value)]),
+    ),
+    requestId,
+  };
+  if (explore) payload.explore = explore;
+  return payload;
+}
+
+export function afterFinancialChange(previous) {
+  if (!previous?.evidence) return previous;
+  return {
+    ...previous,
+    status: "stale",
+    message: "Economic results are stale because financial assumptions changed. Operational evidence was kept.",
+  };
+}
+
+export function decisionBriefText(brief) {
+  if (!brief) return "";
+  return [
+    `Baseline: ${brief.baseline}`,
+    `Strategies: ${(brief.strategies ?? []).join(", ")}`,
+    "",
+    "Operational findings",
+    ...(brief.operationalFindings ?? []),
+    "",
+    "Economic findings",
+    ...(brief.economicFindings ?? []),
+    "",
+    "Key assumptions",
+    ...(brief.keyAssumptions ?? []),
+    "",
+    brief.breakEven ? `Break-even: ${brief.breakEven}` : null,
+    "",
+    "Material risks",
+    ...(brief.materialRisks ?? []),
+    "",
+    `Next action: ${brief.suggestedNextAction}`,
+  ]
+    .filter((line) => line != null)
+    .join("\n");
 }
 
 export function transformPayload(calibration, transform, requestId) {
