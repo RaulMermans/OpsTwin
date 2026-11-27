@@ -7,12 +7,14 @@
   "main": "src/index.js",
   "scripts": {
     "build": "npm --prefix static/transformation-lab run build",
-    "test": "node --test src/remote/fit.test.js src/jira/classify-response.test.js src/manifest.test.js src/isolation.test.js",
+    "test": "node --test src/remote/fit.test.js src/jira/classify-response.test.js src/jira/context.test.js src/manifest.test.js src/isolation.test.js src/app-identity.test.js src/ui/lab-state.test.js",
     "lint:manifest": "node src/manifest.test.js"
   },
   "dependencies": {
     "@forge/api": "^8.5.1",
-    "@forge/resolver": "^2.0.2",
+    "@forge/resolver": "^2.0.2"
+  },
+  "devDependencies": {
     "jose": "^6.1.0"
   }
 }

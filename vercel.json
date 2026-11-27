@@ -17,6 +17,10 @@
       "destination": { "service": "simulation" }
     },
     {
+      "source": "/api/integrations/atlassian/(.*)",
+      "destination": { "service": "simulation" }
+    },
+    {
       "source": "/(.*)",
       "destination": { "service": "web" }
     }

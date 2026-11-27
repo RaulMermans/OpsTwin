@@ -16,6 +16,14 @@ modules:
   function:
     - key: resolver
       handler: index.handler
+  endpoint:
+    - key: compare-remote
+      remote: opstwin-simulation
+      auth:
+        appUserToken:
+          enabled: false
+        appSystemToken:
+          enabled: false
 
 resources:
   - key: transformation-lab
@@ -26,7 +34,17 @@ app:
   runtime:
     name: nodejs22.x
 
+remotes:
+  - key: opstwin-simulation
+    baseUrl: https://ops-twin.vercel.app
+    operations:
+      - compute
+
 permissions:
   scopes:
     - read:jira-work
     - read:servicedesk-request
+  external:
+    fetch:
+      backend:
+        - remote: opstwin-simulation

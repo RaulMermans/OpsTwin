@@ -1,5 +1,16 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-1 checkpoint — 2026-11-26
+
+- Branch `feat/codegeist-cg1-secure-integration` from CG-0 `42f04a1`. CG-0 was already committed; working tree was clean. Not pushed.
+- Tag `cg0-pre-hackathon-baseline` is `cf5a7eb` dated 2026-11-22, after competition start 2026-10-27. Clone is grafted; pre-2026-10-27 history is unavailable.
+- Forge: CLI 15.1.0, logged in as Raul Mermans, Developer Space OpsTwin, app `73670daa-...`, install `b1bb872d-...` on `opstwin-dev.atlassian.net` development.
+- MCP Forge/ADS servers are configured but not loaded in this Cursor session. Official docs used instead.
+- FIT production verifier is Python on `POST /api/integrations/atlassian/v1/compare` (ADR-024). Local unauthenticated 401; production URL currently 404 until owner Vercel deploy.
+- Local synthetic comparison runCount=5: ~0.20s, 963 bytes, integrity passed.
+- 2026-11-27: `forge deploy -e development --approve MAJOR_VERSION_RULE` → app **3.0.0**. `forge install --upgrade` on `opstwin-dev.atlassian.net` / Jira / development succeeded (egress `ops-twin.vercel.app`). Hosted remote still 404 until Vercel has the new route.
+- `npm audit --force` not used. Remaining: glob/minimatch via `@forge/api` (moderate); prosemirror-view XSS via `@forge/bridge` ADF (high, unused editor paste path). Compatible fix would downgrade Forge packages.
+
 ## Codegeist CG-0 checkpoint — 2026-11-26
 
 - Desktop copy had no `.git`; restored from GitHub `master` `cf5a7eb57b13c83018757a522cfcad0117b207ea` (empty `diff -rq` vs clone). Local tag `cg0-pre-hackathon-baseline`. Branch `feat/codegeist-cg0-foundation` (not pushed).

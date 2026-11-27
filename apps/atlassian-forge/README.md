@@ -4,11 +4,11 @@ Atlassian application layer for **OpsTwin for Jira — AI Transformation Lab**.
 
 This package is isolated from OpsTwin Core. The simulation engine remains in `apps/simulation-api` and must never import Forge modules.
 
-## Status (CG-0)
+## Status (CG-1)
 
-- Local Custom UI and resolver foundation: implemented
 - Official app identity: `ari:cloud:ecosystem::app/73670daa-a329-4491-8a96-89bf239b203b` in Developer Space **OpsTwin**
-- Live install on `opstwin-dev.atlassian.net`: in progress after CG-0 register
+- Live development install on `opstwin-dev.atlassian.net`
+- Remote: `opstwin-simulation` → `https://ops-twin.vercel.app/api/integrations/atlassian/v1/compare`
 
 Do not invent or reuse another product's Forge app ID. Do not deploy the placeholder identity.
 
@@ -16,8 +16,8 @@ Do not invent or reuse another product's Forge app ID. Do not deploy the placeho
 
 ```sh
 cd apps/atlassian-forge
-npm install
-npm --prefix static/transformation-lab install
+npm ci
+npm --prefix static/transformation-lab ci
 npm test
 npm run build
 ```

@@ -25,13 +25,11 @@ The existing comparison path is Python/SimPy. Duplicating it on Forge Node would
 
 ## CG-0 implemented
 
-- Unregistered Forge manifest, Custom UI, read-only resolver
-- Local FIT verifier and payload bound (`64 KiB`) with unit tests
-- No `remotes:` block, because no internet-reachable authenticated development endpoint is authorized yet
+- Registered Forge manifest, Custom UI, read-only resolver
+- Local FIT contract tests (`64 KiB` bound)
 
-## CG-1 required remote
+## CG-1 remote
 
-1. Owner registers a distinct OpsTwin Forge app (not RE:VERSE).
-2. Host a development-only Remote that verifies FIT (`iss=forge/invocation-token`, `aud` and `app.id` = trusted app ARI, expiry, installation ARI).
-3. Map synthetic or normalized operational models to existing comparison requests.
-4. Keep production `https://ops-twin.vercel.app/api/simulation/*` free of Forge auth unless a separate isolated route is explicitly approved.
+Hosted path (ADR-024): `POST /api/integrations/atlassian/v1/compare` on the existing FastAPI service. FIT is required. Public `/api/simulation/*` is unchanged. CG-1 bodies are synthetic catalog inputs only; Jira issue text is never forwarded.
+
+Sources retrieved 2026-11-26: [Forge Remote](https://developer.atlassian.com/platform/forge/remote/), [essentials](https://developer.atlassian.com/platform/forge/remote/essentials/) (UI timeout 25s), [remotes](https://developer.atlassian.com/platform/forge/manifest-reference/remotes/), [endpoint](https://developer.atlassian.com/platform/forge/manifest-reference/endpoint/), [invokeRemote](https://developer.atlassian.com/platform/forge/apis-reference/ui-api-bridge/invokeRemote/).

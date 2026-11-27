@@ -10,11 +10,18 @@
 - Payload cap for future Remote: 64 KiB.
 - Placeholder app ARI `.../00000000-0000-4000-8000-000000000000` must not accept Remote traffic.
 
-## CG-0 tests
+## CG-1 tests
 
-`apps/atlassian-forge/src/remote/fit.test.js` covers missing auth, invalid token, expiry, wrong audience, wrong app id, unregistered identity, and oversized bodies.
+Offline FIT tests (JS contract + Python production verifier) cover missing auth, malformed bearer, missing/expired `exp`, `nbf`, issuer, audience, app id, installation ARI, environment, unsupported algorithms, untrusted keys, oversized bodies, and log redaction.
 
-Live FIT against Atlassian JWKS is **not** verified this sprint.
+Live FIT against Atlassian JWKS is a separate gate from those mocked-key tests. Unauthenticated `POST /api/integrations/atlassian/v1/compare` must return 401.
+
+## Dependency advisories (CG-1)
+
+Inspected 2026-11-26 with `npm audit` (no `--force`):
+
+- `@forge/api` → `@forge/manifest` → `glob`/`minimatch` (moderate). Suggested fix installs `@forge/api@6.1.1` (breaking). Left unresolved.
+- `@forge/bridge` → `@atlaskit/adf-schema` → `prosemirror-view` XSS GHSA-c8x8-7fp4-3x9w (high). Suggested fix installs `@forge/bridge@5.5.0` (breaking, older). Custom UI uses `invoke`/`view` only; paste handling is not used. Left unresolved.
 
 ## Data residency
 

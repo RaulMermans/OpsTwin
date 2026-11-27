@@ -27,7 +27,15 @@ OpsTwin is a digital twin-style environment for simulating business operations a
 
 See `docs/sprints/SPRINT_04_SCENARIO_COMPARISON.md`, `docs/SCENARIO_COMPARISON_SPEC.md`, and `docs/METRIC_DEFINITIONS.md` for Core simulation semantics.
 
-Atlassian/Codegeist work is an additional isolated track. Read `docs/codegeist/sprints/CG-00.md` and `docs/adrs/ADR-023-atlassian-application-isolation.md` before editing `apps/atlassian-forge/` or `docs/integrations/atlassian/`. OpsTwin Core must never import Forge or Atlassian modules. Do not register, deploy, or install a Forge app without owner authentication on `opstwin-dev.atlassian.net`.
+Atlassian/Codegeist work is an additional isolated track. Read `docs/codegeist/sprints/CG-00.md`, `docs/codegeist/sprints/CG-01.md`, `docs/adrs/ADR-023-atlassian-application-isolation.md`, and `docs/adrs/ADR-024-forge-remote-python-adapter.md` before editing `apps/atlassian-forge/`, `apps/simulation-api/app/integrations/`, or `docs/integrations/atlassian/`. OpsTwin Core must never import Forge or Atlassian modules. Do not register, deploy, or install a Forge app without owner authentication on `opstwin-dev.atlassian.net`.
+
+Durable integration rules:
+
+- Never classify a malformed successful API response as an empty dataset.
+- Never treat optional JWT expiration validation as sufficient when expiration is mandatory.
+- Never infer project authorization from installation identity alone.
+- Never claim hosted integration success based on local mocks.
+- Never exclude entire directories from security scans without justified, reviewed exceptions.
 
 ## Context discipline
 

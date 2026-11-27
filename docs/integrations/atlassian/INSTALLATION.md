@@ -37,6 +37,10 @@ Verified 2026-11-26 after owner login and OpsTwin Developer Space:
 
 Payment method was **not** added. Marketplace and production app environment were **not** installed.
 
+## CG-1 remote hosting
+
+Forge `remotes.opstwin-simulation.baseUrl` is `https://ops-twin.vercel.app`. The new route is not live until the owner deploys this branch to that Vercel project. Required env (non-secret): `OPSTWIN_FORGE_APP_ID` may override the registered app ARI; default is the OpsTwin app id in the manifest. Do not disable authentication to reach a preview.
+
 ## Skills / MCP
 
 Project-scope install (already applied):

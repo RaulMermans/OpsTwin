@@ -13,7 +13,7 @@ Keep three layers:
 
 1. **OpsTwin Core** — `apps/simulation-api`, `apps/web`, `contracts/`. Platform-independent.
 2. **Integration contracts** — documented in `docs/integrations/atlassian/DATA_CONTRACT.md`. No Atlassian types leak into Core.
-3. **Atlassian application** — `apps/atlassian-forge/`. Forge manifest, Custom UI, resolvers, and future Forge Remote adapter.
+3. **Atlassian application** — `apps/atlassian-forge/`. Forge manifest, Custom UI, resolvers. The hosted FIT adapter is `apps/simulation-api/app/integrations/` (ADR-024), not Core engine modules.
 
 Dependency direction is Atlassian application → contracts → Core. Core must never import Forge or Atlassian modules.
 
