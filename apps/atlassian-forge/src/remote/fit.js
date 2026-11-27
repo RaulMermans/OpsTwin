@@ -4,7 +4,7 @@ import { expectedAppId, isAppAri, isInstallationAri, UNREGISTERED_APP_ID } from 
 export { UNREGISTERED_APP_ID, expectedAppId };
 export const FIT_ISSUER = "forge/invocation-token";
 export const COMMERCIAL_JWKS_URL = "https://forge.cdn.prod.atlassian-dev.net/.well-known/jwks.json";
-export const MAX_REMOTE_BYTES = 64 * 1024;
+export const MAX_REMOTE_BYTES = 192 * 1024;
 export const ALLOWED_ALGORITHMS = ["RS256"];
 
 const IC_LABEL = /^[a-z0-9_-]{1,50}$/;

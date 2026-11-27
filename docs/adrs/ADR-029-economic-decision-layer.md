@@ -14,7 +14,7 @@ CG-6 must connect operational experiments to ROI, payback, cash-versus-capacity,
 3. Staffing cash is calendar payroll (`FTE × monthly loaded cost × evaluation months`), not simulated busy minutes. Released busy hours are capacity, not cash, unless an explicit realization mechanism and rate are supplied.
 4. ROI = net benefit / incremental investment, with net benefit = realizable cash − incremental investment. ROI is omitted when the investment denominator is zero. Payback exists only when cumulative incremental cash recovers one-time implementation within the evaluation horizon.
 5. Financial-only break-even reuses the same operational means. Parameters that change queue behavior require another comparison experiment.
-6. Remote `POST /api/integrations/atlassian/v1/evaluate-economics` stays FIT-authenticated and synthetic-only.
+6. Remote `POST /api/integrations/atlassian/v1/evaluate-economics` stays FIT-authenticated. CG-7 requires a server-signed evidence token rather than browser-supplied metrics (ADR-030).
 
 ## Consequences
 

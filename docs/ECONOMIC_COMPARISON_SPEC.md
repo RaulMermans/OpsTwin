@@ -20,13 +20,15 @@ Incremental recurring cost per observed unit of objective improvement is the mea
 
 The dedicated validator reconciles currency, duration, IDs, component sums, missing evidence, cost per completion, intervention separation/amortization, seed alignment, paired intersections, null rules, probabilities, trade-offs, sensitivity baseline deltas, zero-event retention, and result schema. Safe failures use the seven documented `economic_*` categories and contain no paths or stack traces.
 
-## CG-6 decision overlay (`cg6.v1`)
+## CG-6 / CG-7 decision overlay
 
-Codegeist experiments use a fixed-workload measurement basis. Completions are comparable across alternatives. Throughput, utilization, and resource-provisioning cost over until-empty horizons are not converted into monthly cash.
+Codegeist experiments remain a finite until-empty workload. Completions are comparable. Throughput and utilization are not cash denominators.
 
-Staffing cash = modeled FTE × monthly loaded cost × evaluation months. Released human hours = reduction in simulated busy time and are not cash unless an explicit realization mechanism and rate are set.
+**Fixed workload:** busy-hour labor cost and attributable AI usage for the simulated demand. Subscription and extra-FTE payroll are omitted. ROI and payback are withheld.
 
-Incremental investment = one-time implementation + incremental recurring spend versus baseline. Net benefit = realizable cash − incremental investment. ROI is that ratio when the denominator is positive, otherwise unavailable. Payback is reported only when cumulative incremental cash recovers implementation within the evaluation horizon.
+**Recurring period:** requires expected demand per month. Calendar payroll = FTE × monthly loaded cost × selected months. Released hours and usage costs are scaled by demand × months / simulated completions. This is a linear per-case projection, not a re-simulated horizon.
 
-Financial-only break-even reuses the same operational means. Coverage, processing reduction, and hybrid routing require a new operational experiment.
+Released human hours are not cash unless an explicit realization mechanism and rate are set. ROI is net / incremental investment when the period basis is valid and the denominator is positive. Payback uses the selected evaluation months, not a hardcoded year.
+
+Financial-only break-even requires an explicit strategy. AI subscription sensitivity is undefined for hiring-only strategies.
 

@@ -39,11 +39,13 @@ export function DecisionPanel({
   assumptions,
   constraints,
   exploreParameter,
+  exploreStrategy,
   onAssumptions,
   onConstraints,
   onEvaluate,
   onExplore,
   onExploreParameter,
+  onExploreStrategy,
 }) {
   const currency = assumptions.currency;
   const strategies = economics.evidence?.strategies;
@@ -58,11 +60,22 @@ export function DecisionPanel({
     <section>
       <h3>Economic assumptions</h3>
       <p>
-        Synthetic demonstration defaults. These are not this organization&apos;s financial data. Changing only these
-        values recomputes economics without rerunning the simulation.
+        Financial assumptions are explicit. Changing only these values recomputes economics without rerunning the
+        simulation. Fixed-workload mode does not convert a finite experiment into annual savings.
       </p>
+      <label className="stack">
+        Evaluation basis
+        <select
+          value={assumptions.evaluationBasis}
+          onChange={(event) => onAssumptions({ evaluationBasis: event.target.value })}
+        >
+          <option value="fixed_workload">Fixed workload — do not annualize</option>
+          <option value="recurring_period">Recurring period — requires monthly demand</option>
+        </select>
+      </label>
       <div className="grid">
         {[
+          ["expectedDemandPerMonth", "Expected demand / month"],
           ["monthlyStaffCostPerFte", "Staff cost per FTE-month"],
           ["aiSubscriptionMonthly", "AI subscription / month"],
           ["aiCostPerAutomatedCase", "AI cost per automated case"],
@@ -198,7 +211,15 @@ export function DecisionPanel({
             ))}
 
           <h3>Break-even Explorer</h3>
-          <p>Financial-only. Operational parameters such as coverage require a new simulation.</p>
+          <p>Financial-only. Select the strategy first. AI subscription sensitivity is unavailable for hiring-only strategies.</p>
+          <label className="stack">
+            Strategy
+            <select value={exploreStrategy} onChange={(event) => onExploreStrategy(event.target.value)}>
+              <option value="human-expansion">Human capacity expansion</option>
+              <option value="ai-assisted">AI-assisted processing</option>
+              <option value="hybrid">Hybrid automation</option>
+            </select>
+          </label>
           <label className="stack">
             Parameter
             <select value={exploreParameter} onChange={(event) => onExploreParameter(event.target.value)}>

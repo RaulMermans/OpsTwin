@@ -231,7 +231,7 @@ test("invalid tokens, oversized payloads, and logs stay bounded", async () => {
       }),
     (error) => error instanceof FitValidationError && error.code === "invalid_token",
   );
-  assert.throws(() => assertPayloadBounds("x".repeat(65 * 1024)), { code: "payload_too_large" });
+  assert.throws(() => assertPayloadBounds("x".repeat(193 * 1024)), { code: "payload_too_large" });
   assert.equal(sanitizeRemoteLog("Bearer abc.def.ghi"), "[redacted-token]");
   assert.equal(jwksUrlForLabel(undefined), "https://forge.cdn.prod.atlassian-dev.net/.well-known/jwks.json");
   assert.throws(() => jwksUrlForLabel("https://evil.example"), { code: "invalid_ic_label" });

@@ -26,3 +26,5 @@
 | CG-5 live operational calibration of OPS history | Not claimed | Snapshots stay in Forge; remotes remain fixture-ID only |
 | CG-6 decision overlay (cash vs capacity, ROI, payback, break-even) | Source + pytest + Forge 3.6.0 | `app/economics/decision.py`, `cg6.v1`; hosted `dpl_GHxMygNfRXUrCosM8Q8AAcjFNhvK`; live Jira economic click not completed |
 | CG-6 live organizational ROI | Not claimed | Synthetic demonstration assumptions only |
+| CG-7 BYOD + signed evidence | Source + pytest + hosted 3.7.0; live Jira clicks not completed | ADR-030, `construct-baseline`, HMAC on Vercel prod; Forge 3.7.0; iframe journeys pending owner session |
+| CG-7 historical organizational calibration | Not claimed | Exploratory models only unless holdout passes |

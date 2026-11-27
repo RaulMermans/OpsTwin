@@ -1,9 +1,12 @@
 import json
+import os
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+os.environ.setdefault("OPSTWIN_ALLOW_DEV_EVIDENCE_KEY", "1")
 
 
 @pytest.fixture

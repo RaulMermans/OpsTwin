@@ -42,11 +42,23 @@ def economic_assumption_identity(assumptions: dict[str, Any]) -> str:
     return sha256_canonical({"layer": "economic_assumptions", "assumptions": assumptions})
 
 
-def economic_evaluation_identity(experiment_identity: str, assumption_identity: str) -> str:
+def economic_evaluation_identity(
+    experiment_identity: str,
+    assumption_identity: str,
+    *,
+    constraints: dict[str, Any] | None = None,
+    explore: dict[str, Any] | None = None,
+    selected_strategy: str | None = None,
+    calculation_version: str = "cg7.v1",
+) -> str:
     return sha256_canonical(
         {
             "layer": "economic_evaluation",
             "operationalExperimentIdentity": experiment_identity,
             "economicAssumptionIdentity": assumption_identity,
+            "constraints": constraints or {},
+            "explore": explore,
+            "selectedStrategy": selected_strategy,
+            "calculationVersion": calculation_version,
         }
     )

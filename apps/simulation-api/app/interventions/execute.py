@@ -297,7 +297,8 @@ class AlternativeEvidence(ContractModel):
 
 class MultiExperimentEvidence(ContractModel):
     contract_version: Literal["cg5.v1"] = "cg5.v1"
-    synthetic: Literal[True] = True
+    synthetic: bool = True
+    source_mode: Literal["synthetic", "manual", "jira", "csv"] | None = None
     fixture_id: str | None = None
     experiment_id: str
     experiment_identity: str
@@ -478,6 +479,8 @@ def run_multi_intervention_experiment(
     fixture_id: str | None = None,
     experiment_id: str,
     request_id: str | None = None,
+    source_mode: Literal["synthetic", "manual", "jira", "csv"] = "synthetic",
+    synthetic: bool = True,
 ) -> MultiExperimentEvidence:
     if not alternatives:
         raise InterventionError("invalid_experiment", "At least one alternative is required.")
@@ -534,6 +537,8 @@ def run_multi_intervention_experiment(
             experiment_id=experiment_id,
             experiment_identity=identity,
             request_id=request_id,
+            source_mode=source_mode,
+            synthetic=synthetic,
             experiment_status="failed",
             approximations=all_approximations,
             baseline_readiness=artifact.readiness_status,
@@ -616,6 +621,8 @@ def run_multi_intervention_experiment(
         experiment_id=experiment_id,
         experiment_identity=identity,
         request_id=request_id,
+        source_mode=source_mode,
+        synthetic=synthetic,
         experiment_status=status,
         approximations=all_approximations,
         baseline_readiness=artifact.readiness_status,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.domain.models import ContractModel
 
@@ -35,10 +35,17 @@ BreakEvenParameter = Literal[
 
 
 class DecisionAssumptions(ContractModel):
-    schema_version: Literal["cg6.v1"] = "cg6.v1"
+    schema_version: Literal["cg6.v1", "cg7.v1"] = "cg7.v1"
     currency: str = "EUR"
-    origin: Literal["synthetic_demonstration"] = "synthetic_demonstration"
+    origin: Literal[
+        "synthetic_demonstration",
+        "user_defined_exploratory",
+        "source_linked_exploratory",
+        "csv_exploratory",
+    ] = "synthetic_demonstration"
+    evaluation_basis: Literal["fixed_workload", "recurring_period"] = "fixed_workload"
     evaluation_months: int = Field(default=12, ge=1, le=36)
+    expected_demand_per_month: float | None = Field(default=None, gt=0, le=1_000_000)
     monthly_staff_cost_per_fte: float = Field(default=6_500, ge=0)
     paid_hours_per_month: float = Field(default=160, gt=0, le=744)
     baseline_triage_fte: float = Field(default=1, ge=0)
@@ -49,6 +56,12 @@ class DecisionAssumptions(ContractModel):
     realization_mechanism: RealizationMechanism = "none"
     realization_rate: float = Field(default=0, ge=0, le=1)
     value_released_capacity: bool = False
+
+    @model_validator(mode="after")
+    def recurring_requires_demand(self) -> DecisionAssumptions:
+        if self.evaluation_basis == "recurring_period" and self.expected_demand_per_month is None:
+            raise ValueError("recurring_period evaluation requires expectedDemandPerMonth")
+        return self
 
     @field_validator("currency")
     @classmethod
@@ -67,6 +80,7 @@ class DecisionConstraints(ContractModel):
 
 
 class BreakEvenExploreRequest(ContractModel):
+    strategy_id: str = Field(min_length=1, max_length=64)
     parameter: BreakEvenParameter
     low: float = Field(ge=0)
     high: float = Field(ge=0)
@@ -77,7 +91,7 @@ class StrategyEconomics(ContractModel):
     strategy_id: str
     intervention_kind: str
     status: Literal["valid", "unavailable"]
-    measurement_mode: Literal["fixed_workload"]
+    measurement_mode: Literal["fixed_workload", "recurring_period"]
     comparable_completions: bool
     duration_dependent_metrics_comparable: Literal[False] = False
     average_cycle_time: float | None
@@ -132,17 +146,17 @@ class DecisionBrief(ContractModel):
     break_even: str | None
     material_risks: list[str]
     suggested_next_action: str
-    synthetic: Literal[True] = True
+    synthetic: bool = True
 
 
 class DecisionEvaluationResult(ContractModel):
-    contract_version: Literal["cg6.v1"] = "cg6.v1"
-    synthetic: Literal[True] = True
+    contract_version: Literal["cg6.v1", "cg7.v1"] = "cg7.v1"
+    synthetic: bool = True
     fixture_id: str | None
     operational_experiment_identity: str
     economic_assumption_identity: str
     economic_evaluation_identity: str
-    measurement_mode: Literal["fixed_workload"]
+    measurement_mode: Literal["fixed_workload", "recurring_period"]
     economic_uncertainty: Literal["conditional_on_summarized_operational_outcomes"]
     integrity_status: Literal["passed"]
     experiment_status: Literal["complete", "partial"]

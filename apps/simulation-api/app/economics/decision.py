@@ -42,12 +42,13 @@ class DecisionError(ValueError):
 
 
 class DecisionEvaluationRequest(ContractModel):
-    contract_version: str = "cg6.v1"
-    fixture_id: str
+    contract_version: str = "cg7.v1"
+    fixture_id: str | None = None
     alternatives: list[NamedAlternative] = Field(min_length=1, max_length=3)
     execution: ExperimentExecution
     experiment_identity: str = Field(min_length=16, max_length=64)
-    evidence: MultiExperimentEvidence
+    evidence: MultiExperimentEvidence | None = None
+    evidence_token: str | None = None
     assumptions: DecisionAssumptions
     constraints: DecisionConstraints = Field(default_factory=DecisionConstraints)
     explore: BreakEvenExploreRequest | None = None
@@ -132,6 +133,7 @@ def evaluate_strategy_economics(
     constraints: DecisionConstraints,
 ) -> StrategyEconomics:
     months = assumptions.evaluation_months
+    basis = assumptions.evaluation_basis
     completions = ops.get("completions")
     cycle = ops.get("cycle")
     unsuccessful = ops.get("unsuccessful")
@@ -139,30 +141,75 @@ def evaluate_strategy_economics(
     baseline_busy = baseline_ops.get("busy_hours")
     baseline_fte = _staff_fte(assumptions, "baseline", None)
     fte = _staff_fte(assumptions, kind, alternative)
-    staff_cost = fte * assumptions.monthly_staff_cost_per_fte * months
-    baseline_staff = baseline_fte * assumptions.monthly_staff_cost_per_fte * months
-    incremental_staff = staff_cost - baseline_staff
-    automated = _automated_cases(kind, completions, alternative) if alternative else 0.0
-    ai_recurring = 0.0
-    implementation = 0.0
-    if _uses_ai(kind):
-        ai_recurring = assumptions.ai_subscription_monthly * months + (
-            assumptions.ai_cost_per_automated_case * automated
-        )
-        implementation = assumptions.implementation_cost
-    incremental_ai = ai_recurring + implementation
-    incremental_investment = incremental_staff + incremental_ai
-    released_hours = None
-    if busy_hours is not None and baseline_busy is not None:
-        released_hours = baseline_busy - busy_hours
     hourly = assumptions.monthly_staff_cost_per_fte / assumptions.paid_hours_per_month
-    potential = None if released_hours is None else max(0.0, released_hours) * hourly
-    realizable: float | None = 0.0
-    notes = [
-        "Staffing cost is calendar payroll for modeled FTE, not simulated utilization.",
+    simulated_released = None
+    if busy_hours is not None and baseline_busy is not None:
+        simulated_released = baseline_busy - busy_hours
+    automated_sim = _automated_cases(kind, completions, alternative) if alternative else 0.0
+    notes: list[str] = [
         "Released processing hours are not cash savings unless a realization mechanism is selected.",  # noqa: E501
-        "Fixed-workload results are not scaled into annual cash flow beyond the stated evaluation months.",  # noqa: E501
+        "Simulated utilization is not treated as payroll expenditure.",
     ]
+    scale = 1.0
+    withhold_period = basis == "fixed_workload"
+    if basis == "recurring_period":
+        demand = assumptions.expected_demand_per_month
+        if demand is None or completions is None or completions <= 0:
+            withhold_period = True
+            notes.append(
+                "Period-based ROI and payback are withheld because demand or simulated completions are insufficient."  # noqa: E501
+            )
+        else:
+            scale = (demand * months) / completions
+            notes.append(
+                f"Recurring-period results apply linear per-case scaling of {scale:.4g} "
+                "from the simulated workload. Nonlinear queueing is not extrapolated."
+            )
+            cycle_base = baseline_ops.get("cycle")
+            if (
+                cycle is not None
+                and cycle_base is not None
+                and abs(cycle - cycle_base) > 0.05 * max(abs(cycle_base), 1.0)
+            ):
+                notes.append(
+                    "Cycle time changed with the intervention, so scaled cash results are exploratory per-case projections, not a re-simulated period horizon."  # noqa: E501
+                )
+    if basis == "fixed_workload":
+        staff_cost = None if busy_hours is None else busy_hours * hourly
+        incremental_staff = 0.0
+        notes.append(
+            "Fixed-workload staffing is the loaded cost of simulated busy hours for this demand, not calendar FTE payroll."  # noqa: E501
+        )
+        if kind == "capacity":
+            notes.append(
+                "Extra FTE calendar payroll is omitted in fixed-workload mode. Use recurring_period to cost hiring."  # noqa: E501
+            )
+        ai_usage = assumptions.ai_cost_per_automated_case * automated_sim
+        ai_recurring = ai_usage
+        notes.append("AI subscription is a period cost and is omitted from fixed-workload totals.")
+        implementation = assumptions.implementation_cost if _uses_ai(kind) else 0.0
+        released_hours = simulated_released
+        potential = None if released_hours is None else max(0.0, released_hours) * hourly
+        incremental_ai = ai_usage
+        incremental_investment = incremental_staff + ai_usage + implementation
+        total_cost = (staff_cost or 0.0) + ai_usage
+        recurring = None
+    else:
+        staff_cost = fte * assumptions.monthly_staff_cost_per_fte * months
+        baseline_staff = baseline_fte * assumptions.monthly_staff_cost_per_fte * months
+        incremental_staff = staff_cost - baseline_staff
+        notes.append("Staffing cost is calendar payroll for modeled FTE over the selected months.")
+        automated = automated_sim * scale
+        ai_usage = assumptions.ai_cost_per_automated_case * automated
+        ai_recurring = (assumptions.ai_subscription_monthly * months + ai_usage) if _uses_ai(kind) else 0.0  # noqa: E501
+        implementation = assumptions.implementation_cost if _uses_ai(kind) else 0.0
+        released_hours = None if simulated_released is None else simulated_released * scale
+        potential = None if released_hours is None else max(0.0, released_hours) * hourly
+        incremental_ai = ai_recurring + implementation
+        incremental_investment = incremental_staff + incremental_ai
+        total_cost = staff_cost + ai_recurring + implementation
+        recurring = staff_cost + ai_recurring
+    realizable: float | None = 0.0
     if assumptions.realization_mechanism != "none" and potential is not None:
         realizable = potential * assumptions.realization_rate
         notes.append(
@@ -176,16 +223,21 @@ def evaluate_strategy_economics(
     roi = None
     if realizable is not None:
         net = realizable - incremental_investment
-        if incremental_investment > 0:
+        if incremental_investment > 0 and not withhold_period:
             roi = net / incremental_investment
+        elif withhold_period:
+            notes.append("Period-based ROI is withheld on a fixed-workload measurement basis.")
     payback_months = None
     payback_status: Literal["recovered_within_horizon", "no_payback", "not_applicable"] = (
-        "no_payback"
+        "not_applicable" if withhold_period else "no_payback"
     )
     monthly_net = None
-    if realizable is not None:
-        monthly_net = (realizable - (incremental_staff + ai_recurring)) / months
-    if implementation <= 0:
+    if realizable is not None and not withhold_period:
+        monthly_net = (realizable - (incremental_staff + (ai_recurring if basis == "recurring_period" else 0.0))) / months  # noqa: E501
+    if withhold_period:
+        payback_status = "not_applicable"
+        notes.append("Payback is withheld unless a recurring-period demand projection is used.")
+    elif implementation <= 0:
         if monthly_net is not None and monthly_net >= 0 and incremental_investment <= 0:
             payback_months = 0.0
             payback_status = "recovered_within_horizon"
@@ -193,33 +245,35 @@ def evaluate_strategy_economics(
             payback_months = 0.0
             payback_status = "recovered_within_horizon"
         else:
-            payback_status = "not_applicable" if implementation == 0 and incremental_investment <= 0 else "no_payback"  # noqa: E501
+            payback_status = (
+                "not_applicable"
+                if implementation == 0 and incremental_investment <= 0
+                else "no_payback"
+            )
     elif monthly_net is None or monthly_net <= 0:
         payback_status = "no_payback"
     else:
         payback_months = implementation / monthly_net
-        payback_status = (
-            "recovered_within_horizon" if payback_months <= months else "no_payback"
-        )
+        payback_status = "recovered_within_horizon" if payback_months <= months else "no_payback"
     cost_per = None
-    total_cost = staff_cost + ai_recurring + implementation
     if completions is not None and completions > 0:
-        cost_per = total_cost / completions
+        if basis == "fixed_workload":
+            cost_per = total_cost / completions
+        elif scale > 0:
+            cost_per = total_cost / (completions * scale)
     potential_value = potential if assumptions.value_released_capacity else None
     if potential_value is not None:
         notes.append(
             "Potential capacity value is theoretical productivity, not counted in net benefit or ROI."  # noqa: E501
         )
     cycle_base = baseline_ops.get("cycle")
-    improved_ops = (
-        cycle is not None and cycle_base is not None and cycle < cycle_base - 1e-9
-    )
+    improved_ops = cycle is not None and cycle_base is not None and cycle < cycle_base - 1e-9
     released = released_hours is not None and released_hours > 1e-9
     state = _classify(
-        net=net,
+        net=None if withhold_period else net,
         improved_ops=improved_ops,
         released=released,
-        realizable=realizable or 0.0,
+        realizable=0.0 if realizable is None else realizable,
         kind=kind,
         constraints=constraints,
         cycle=cycle,
@@ -229,12 +283,14 @@ def evaluate_strategy_economics(
         incremental_staff=incremental_staff,
         payback_months=payback_months,
         payback_status=payback_status,
+        evaluation_months=months,
+        withhold_period=withhold_period,
     )
     return StrategyEconomics(
         strategy_id=strategy_id,
         intervention_kind=kind,
         status="valid",
-        measurement_mode="fixed_workload",
+        measurement_mode=basis,
         comparable_completions=True,
         average_cycle_time=cycle,
         successful_completions=completions,
@@ -243,7 +299,7 @@ def evaluate_strategy_economics(
         incremental_staffing_cost=incremental_staff,
         incremental_ai_cost=incremental_ai,
         one_time_implementation_expenditure=implementation,
-        recurring_operating_expenditure=staff_cost + ai_recurring,
+        recurring_operating_expenditure=recurring,
         total_modeled_cost=total_cost,
         cost_per_successful_completion=cost_per,
         released_human_hours=released_hours,
@@ -274,8 +330,10 @@ def _classify(
     incremental_staff: float,
     payback_months: float | None,
     payback_status: str,
+    evaluation_months: int = 12,
+    withhold_period: bool = False,
 ) -> DecisionState:
-    months = 12
+    months = evaluation_months
     if constraints.maximum_cycle_time is not None and cycle is not None:
         if cycle > constraints.maximum_cycle_time:
             return "not_justified_under_the_selected_assumptions"
@@ -300,6 +358,12 @@ def _classify(
         and payback_months > constraints.maximum_payback_months
     ):
         return "not_justified_under_the_selected_assumptions"
+    if withhold_period:
+        if improved_ops:
+            return "suitable_for_controlled_pilot_evaluation"
+        if released:
+            return "capacity_releasing_without_cash_savings"
+        return "insufficient_evidence_for_a_decision"
     if net is not None and net > 0:
         return "economically_attractive_under_current_assumptions"
     if improved_ops and (net is None or net <= 0):
@@ -451,10 +515,17 @@ def _brief(
         if row.roi is None and row.incremental_investment == 0:
             economic.append(f"{row.strategy_id}: ROI unavailable because incremental investment is zero.")  # noqa: E501
     risks = [
-        "Synthetic laboratory experiment. Not this organization's historical performance.",
         "Economic results are conditional on summarized operational means, not ROI confidence intervals.",  # noqa: E501
         "Throughput and utilization use scenario-specific until-empty durations and are not used as cash denominators.",  # noqa: E501
     ]
+    if evidence.synthetic:
+        risks.insert(0, "Synthetic laboratory experiment. Not this organization's historical performance.")  # noqa: E501
+    elif evidence.source_mode == "manual":
+        risks.insert(0, "User-defined exploratory model. Not historically calibrated.")
+    elif evidence.source_mode == "jira":
+        risks.insert(0, "Source-linked Jira evidence. Historical validation is separate from import success.")  # noqa: E501
+    elif evidence.source_mode == "csv":
+        risks.insert(0, "CSV-uploaded event log. Not independently audited organizational history.")
     if evidence.exploratory:
         risks.append("The baseline is exploratory and is not historically adequate.")
     next_action = "Do not implement on this evidence alone."
@@ -465,7 +536,7 @@ def _brief(
     ]
     if attractive:
         next_action = (
-            f"Under the selected synthetic assumptions, {', '.join(attractive)} is economically attractive. "  # noqa: E501
+            f"Under the selected assumptions, {', '.join(attractive)} is economically attractive. "
             "Validate realization mechanisms before any implementation decision."
         )
     elif any(row.decision_state == "suitable_for_controlled_pilot_evaluation" for row in rows):
@@ -502,7 +573,9 @@ def _brief(
 def evaluate_decision(request: DecisionEvaluationRequest) -> DecisionEvaluationResult:
     started = perf_counter()
     evidence = request.evidence
-    if evidence.synthetic is not True or evidence.identities_agree is not True:
+    if evidence is None:
+        raise DecisionError("invalid_evidence", "Operational evidence is required.")
+    if evidence.identities_agree is not True:
         raise DecisionError("invalid_evidence", "Operational evidence failed identity checks.")
     if evidence.contract_version != "cg5.v1":
         raise DecisionError("unsupported_contract", "Economic evaluation requires cg5.v1 evidence.")
@@ -576,7 +649,19 @@ def evaluate_decision(request: DecisionEvaluationRequest) -> DecisionEvaluationR
             )
         if request.explore.high < request.explore.low:
             raise DecisionError("invalid_explore_range", "Break-even high must be at least low.")
-        focus = next((row for row in rows if row.strategy_id != "baseline"), rows[-1])
+        requested = request.explore.strategy_id
+        focus = next((row for row in rows if row.strategy_id == requested), None)
+        if focus is None or focus.strategy_id == "baseline":
+            raise DecisionError(
+                "invalid_explore_strategy",
+                "Break-even exploration requires an explicit non-baseline strategy.",
+            )
+        if request.explore.parameter in {"aiSubscriptionMonthly", "aiCostPerAutomatedCase"}:
+            if not _uses_ai(focus.intervention_kind):
+                raise DecisionError(
+                    "invalid_explore_parameter",
+                    "AI cost sensitivity is not defined for a strategy that does not use AI.",
+                )
         named: NamedAlternative | None = alternatives_by_id.get(focus.strategy_id)
         focus_evidence = next(item for item in evidence.alternatives if item.alternative_id == focus.strategy_id)  # noqa: E501
         ops = _ops_from_metrics(focus_evidence.system_metrics, focus_evidence.resource_metrics)
@@ -645,14 +730,23 @@ def evaluate_decision(request: DecisionEvaluationRequest) -> DecisionEvaluationR
                 for row in rows
             ]
     assumption_id = economic_assumption_identity(request.assumptions.model_dump(by_alias=True))
-    evaluation_id = economic_evaluation_identity(computed, assumption_id)
+    evaluation_id = economic_evaluation_identity(
+        computed,
+        assumption_id,
+        constraints=request.constraints.model_dump(by_alias=True, exclude_none=True),
+        explore=None
+        if request.explore is None
+        else request.explore.model_dump(by_alias=True),
+        selected_strategy=None if request.explore is None else request.explore.strategy_id,
+    )
     duration_ms = int((perf_counter() - started) * 1000)
     return DecisionEvaluationResult(
         fixture_id=request.fixture_id,
         operational_experiment_identity=computed,
         economic_assumption_identity=assumption_id,
         economic_evaluation_identity=evaluation_id,
-        measurement_mode="fixed_workload",
+        measurement_mode=request.assumptions.evaluation_basis,
+        synthetic=evidence.synthetic,
         economic_uncertainty="conditional_on_summarized_operational_outcomes",
         integrity_status="passed",
         experiment_status="complete" if evidence.experiment_status == "complete" else "partial",

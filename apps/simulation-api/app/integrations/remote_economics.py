@@ -10,15 +10,18 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.economics.decision import DecisionError, DecisionEvaluationRequest, evaluate_decision
+from app.integrations.evidence_token import EvidenceTokenError, bind_context, verify_claims
 from app.integrations.fit import (
     FitValidationError,
     assert_payload_bounds,
+    environment_type_from_verified,
     sanitize_remote_log,
     trusted_app_id,
     verify_forge_invocation_token,
 )
 from app.integrations.remote_compare import _error, _installation_ref
 from app.integrations.telemetry import emit
+from app.interventions.execute import MultiExperimentEvidence
 
 router = APIRouter(prefix="/api/integrations/atlassian/v1")
 
@@ -57,7 +60,7 @@ async def evaluate_economics_remote(request: Request) -> JSONResponse:
             "correlationId": correlation_id,
             "operation": "evaluate-economics",
             "installationRef": _installation_ref(str(verified["installationId"])),
-            "contractVersion": "cg6.v1",
+            "contractVersion": "cg7.v1",
         },
     )
     try:
@@ -72,21 +75,41 @@ async def evaluate_economics_remote(request: Request) -> JSONResponse:
             "economics.blocked",
             {
                 "correlationId": correlation_id,
-                "reason": "non_synthetic",
+                "reason": "untrusted_model",
                 "operation": "evaluate-economics",
             },
         )
         return _error(
             403,
-            "NON_SYNTHETIC_REJECTED",
-            "Remote economic evaluation accepts synthetic experiment evidence only.",
+            "UNTRUSTED_MODEL_REJECTED",
+            "Remote economic evaluation does not accept source records or executable models.",
         )
+    if not payload.get("evidenceToken"):
+        return _error(
+            422,
+            "EVIDENCE_TOKEN_REQUIRED",
+            "Economic evaluation requires a server-signed experiment token.",
+        )
+    payload.pop("evidence", None)
     try:
         evaluation_request = DecisionEvaluationRequest.model_validate(payload)
     except ValidationError:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
     try:
+        claims = verify_claims(evaluation_request.evidence_token)
+        bind_context(
+            claims,
+            app_id=trusted_app_id(),
+            installation_id=str(verified["installationId"]),
+            environment_type=environment_type_from_verified(verified),
+        )
+        if claims.get("kind") != "experiment":
+            raise EvidenceTokenError("unsupported_token", "The token is not experiment evidence.")
+        evidence = MultiExperimentEvidence.model_validate(claims["evidence"])
+        evaluation_request = evaluation_request.model_copy(update={"evidence": evidence})
         result = evaluate_decision(evaluation_request)
+    except EvidenceTokenError as error:
+        return _error(422, error.code.upper(), error.message)
     except DecisionError as error:
         emit(
             "economics.refused",
@@ -97,7 +120,7 @@ async def evaluate_economics_remote(request: Request) -> JSONResponse:
     body = result.model_dump(by_alias=True, exclude_none=True)
     body["durationMs"] = duration_ms
     body["correlationId"] = correlation_id
-    if body.get("synthetic") is not True or body.get("integrityStatus") != "passed":
+    if body.get("integrityStatus") != "passed":
         return _error(500, "RESPONSE_VALIDATION_FAILED", "Economic response contract was invalid.")
     emit(
         "economics.completed",
@@ -105,7 +128,7 @@ async def evaluate_economics_remote(request: Request) -> JSONResponse:
             "correlationId": correlation_id,
             "durationMs": duration_ms,
             "fixtureId": evaluation_request.fixture_id,
-            "synthetic": True,
+            "synthetic": body.get("synthetic"),
         },
     )
     return JSONResponse(content=body)

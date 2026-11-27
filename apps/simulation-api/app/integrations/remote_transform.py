@@ -11,11 +11,21 @@ from fastapi.responses import JSONResponse
 from pydantic import Field, ValidationError, model_validator
 
 from app.calibration.catalog import LABORATORY_FIXTURES, load_fixture, request_for_fixture
+from app.calibration.contracts import CalibrationArtifact
 from app.calibration.workflow import calibrate
 from app.domain.models import ContractModel
+from app.integrations.baselines import BaselineError, reconstruct_from_claims
+from app.integrations.evidence_token import (
+    EvidenceTokenError,
+    bind_context,
+    compact_operational_evidence,
+    sign_claims,
+    verify_claims,
+)
 from app.integrations.fit import (
     FitValidationError,
     assert_payload_bounds,
+    environment_type_from_verified,
     sanitize_remote_log,
     trusted_app_id,
     verify_forge_invocation_token,
@@ -52,7 +62,9 @@ FixtureId = Literal[
 
 class AtlassianTransformRequest(ContractModel):
     contract_version: Literal["cg4.v1", "cg5.v1"] = "cg4.v1"
-    fixture_id: FixtureId
+    fixture_id: FixtureId | None = None
+    source_mode: Literal["synthetic", "manual", "jira", "csv"] = "synthetic"
+    baseline_token: str | None = None
     approve_lab_assumptions: bool = False
     random_seed: int = 20_260_327
     intervention: InterventionConfig | None = None
@@ -63,6 +75,10 @@ class AtlassianTransformRequest(ContractModel):
 
     @model_validator(mode="after")
     def require_catalog_mode(self) -> AtlassianTransformRequest:
+        if self.source_mode != "synthetic" and not self.baseline_token:
+            raise ValueError("user-defined baselines require a signed baseline token")
+        if self.source_mode == "synthetic" and self.fixture_id is None and not self.baseline_token:
+            raise ValueError("synthetic experiments require fixtureId")
         if self.contract_version == "cg5.v1":
             if not self.alternatives:
                 raise ValueError("cg5.v1 requires alternatives")
@@ -123,30 +139,46 @@ async def transform_remote(request: Request) -> JSONResponse:
     if forbidden.intersection(payload):
         emit(
             "transform.blocked",
-            {"correlationId": correlation_id, "reason": "non_synthetic", "operation": "transform"},
+            {"correlationId": correlation_id, "reason": "untrusted_model", "operation": "transform"},  # noqa: E501
         )
         return _error(
             403,
-            "NON_SYNTHETIC_REJECTED",
-            "Remote experiments accept synthetic fixture identifiers only.",
+            "UNTRUSTED_MODEL_REJECTED",
+            "Remote experiments reconstruct baselines from signed tokens or synthetic fixtures only.",  # noqa: E501
         )
     try:
         transform_request = AtlassianTransformRequest.model_validate(payload)
     except ValidationError:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
-    if transform_request.fixture_id not in LABORATORY_FIXTURES:
-        return _error(
-            422, "UNKNOWN_FIXTURE", "The fixture identifier is not in the synthetic catalog."
-        )  # noqa: E501
-    snapshot = load_fixture(transform_request.fixture_id, transform_request.random_seed)
-    engine_request = request_for_fixture(
-        transform_request.fixture_id,
-        snapshot,
-        approve=transform_request.approve_lab_assumptions,
-    )
+    environment_type = environment_type_from_verified(verified)
+
+    def _artifact() -> CalibrationArtifact:
+        if transform_request.baseline_token:
+            claims = verify_claims(transform_request.baseline_token)
+            bind_context(
+                claims,
+                app_id=trusted_app_id(),
+                installation_id=str(verified["installationId"]),
+                environment_type=environment_type,
+            )
+            if claims.get("kind") != "baseline":
+                raise EvidenceTokenError("unsupported_token", "The token is not a baseline artifact.")  # noqa: E501
+            return reconstruct_from_claims(claims)
+        assert transform_request.fixture_id is not None
+        if transform_request.fixture_id not in LABORATORY_FIXTURES:
+            raise KeyError(transform_request.fixture_id)
+        snapshot = load_fixture(transform_request.fixture_id, transform_request.random_seed)
+        engine_request = request_for_fixture(
+            transform_request.fixture_id,
+            snapshot,
+            approve=transform_request.approve_lab_assumptions,
+        )
+        return calibrate(snapshot, engine_request)
 
     def _execute() -> InterventionEvidence | MultiExperimentEvidence:
-        artifact = calibrate(snapshot, engine_request)
+        artifact = _artifact()
+        source_mode = transform_request.source_mode
+        synthetic = source_mode == "synthetic"
         if transform_request.contract_version == "cg5.v1":
             assert transform_request.alternatives is not None
             return run_multi_intervention_experiment(
@@ -156,6 +188,8 @@ async def transform_remote(request: Request) -> JSONResponse:
                 fixture_id=transform_request.fixture_id,
                 experiment_id=transform_request.experiment_id or str(uuid.uuid4()),
                 request_id=transform_request.request_id,
+                source_mode=source_mode,
+                synthetic=synthetic,
             )
         assert transform_request.intervention is not None
         return run_intervention_experiment(
@@ -173,6 +207,10 @@ async def transform_remote(request: Request) -> JSONResponse:
             {"correlationId": correlation_id, "reason": error.code, "operation": "transform"},
         )
         return _error(422, error.code.upper(), error.message)
+    except (EvidenceTokenError, BaselineError) as error:
+        return _error(422, error.code.upper(), error.message)
+    except KeyError:
+        return _error(422, "UNKNOWN_FIXTURE", "The fixture identifier is not in the synthetic catalog.")  # noqa: E501
     except ComparisonWorkBudgetError:
         return _error(
             422, "WORK_BUDGET_EXCEEDED", "This comparison is too large for synchronous execution."
@@ -192,13 +230,36 @@ async def transform_remote(request: Request) -> JSONResponse:
             ),
             "durationMs": duration_ms,
             "integrityStatus": getattr(evidence, "integrity_status", None),
-            "synthetic": True,
+            "synthetic": getattr(evidence, "synthetic", True),
         },
     )
     body = evidence.model_dump(by_alias=True, exclude_none=True)
-    body["disclosure"] = "Synthetic laboratory experiment. Not this Jira project's history."
-    if body.get("synthetic") is not True or body.get("identitiesAgree") is not True:
+    if transform_request.source_mode == "synthetic":
+        body["disclosure"] = "Synthetic laboratory experiment. Not this Jira project's history."
+    elif transform_request.source_mode == "manual":
+        body["disclosure"] = "User-defined exploratory experiment. Not historically calibrated."
+    elif transform_request.source_mode == "csv":
+        body["disclosure"] = "CSV-sourced exploratory experiment. Not independently audited history."  # noqa: E501
+    else:
+        body["disclosure"] = "Source-linked experiment. Import success is not historical validation."  # noqa: E501
+    if body.get("identitiesAgree") is not True:
         return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")
+    try:
+        body["evidenceToken"] = sign_claims(
+            {
+                "kind": "experiment",
+                "appId": trusted_app_id(),
+                "installationId": str(verified["installationId"]),
+                "environmentType": environment_type,
+                "sourceMode": transform_request.source_mode,
+                "experimentIdentity": body.get("experimentIdentity"),
+                "evidence": compact_operational_evidence(evidence)
+                if isinstance(evidence, MultiExperimentEvidence)
+                else body,
+            }
+        )
+    except EvidenceTokenError as error:
+        return _error(500, error.code.upper(), error.message)
     if transform_request.contract_version == "cg5.v1":
         if body.get("contractVersion") != "cg5.v1":
             return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")  # noqa: E501

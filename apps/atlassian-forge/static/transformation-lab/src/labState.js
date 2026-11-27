@@ -161,11 +161,38 @@ export function experimentIdFor(calibration, transform, alternatives) {
   ].join(":");
 }
 
+export function defaultManualSpec() {
+  return {
+    expectedVolume: 400,
+    observationDays: 30,
+    operatingHoursPerDay: 8,
+    triageCapacity: 2,
+    resolutionCapacity: 3,
+    triageMeanMinutes: 8,
+    resolutionMeanMinutes: 20,
+    triageToResolutionProbability: 0.7,
+    slaMinutes: 240,
+  };
+}
+
+export const CSV_TEMPLATE = `case_id,activity,timestamp,work_duration_minutes,processing_stage,outcome
+CASE-1,created,2026-01-05T08:00:00.000Z,,,
+CASE-1,triage_started,2026-01-05T08:04:00.000Z,5,triage,
+CASE-1,triage_completed,2026-01-05T08:10:00.000Z,,,
+CASE-1,resolution_started,2026-01-05T08:12:00.000Z,18,resolution,
+CASE-1,resolved,2026-01-05T08:35:00.000Z,,,completed
+CASE-2,created,2026-01-05T09:00:00.000Z,,,
+CASE-2,triage_started,2026-01-05T09:06:00.000Z,7,triage,
+CASE-2,resolved,2026-01-05T09:20:00.000Z,,,completed
+`;
+
 export function defaultAssumptions(inventory) {
   return {
-    schemaVersion: "cg6.v1",
+    schemaVersion: "cg7.v1",
     currency: "EUR",
     origin: "synthetic_demonstration",
+    evaluationBasis: "fixed_workload",
+    expectedDemandPerMonth: 400,
     evaluationMonths: 12,
     monthlyStaffCostPerFte: 6500,
     paidHoursPerMonth: 160,
@@ -193,7 +220,7 @@ export function defaultConstraints() {
 export function economicsPayload(calibration, transform, experiment, assumptions, constraints, requestId, explore) {
   const alternatives = selectedAlternatives(transform, calibration);
   const payload = {
-    contractVersion: "cg6.v1",
+    contractVersion: "cg7.v1",
     fixtureId: calibration.fixtureId,
     alternatives,
     execution: {
@@ -202,7 +229,7 @@ export function economicsPayload(calibration, transform, experiment, assumptions
       baseSeed: 20261127,
     },
     experimentIdentity: experiment.evidence.experimentIdentity,
-    evidence: experiment.evidence,
+    evidenceToken: experiment.evidence.evidenceToken,
     assumptions,
     constraints: Object.fromEntries(
       Object.entries(constraints)
@@ -255,6 +282,8 @@ export function transformPayload(calibration, transform, requestId) {
   return {
     contractVersion: "cg5.v1",
     fixtureId: calibration.fixtureId,
+    sourceMode: calibration.sourceMode || "synthetic",
+    baselineToken: calibration.evidence?.baselineToken,
     approveLabAssumptions: calibration.approveLabAssumptions,
     randomSeed: 20260327,
     alternatives,
@@ -333,6 +362,55 @@ export function formatMetric(value, digits = 3) {
 export function formatInterval(metric) {
   if (!metric || metric.lower == null || metric.upper == null) return "unavailable";
   return `${formatMetric(metric.lower)} to ${formatMetric(metric.upper)}`;
+}
+
+export function originForSource(mode) {
+  if (mode === "manual") return "user_defined_exploratory";
+  if (mode === "jira") return "source_linked_exploratory";
+  if (mode === "csv") return "csv_exploratory";
+  return "synthetic_demonstration";
+}
+
+export function sourceLinkedCalibrationPayload(preview, staffing, mappingReviewed) {
+  const mapping = preview?.suggestedMapping ?? { mappingVersion: "status-role.1", statuses: [], reviewed: false };
+  return {
+    snapshotReference: preview?.snapshotFingerprint ?? "jira",
+    snapshotFingerprint: preview?.snapshotFingerprint,
+    operationalMapping: {
+      mappingVersion: "status-role.1",
+      reviewed: mappingReviewed === true,
+      requestTypeClasses: mapping.requestTypeClasses ?? {},
+      statuses: (mapping.statuses ?? []).map((item) => ({
+        statusId: item.statusId,
+        role: item.role,
+        stageId: item.stageId ?? null,
+        reviewed: mappingReviewed === true,
+      })),
+    },
+    assumptionSet: [
+      ["triage.processing_time.mean", staffing.triageMeanMinutes, "minutes"],
+      ["resolution.processing_time.mean", staffing.resolutionMeanMinutes, "minutes"],
+      ["resource.triage-team.capacity", staffing.triageCapacity, "servers"],
+      ["resource.resolution-team.capacity", staffing.resolutionCapacity, "servers"],
+    ].map(([id, value, unit]) => ({
+      assumptionId: id,
+      affectedParameter: id,
+      proposedValue: value,
+      unit,
+      rationale: "Explicit analyst assumption. Status residence is not used as processing time.",
+      source: "analyst",
+      approvalStatus: "approved",
+      revision: 1,
+      limitations: ["Not inferred from assignees or dwell time."],
+      evidenceAvailable: "none identifiable",
+      operationalConsequence: "Binds the executed exploratory model.",
+    })),
+    estimationConfiguration: {
+      treatWorklogsAsProcessing: false,
+      allowAssumptionBasedModel: true,
+    },
+    randomSeed: 20260327,
+  };
 }
 
 export function baselineStatusLabel(evidence) {

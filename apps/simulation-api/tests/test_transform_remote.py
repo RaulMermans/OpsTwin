@@ -50,7 +50,7 @@ def test_snapshot_payloads_are_rejected(authorized: None) -> None:
         },
     )
     assert response.status_code == 403
-    assert response.json()["error"]["code"] == "NON_SYNTHETIC_REJECTED"
+    assert response.json()["error"]["code"] == "UNTRUSTED_MODEL_REJECTED"
 
 
 def test_placeholder_item_count_cannot_be_requested(authorized: None) -> None:
