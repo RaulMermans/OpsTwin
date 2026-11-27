@@ -13,4 +13,4 @@ Atlassian-layer claims allowed only with evidence:
 | Live Jira API | implemented in resolver; live response is an acceptance gate |
 | Live Forge Remote | unauthenticated hosted POST returned 401 FIT_INVALID on 2026-11-27 |
 | Operational snapshot contract | golden fixture validates in Python and Node |
-| Live CG-2 import UI | code complete; not yet deployed to the development install |
+| Live CG-2 import UI | development **3.1.0** deployed 2026-11-27; install `b1bb872d-...` latest on major 3 |

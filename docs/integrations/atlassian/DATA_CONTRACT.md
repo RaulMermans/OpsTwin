@@ -2,7 +2,9 @@
 
 CG-1 remote request `cg1.v1` selects a synthetic catalog experiment and intervention parameters. It is not an operational-model payload and must not include `baselineModel`, issues, or tokens.
 
-CG-2 operational snapshots use `contracts/operational-snapshot.schema.json` (`os.1.0.0`). They are not Core models and are not sent to `/api/integrations/atlassian/v1/compare`.
+CG-2 operational snapshots use `contracts/operational-snapshot.schema.json` (`os.1.0.0`). They are not Core models and are not sent to `/api/integrations/atlassian/v1/compare`. Runtime ingest validates the snapshot against that contract before returning success.
+
+JQL cohort filters use `yyyy-MM-dd HH:mm` in the caller's timezone (UTC padded ±1 day when timezone is unknown). Exact UTC window bounds are applied during normalization. Current `resolutiondate` does not reconstruct every historical open interval. Status residence is not processing time. Mixed synthetic/observed records keep per-case origin; live transport is not origin.
 
 Integration data is **not** a Core schema change. The simulation adapter still emits operational model `0.2.0` and comparison request `0.5.0`.
 

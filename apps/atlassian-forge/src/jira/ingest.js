@@ -1,9 +1,10 @@
 import { classifyJiraResponse, classifyNetworkFailure } from "./classify-response.js";
 import { fetchWithRetry } from "./http.js";
 import { paginateOffset, paginateToken } from "./paginate.js";
-import { cohortJql, observationWindow } from "../operational/time.js";
+import { cohortJql, observationWindow, overlapsObservationWindow } from "../operational/time.js";
 import { statusRecord } from "../operational/normalize.js";
 import { buildSnapshot } from "../operational/snapshot.js";
+import { validateSnapshot } from "../operational/validate.js";
 
 export const IMPORT_LIMITS = {
   recordLimit: 40,
@@ -11,9 +12,17 @@ export const IMPORT_LIMITS = {
   pageSize: 20,
   changelogPageSize: 100,
   enrichLimit: 40,
+  deadlineMs: 20000,
+  stageCallLimits: {
+    search: 10,
+    changelog: 120,
+    worklog: 45,
+    sla: 45,
+    metadata: 20,
+  },
 };
 
-const SEARCH_FIELDS = "created,resolutiondate,status,priority,issuetype,assignee,project,updated";
+const SEARCH_FIELDS = "created,resolutiondate,status,priority,issuetype,assignee,project,updated,labels";
 
 function failed(classification, message, extra = {}) {
   return { status: "failed", classification, message, ...extra };
@@ -66,8 +75,28 @@ function findRequestTypeField(fields) {
   return null;
 }
 
+function slaCycles(item) {
+  const completed = Array.isArray(item.completedCycles) ? item.completedCycles : [];
+  const cycles = completed.map((cycle) => ({ ...cycle, ongoing: false }));
+  if (item.ongoingCycle) cycles.push({ ...item.ongoingCycle, ongoing: true });
+  return cycles.map((cycle, index) => {
+    const elapsedMs = Number(cycle?.elapsedTime?.millis);
+    const breached = cycle?.breached;
+    return {
+      id: `${item.id}:${index}`,
+      name: item.name,
+      startTime: cycle?.startTime?.iso8601 ?? cycle?.startTime ?? null,
+      stopTime: cycle?.stopTime?.iso8601 ?? cycle?.stopTime ?? null,
+      elapsedMinutes: Number.isFinite(elapsedMs) ? elapsedMs / 60000 : null,
+      breached: breached === true ? true : breached === false ? false : null,
+      ongoing: Boolean(cycle.ongoing),
+    };
+  });
+}
+
 export function issueToRecord(issue, projectKey, requestTypeFieldId) {
   const fields = issue.fields ?? {};
+  const labelsPresent = Array.isArray(fields.labels);
   return {
     key: issue.key,
     id: issue.id,
@@ -80,33 +109,93 @@ export function issueToRecord(issue, projectKey, requestTypeFieldId) {
     assigneeAccountId: fields.assignee?.accountId ?? null,
     project: fields.project ?? { key: projectKey },
     changelog: changelogItems(issue.changelog?.histories),
+    changelogComplete: false,
     worklogs: [],
     sla: [],
-    syntheticOrigin: Array.isArray(fields.labels) && fields.labels.includes("opstwin-synthetic"),
+    syntheticOrigin: labelsPresent && fields.labels.includes("opstwin-synthetic"),
+    originUnknown: !labelsPresent,
   };
 }
 
-export async function ingestOperationalData({ projectKey, installationRef, payload, now, requestJson }) {
+function completenessOf(result, optional = false) {
+  if (!result) return optional ? "unavailable" : "incomplete";
+  if (result === "forbidden") return "forbidden";
+  if (result === "unavailable") return "unavailable";
+  if (result === "not_requested") return "not_requested";
+  if (result.complete) return result.items?.length === 0 ? "empty" : "complete";
+  return "incomplete";
+}
+
+export async function ingestOperationalData({
+  projectKey,
+  installationRef,
+  payload,
+  now,
+  requestJson,
+  clock = { nowMs: () => Date.now() },
+  limits = IMPORT_LIMITS,
+  retrySleep,
+}) {
   const parsed = parseWindowDays(payload);
   if (parsed.error) return failed("invalid_configuration", parsed.error);
   const window = observationWindow(parsed.windowDays, now);
   window.windowDays = parsed.windowDays;
-  const importStartedAt = now.toISOString();
+  const startedMs = clock.nowMs();
+  const importStartedAt = new Date(startedMs).toISOString();
   const stages = [];
   const telemetry = [];
+  const stageDurations = {};
   let retryCount = 0;
   let pageCount = 0;
+  let apiCalls = 0;
+  const stageCalls = {};
+  let truncatedReason = null;
 
-  async function call(path, schema, method = "GET", body) {
-    const result = await fetchWithRetry(async () => {
-      try {
-        return await requestJson(path, method, body);
-      } catch (error) {
-        const classified = classifyNetworkFailure(error);
-        return { status: 0, body: null, networkError: true, classification: classified };
-      }
-    });
+  function remainingMs() {
+    return limits.deadlineMs - (clock.nowMs() - startedMs);
+  }
+
+  function markStage(name) {
+    const started = clock.nowMs();
+    stages.push(name);
+    return () => {
+      stageDurations[name] = (stageDurations[name] ?? 0) + (clock.nowMs() - started);
+    };
+  }
+
+  function budgetStop(stage) {
+    stageCalls[stage] = (stageCalls[stage] ?? 0) + 1;
+    if (remainingMs() <= 0) {
+      truncatedReason = truncatedReason ?? "deadline";
+      return "deadline";
+    }
+    if (stageCalls[stage] > (limits.stageCallLimits[stage] ?? Number.POSITIVE_INFINITY)) {
+      truncatedReason = truncatedReason ?? "stage_budget";
+      return "stage_budget";
+    }
+    return null;
+  }
+
+  async function call(path, schema, method = "GET", body, stage = "metadata") {
+    const stop = budgetStop(stage);
+    if (stop) return { error: failed(stop, "Import stopped before the request because the execution budget was exhausted.") };
+    apiCalls += 1;
+    const result = await fetchWithRetry(
+      async () => {
+        try {
+          return await requestJson(path, method, body);
+        } catch (error) {
+          const classified = classifyNetworkFailure(error);
+          return { status: 0, body: null, networkError: true, classification: classified };
+        }
+      },
+      { remainingMs: remainingMs(), ...(retrySleep ? { sleep: retrySleep } : {}) },
+    );
     retryCount += result.retries ?? 0;
+    if (result.stopped === "retry_exceeds_deadline") {
+      truncatedReason = truncatedReason ?? "retry_exceeds_deadline";
+      return { error: failed("retry_exceeds_deadline", "Retry-After exceeds the remaining import deadline.") };
+    }
     if (result.networkError) {
       return { error: failed(result.classification?.kind ?? "network_failure", result.classification?.message ?? "Network failure.") };
     }
@@ -124,9 +213,10 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
     return { body: result.body, classified };
   }
 
-  stages.push("validate_project");
+  const endValidate = markStage("validate_project");
   telemetry.push({ event: "import.started", projectKey });
   const project = await call(`/rest/api/3/project/${projectKey}`, "project");
+  endValidate();
   if (project.error) return project.error;
   const sourceProject = {
     reference: `project:${project.body.key}`,
@@ -135,37 +225,49 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
     serviceDeskId: null,
   };
 
-  stages.push("service_desk");
+  // shortcut: skip /myself (needs extra user scope); pad UTC in JQL and clip in normalization
+  const timeZone = null;
+
+  const endDesks = markStage("service_desk");
   const desks = await call("/rest/servicedeskapi/servicedesk", "servicedesk-collection");
+  endDesks();
   const deskValues = Array.isArray(desks.body?.values) ? desks.body.values : [];
   const desk = desks.error ? null : deskValues.find((item) => item.projectKey === projectKey) ?? null;
   sourceProject.serviceDeskId = desk?.id !== undefined && desk?.id !== null ? String(desk.id) : null;
 
   let requestTypes = [];
+  let requestTypeCompleteness = desk ? "incomplete" : "unavailable";
   if (desk) {
-    stages.push("request_types");
+    const endTypes = markStage("request_types");
     const pagedTypes = await paginateOffset({
-      maxPages: IMPORT_LIMITS.pageLimit,
+      maxPages: limits.pageLimit,
       maxRecords: 100,
       pageSize: 50,
       identity: (item) => String(item.id),
       getItems: (page) => page.values ?? [],
       fetchPage: async (start, limit) => {
-        const result = await call(`/rest/servicedeskapi/servicedesk/${desk.id}/requesttype?start=${start}&limit=${limit}`, "request-type-collection");
+        const result = await call(
+          `/rest/servicedeskapi/servicedesk/${desk.id}/requesttype?start=${start}&limit=${limit}`,
+          "request-type-collection",
+        );
         if (result.error) return { error: result.error.classification, total: 0, values: [] };
         return result.body;
       },
     });
+    endTypes();
     pageCount += pagedTypes.pages;
     requestTypes = pagedTypes.items.map((item) => ({ requestTypeId: String(item.id), name: String(item.name) }));
+    requestTypeCompleteness = completenessOf(pagedTypes, true);
   }
 
-  stages.push("fields");
-  const fields = await call("/rest/api/3/field", "unspecified");
+  const endFields = markStage("fields");
+  const fields = await call("/rest/api/3/field", "field-metadata");
+  endFields();
   const requestTypeFieldId = fields.error ? null : findRequestTypeField(fields.body);
 
-  stages.push("statuses");
-  const statusBody = await call(`/rest/api/3/project/${projectKey}/statuses`, "unspecified");
+  const endStatuses = markStage("statuses");
+  const statusBody = await call(`/rest/api/3/project/${projectKey}/statuses`, "project-statuses");
+  endStatuses();
   const statuses = [];
   if (!statusBody.error && Array.isArray(statusBody.body)) {
     for (const type of statusBody.body) {
@@ -173,49 +275,73 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
     }
   }
 
-  stages.push("search");
-  const jql = cohortJql(projectKey, window);
+  const endSearch = markStage("search");
+  const jql = cohortJql(projectKey, window, timeZone);
   const search = await paginateToken({
-    maxPages: IMPORT_LIMITS.pageLimit,
-    maxRecords: IMPORT_LIMITS.recordLimit,
+    maxPages: limits.pageLimit,
+    maxRecords: limits.recordLimit,
     identity: (issue) => issue.id ?? issue.key,
     getItems: (page) => page.issues ?? [],
     getToken: (page) => page.nextPageToken ?? null,
-    isComplete: (page) => page.isLast === true || !page.nextPageToken,
     fetchPage: async (token) => {
-      const params = [`jql=${encodeURIComponent(jql)}`, `maxResults=${IMPORT_LIMITS.pageSize}`, `fields=${SEARCH_FIELDS}${requestTypeFieldId ? `,${requestTypeFieldId}` : ""}`, "expand=changelog"];
-      if (token) params.push(`nextPageToken=${encodeURIComponent(token)}`);
-      const result = await call(`/rest/api/3/search/jql?${params.join("&")}`, "issue-search");
+      const result = await call(
+        "/rest/api/3/search/jql",
+        "issue-search",
+        "POST",
+        {
+          jql,
+          maxResults: limits.pageSize,
+          fields: `${SEARCH_FIELDS}${requestTypeFieldId ? `,${requestTypeFieldId}` : ""}`.split(","),
+          expand: "changelog",
+          ...(token ? { nextPageToken: token } : {}),
+        },
+        "search",
+      );
       if (result.error) return { error: result.error.classification, issues: [] };
       return result.body;
     },
   });
+  endSearch();
   pageCount += search.pages;
   if (search.reason && search.reason !== "record_budget" && search.reason !== "page_budget" && search.items.length === 0 && !search.complete) {
     return failed(search.reason, "Issue search could not be completed.");
   }
 
   const records = [];
+  let rejectedCrossProject = 0;
   for (const issue of search.items) {
     if ((issue.fields?.project?.key ?? issue.key?.split("-")[0]) !== projectKey) {
       telemetry.push({ event: "import.rejected", reason: "cross_project_record" });
+      rejectedCrossProject += 1;
       continue;
     }
+    if (!overlapsObservationWindow(issue.fields?.created, issue.fields?.resolutiondate, window)) continue;
     records.push(issueToRecord(issue, projectKey, requestTypeFieldId));
   }
+  if (rejectedCrossProject > 0) {
+    truncatedReason = truncatedReason ?? "cross_project_rejected";
+    return failed("cross_project_rejected", "Search returned records outside the authorized project. The import was not marked complete.");
+  }
 
-  stages.push("changelogs");
+  const endChangelogs = markStage("changelogs");
   let changelogCapability = "retrieved";
+  let changelogCompleteness = "complete";
   for (const record of records) {
-    if (record.changelog.length > 0) continue;
     const paged = await paginateOffset({
       maxPages: 3,
       maxRecords: 200,
-      pageSize: IMPORT_LIMITS.changelogPageSize,
-      identity: (item) => item.id,
-      getItems: (page) => changelogItems(page.values ?? page.histories ?? []),
+      pageSize: limits.changelogPageSize,
+      identity: (item) => String(item.id),
+      getItems: (page) => page.values ?? page.histories ?? [],
+      getSourceCount: (page) => (page.values ?? page.histories ?? []).length,
       fetchPage: async (startAt, maxResults) => {
-        const result = await call(`/rest/api/3/issue/${record.key}/changelog?startAt=${startAt}&maxResults=${maxResults}`, "unspecified");
+        const result = await call(
+          `/rest/api/3/issue/${record.key}/changelog?startAt=${startAt}&maxResults=${maxResults}`,
+          "changelog-collection",
+          "GET",
+          undefined,
+          "changelog",
+        );
         if (result.error) return { error: result.error.classification, values: [] };
         return result.body;
       },
@@ -223,22 +349,50 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
     pageCount += paged.pages;
     if (paged.reason === "permission_denied" || paged.reason === "authentication_failed") {
       changelogCapability = "forbidden";
+      changelogCompleteness = "forbidden";
+      record.changelogComplete = false;
       break;
     }
-    record.changelog = paged.items;
+    if (paged.reason === "deadline" || paged.reason === "retry_exceeds_deadline" || paged.reason === "stage_budget") {
+      changelogCapability = "partial";
+      changelogCompleteness = "incomplete";
+      truncatedReason = truncatedReason ?? paged.reason;
+      record.changelogComplete = false;
+      break;
+    }
+    if (!paged.complete) {
+      changelogCapability = "partial";
+      changelogCompleteness = "incomplete";
+      truncatedReason = truncatedReason ?? paged.reason ?? "incomplete_changelog";
+      record.changelog = changelogItems(paged.items);
+      record.changelogComplete = false;
+      continue;
+    }
+    record.changelog = changelogItems(paged.items);
+    record.changelogComplete = true;
   }
+  endChangelogs();
+  if (records.length === 0) changelogCompleteness = search.complete ? "empty" : "incomplete";
 
-  stages.push("worklogs");
+  const endWorklogs = markStage("worklogs");
   let worklogCapability = "retrieved";
-  for (const record of records.slice(0, IMPORT_LIMITS.enrichLimit)) {
+  let worklogCompleteness = "complete";
+  for (const record of records.slice(0, limits.enrichLimit)) {
     const paged = await paginateOffset({
       maxPages: 3,
       maxRecords: 50,
       pageSize: 50,
       identity: (item) => String(item.id),
-      getItems: (page) => page.worklogs ?? page.values ?? [],
+      getItems: (page) => page.worklogs ?? [],
+      getSourceCount: (page) => (page.worklogs ?? []).length,
       fetchPage: async (startAt, maxResults) => {
-        const result = await call(`/rest/api/3/issue/${record.key}/worklog?startAt=${startAt}&maxResults=${maxResults}`, "unspecified");
+        const result = await call(
+          `/rest/api/3/issue/${record.key}/worklog?startAt=${startAt}&maxResults=${maxResults}`,
+          "worklog-collection",
+          "GET",
+          undefined,
+          "worklog",
+        );
         if (result.error) return { error: result.error.classification, worklogs: [] };
         return result.body;
       },
@@ -246,10 +400,24 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
     pageCount += paged.pages;
     if (paged.reason === "permission_denied" || paged.reason === "authentication_failed") {
       worklogCapability = "forbidden";
+      worklogCompleteness = "forbidden";
       break;
     }
     if (paged.reason === "not_found") {
       worklogCapability = "unavailable";
+      worklogCompleteness = "unavailable";
+      break;
+    }
+    if (paged.reason === "malformed" || paged.reason === "partial") {
+      worklogCapability = "unavailable";
+      worklogCompleteness = "unavailable";
+      record.worklogs = [];
+      continue;
+    }
+    if (paged.reason === "deadline" || paged.reason === "retry_exceeds_deadline" || paged.reason === "stage_budget") {
+      worklogCapability = "unavailable";
+      worklogCompleteness = "incomplete";
+      truncatedReason = truncatedReason ?? paged.reason;
       break;
     }
     record.worklogs = paged.items.map((item) => ({
@@ -259,45 +427,52 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
       timeSpentSeconds: item.timeSpentSeconds,
     }));
   }
+  endWorklogs();
+  if (records.length === 0 && worklogCompleteness === "complete") worklogCompleteness = "empty";
 
-  stages.push("sla");
+  const endSla = markStage("sla");
   let slaCapability = desk ? "retrieved" : "unavailable";
+  let slaCompleteness = desk ? "complete" : "unavailable";
   if (desk) {
-    for (const record of records.slice(0, IMPORT_LIMITS.enrichLimit)) {
-      const result = await call(`/rest/servicedeskapi/request/${record.key}/sla`, "unspecified");
+    for (const record of records.slice(0, limits.enrichLimit)) {
+      const result = await call(`/rest/servicedeskapi/request/${record.key}/sla`, "sla-collection", "GET", undefined, "sla");
       if (result.error) {
         if (result.error.classification === "permission_denied" || result.error.classification === "authentication_failed") {
           slaCapability = "forbidden";
+          slaCompleteness = "forbidden";
           break;
         }
         if (result.error.classification === "not_found") {
           slaCapability = "unavailable";
+          slaCompleteness = "unavailable";
+          break;
+        }
+        if (result.error.classification === "malformed" || result.error.classification === "partial") {
+          slaCapability = "unavailable";
+          slaCompleteness = "unavailable";
+          continue;
+        }
+        if (result.error.classification === "deadline" || result.error.classification === "retry_exceeds_deadline") {
+          slaCapability = "unavailable";
+          slaCompleteness = "incomplete";
+          truncatedReason = truncatedReason ?? result.error.classification;
           break;
         }
         continue;
       }
-      const values = result.body?.values ?? [];
-      record.sla = values.map((item) => {
-        const cycle = item.completedCycles?.[item.completedCycles.length - 1] ?? item.ongoingCycle;
-        const elapsedMs = Number(cycle?.elapsedTime?.millis);
-        return {
-          id: item.id,
-          name: item.name,
-          startTime: cycle?.startTime?.iso8601 ?? cycle?.startTime,
-          stopTime: cycle?.stopTime?.iso8601 ?? cycle?.stopTime,
-          elapsedMinutes: Number.isFinite(elapsedMs) ? elapsedMs / 60000 : null,
-          breached: Boolean(cycle?.breached ?? item.breached),
-        };
-      });
+      record.sla = (result.body?.values ?? []).flatMap((item) => slaCycles(item));
     }
   }
+  endSla();
 
   const updatedTimes = records.map((item) => item.updated).filter(Boolean);
   const inconsistentSource = updatedTimes.some((stamp) => Date.parse(stamp) > Date.parse(importStartedAt));
-  const complete = search.complete === true;
+  const searchComplete = search.complete === true;
+  const changelogMandatoryOk = changelogCompleteness === "complete" || changelogCompleteness === "empty";
+  const complete = searchComplete && changelogMandatoryOk && !truncatedReason;
   const extraction = {
     complete,
-    truncatedReason: complete ? null : search.reason ?? "incomplete",
+    truncatedReason: complete ? null : truncatedReason ?? search.reason ?? "incomplete",
     pageCount,
     retryCount,
     inconsistentSource,
@@ -305,7 +480,19 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
     worklogCapability,
     slaCapability,
     changelogCapability,
+    searchCompleteness: searchComplete ? (records.length === 0 ? "empty" : "complete") : "incomplete",
+    changelogCompleteness,
+    requestTypeCompleteness,
+    worklogCompleteness,
+    slaCompleteness,
+    apiCallCount: apiCalls,
+    stageDurations,
   };
+  const importCompletedAt = new Date(clock.nowMs()).toISOString();
+  const syntheticCount = records.filter((item) => item.syntheticOrigin).length;
+  const observedCount = records.filter((item) => !item.syntheticOrigin && !item.originUnknown).length;
+  const evidenceClass =
+    records.length === 0 ? "observed" : syntheticCount === records.length ? "synthetic" : observedCount === records.length ? "observed" : "unknown";
   stages.push("normalize");
   const snapshot = buildSnapshot({
     issues: records,
@@ -315,20 +502,34 @@ export async function ingestOperationalData({ projectKey, installationRef, paylo
     window,
     importConfiguration: {
       windowDays: parsed.windowDays,
-      recordLimit: IMPORT_LIMITS.recordLimit,
-      pageLimit: IMPORT_LIMITS.pageLimit,
+      recordLimit: limits.recordLimit,
+      pageLimit: limits.pageLimit,
       cohortPolicy: "open-during-window",
       includeWorklogs: true,
       includeSla: true,
     },
     extraction,
     importStartedAt,
-    importCompletedAt: now.toISOString(),
+    importCompletedAt,
     authorizedInstallationRef: installationRef,
-    evidenceClass: records.some((item) => item.syntheticOrigin) ? "synthetic" : "observed",
+    evidenceClass,
     transportAuthenticity: "live_api",
   });
-  telemetry.push({ event: complete ? "import.completed" : "import.partial", pageCount, retryCount, cases: snapshot.cases.length });
+  snapshot.limitations.push(
+    `JQL used yyyy-MM-dd HH:mm in ${timeZone ?? "UTC with ±1 day padding"}; exact UTC window bounds are enforced during normalization.`,
+  );
+  const contract = validateSnapshot(snapshot);
+  if (!contract.ok) {
+    return failed("snapshot_contract", `Snapshot failed the os.1.0.0 contract at ${contract.path}: ${contract.message}`, { snapshot });
+  }
+  telemetry.push({
+    event: complete ? "import.completed" : "import.partial",
+    pageCount,
+    retryCount,
+    apiCalls,
+    durationMs: clock.nowMs() - startedMs,
+    cases: snapshot.cases.length,
+  });
   return {
     status: complete ? "completed" : "partial",
     stage: stages[stages.length - 1],

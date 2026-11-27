@@ -96,7 +96,12 @@
         "inconsistentSource": { "type": "boolean" },
         "worklogCapability": { "type": "string", "enum": ["retrieved", "unavailable", "forbidden", "not_requested"] },
         "slaCapability": { "type": "string", "enum": ["retrieved", "unavailable", "forbidden", "not_requested"] },
-        "changelogCapability": { "type": "string", "enum": ["retrieved", "unavailable", "forbidden", "partial"] }
+        "changelogCapability": { "type": "string", "enum": ["retrieved", "unavailable", "forbidden", "partial"] },
+        "searchCompleteness": { "type": ["string", "null"] },
+        "changelogCompleteness": { "type": ["string", "null"] },
+        "requestTypeCompleteness": { "type": ["string", "null"] },
+        "worklogCompleteness": { "type": ["string", "null"] },
+        "slaCompleteness": { "type": ["string", "null"] }
       }
     }
   },

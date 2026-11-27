@@ -13,7 +13,7 @@
 | R9 | Production API accidentally Forge-auth coupled | High | Low | Breaks standalone app | Eng | ADR-023/024, isolation script, dedicated integration prefix | PR mutates `/api/simulation/*` auth | Revert | Mitigated: new prefix only |
 | R15 | Hosted remote route absent on Vercel | High | High | No live FIT invoke | Owner | Deploy CG-1 branch to `ops-twin` | Unauthenticated 404/401 on the integration path | Mark `remote_live_invocation_status` blocked | **Closed 2026-11-27 — unauthenticated POST returns 401 FIT_INVALID** |
 | R16 | CG-1 live asUser bodies not captured in this session | Medium | Medium | Entry-gate partial | Eng | Resolver + install list | Queue page not exercised | Continue CG-2 offline | Open |
-| R17 | Interactive import timeout | High | Medium | Partial snapshots | Eng | 40-case / 8-page budget | Resolver timeout | Async events only after measurement | Mitigated |
+| R17 | Interactive import timeout | High | Medium | Partial snapshots | Eng | 20s deadline, stage budgets, Retry-After vs remaining time | Resolver timeout | Return partial; async only after measurement | Mitigated in CG-2.1 |
 | R18 | User context lost if async continuation added later | High | High | Silent asApp escalation | Eng | No async import in CG-2 | Proposal to queue imports | Keep synchronous asUser | Mitigated |
 | R19 | Empty OPS history | Medium | High | Empty live snapshot | Eng | Explicit empty state + synthetic demo | Search returns [] | Owner-approved sandbox batch | Open |
 | R20 | Status residence treated as service time | High | High | False bottleneck claims | Eng | Separate interval types + UI limitations | CG-3 mapping | Keep unresolved operationalClass | Mitigated in CG-2 |

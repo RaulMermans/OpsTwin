@@ -19,16 +19,21 @@ const desksOk = { status: 200, body: { values: [{ id: "1", projectKey: "OPS" }] 
 const typesOk = { status: 200, body: { values: [{ id: "10", name: "Get IT help" }] } };
 const fieldsOk = { status: 200, body: [{ id: "customfield_1", name: "Request Type", schema: { custom: "com.atlassian.servicedesk:vp-origin" } }] };
 const statusesOk = { status: 200, body: [{ statuses: [{ id: "1", name: "Open", statusCategory: { key: "new" } }] }] };
+const myselfOk = { status: 200, body: { timeZone: "UTC" } };
 
 function baseHandlers(search) {
   return [
+    ["/rest/api/3/myself", myselfOk],
     ["/rest/api/3/project/OPS", projectOk],
     ["/rest/servicedeskapi/servicedesk/1/requesttype", typesOk],
     ["/rest/servicedeskapi/servicedesk", desksOk],
     ["/rest/api/3/field", fieldsOk],
     ["/rest/api/3/project/OPS/statuses", statusesOk],
     ["/rest/api/3/search/jql", search],
-    ["/rest/api/3/issue/", { status: 200, body: { values: [], total: 0, isLastPage: true } }],
+    ["/rest/api/3/issue/", (path) => {
+      if (path.includes("/worklog")) return { status: 200, body: { worklogs: [], total: 0, isLastPage: true } };
+      return { status: 200, body: { values: [], total: 0, isLast: true } };
+    }],
     ["/rest/servicedeskapi/request/", { status: 200, body: { values: [] } }],
   ];
 }
@@ -108,7 +113,8 @@ test("project-scoped search rejects records from another project", async () => {
       }),
     ),
   });
-  assert.equal(result.snapshot.cases.length, 0);
+  assert.equal(result.status, "failed");
+  assert.equal(result.classification, "cross_project_rejected");
 });
 
 test("payload projectKey cannot redirect the trusted project", async () => {
@@ -118,14 +124,15 @@ test("payload projectKey cannot redirect the trusted project", async () => {
     installationRef: "install-1",
     payload: { windowDays: 30, projectKey: "EVIL" },
     now: new Date("2026-10-15T00:00:00.000Z"),
-    requestJson: async (path) => {
+    requestJson: async (path, method, body) => {
       paths.push(path);
+      if (body?.jql) paths.push(String(body.jql));
       return router(baseHandlers({ status: 200, body: { issues: [], isLast: true } }))(path);
     },
   });
   assert.ok(paths.some((path) => path.includes("/project/OPS")));
   assert.equal(paths.some((path) => path.includes("/project/EVIL")), false);
-  assert.ok(paths.some((path) => path.includes("jql=") && path.includes("OPS")));
+  assert.ok(paths.some((path) => path.includes("OPS") && path.includes("created")));
 });
 
 test("live-shaped issue search normalizes a snapshot with provenance", async () => {
@@ -167,6 +174,17 @@ test("live-shaped issue search normalizes a snapshot with provenance", async () 
           isLast: true,
         },
       }),
+      [
+        "/rest/api/3/issue/OPS-1/changelog",
+        {
+          status: 200,
+          body: {
+            values: [{ id: "h1", created: "2026-10-02T00:00:00.000Z", items: [{ field: "status", from: "1", to: "3" }] }],
+            total: 1,
+            isLast: true,
+          },
+        },
+      ],
       ["/rest/api/3/issue/OPS-1/worklog", { status: 200, body: { worklogs: [{ id: "w", started: "2026-10-01T03:00:00.000Z", timeSpentSeconds: 120 }], total: 1, isLastPage: true } }],
       ["/rest/servicedeskapi/request/OPS-1/sla", { status: 200, body: { values: [{ id: "s", name: "Time to resolution", completedCycles: [{ startTime: { iso8601: "2026-10-01T00:00:00.000Z" }, stopTime: { iso8601: "2026-10-02T00:00:00.000Z" }, elapsedTime: { millis: 86400000 }, breached: false }] }] } }],
     ]),
@@ -179,6 +197,7 @@ test("live-shaped issue search normalizes a snapshot with provenance", async () 
   assert.ok(result.snapshot.events.some((item) => item.eventType === "worklog_recorded"));
   assert.ok(result.snapshot.events.some((item) => item.eventType === "sla_cycle_observed"));
   assert.equal(result.snapshot.cases[0].assigneeReference.startsWith("ref_"), true);
+  assert.ok(result.telemetry.some((item) => item.event === "import.completed"));
 });
 
 test("unsupported window is rejected", async () => {

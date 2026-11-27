@@ -1,5 +1,12 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-2.1 checkpoint — 2026-11-27
+
+- Continue `feat/codegeist-cg2-operational-data` from `b5ccfb9`. Recoverable pointer `checkpoint/cg2.1-start`.
+- P0 connector defects: expanded changelog treated as complete; offset advanced by transformed events; missing continuation counted as success; labels omitted from search; ISO JQL timestamps; generic JSON success; mixed origin collapsed; unsalted assignee hashes; quality denominators; representativeness from page completion; no import deadline.
+- Runtime `os.1.0.0` validation is enforced on ingest. Do not start CG-3.
+- `pnpm verify`: 258 pytest, 183 vitest. Forge ingest/operational tests: 61 pass. Forge development **3.3.0**. Live Overview: OPS connected. Two FIT runs: add-capacity +1 (45.913→47.386, P=0.200) and faster-triage 25% (45.913→42.874, P=0.600). Import now POSTs `/rest/api/3/search/jql` and skips `/myself`. Simulation Lab output is not importable; remaining live click is Operational Data → Import operational records.
+
 ## Codegeist CG-2 checkpoint — 2026-11-27
 
 - Branch `feat/codegeist-cg2-operational-data` from CG-1 `cabf1d4`. Working tree was clean. Not pushed.

@@ -259,6 +259,10 @@ export function App() {
             {requestTypes?.serviceDeskId ?? "not visible"}. Authorization follows the signed-in Jira user.
           </p>
           <h3>Import configuration</h3>
+          <p>
+            This reads Jira/JSM issues for the connected project. Simulation Lab results are not operational records and
+            cannot be imported here.
+          </p>
           <p>Read-only import of issue metadata, changelogs, worklogs, and SLA cycles. Descriptions, comments, and attachments are not retrieved.</p>
           <label>
             Observation window

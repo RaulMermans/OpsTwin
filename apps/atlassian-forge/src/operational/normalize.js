@@ -76,6 +76,9 @@ export function normalizeCase(issue, meta) {
   else if (created.ok && !resolved.ok && (issue.resolutiondate === null || issue.resolutiondate === undefined)) {
     observationStatus = "open";
   }
+  const originUnknown = Boolean(issue.originUnknown);
+  const syntheticOrigin = Boolean(issue.syntheticOrigin) || (!originUnknown && meta.evidenceClass === "synthetic");
+  const evidenceClass = syntheticOrigin ? "synthetic" : originUnknown ? "unknown" : "observed";
   return {
     schemaVersion: SCHEMA_VERSION,
     caseId,
@@ -89,11 +92,11 @@ export function normalizeCase(issue, meta) {
     currentStatusReference: statusId,
     observationStatus,
     lifecycleCompleteness: "unknown",
-    assigneeReference: issue.assigneeAccountId ? pseudonym(issue.assigneeAccountId) : null,
+    assigneeReference: issue.assigneeAccountId ? pseudonym(issue.assigneeAccountId, meta.installationRef ?? "") : null,
     updatedAt: parseTimestamp(issue.updated).ok ? parseTimestamp(issue.updated).utcIso : null,
     createdAtInvalid: Boolean(issue.created) && !created.ok,
-    syntheticOrigin: Boolean(issue.syntheticOrigin || meta.evidenceClass === "synthetic"),
-    provenance: baseProvenance(meta, sourceRef, issue.syntheticOrigin ? "synthetic" : meta.evidenceClass),
+    syntheticOrigin,
+    provenance: baseProvenance(meta, sourceRef, evidenceClass),
   };
 }
 
@@ -142,8 +145,8 @@ export function eventsFromIssue(issue, caseRecord, meta) {
           caseRecord.caseId,
           type,
           created,
-          from ? pseudonym(from) : null,
-          to ? pseudonym(to) : null,
+          from ? pseudonym(from, meta.installationRef ?? "") : null,
+          to ? pseudonym(to, meta.installationRef ?? "") : null,
           source,
           meta,
         ),
@@ -180,7 +183,7 @@ export function eventsFromIssue(issue, caseRecord, meta) {
         caseRecord.caseId,
         "sla_cycle_observed",
         sla.stopTime ?? sla.startTime ?? issue.created,
-        sla.breached ? "breached" : "not_breached",
+        sla.breached === true ? "breached" : sla.breached === false ? "not_breached" : "unknown",
         sla.name ?? sla.id ?? "sla",
         `${caseRecord.sourceReference}:sla:${sla.id ?? sla.name ?? "unknown"}`,
         meta,
@@ -191,9 +194,15 @@ export function eventsFromIssue(issue, caseRecord, meta) {
   return events;
 }
 
-function applyObservationStatus(caseRecord, events) {
-  const resolvedEvents = events.filter((event) => event.eventType === "resolved").sort(compareEvents);
-  const reopenedEvents = events.filter((event) => event.eventType === "reopened").sort(compareEvents);
+function inObservation(iso, window) {
+  const parsed = parseTimestamp(iso);
+  if (!parsed.ok) return false;
+  return parsed.utcMs < Date.parse(window.end);
+}
+
+function applyObservationStatus(caseRecord, events, window) {
+  const resolvedEvents = events.filter((event) => event.eventType === "resolved" && inObservation(event.occurredAt, window)).sort(compareEvents);
+  const reopenedEvents = events.filter((event) => event.eventType === "reopened" && inObservation(event.occurredAt, window)).sort(compareEvents);
   if (reopenedEvents.length > 0) {
     const lastReopen = reopenedEvents[reopenedEvents.length - 1];
     const lastResolve = resolvedEvents[resolvedEvents.length - 1];
@@ -209,14 +218,19 @@ function applyObservationStatus(caseRecord, events) {
   return { ...caseRecord, observationStatus: "unknown" };
 }
 
-export function reconstructLifecycle(caseRecord, events, window) {
+export function reconstructLifecycle(caseRecord, events, window, issue = {}) {
   const related = events.filter((event) => event.caseId === caseRecord.caseId).sort(compareEvents);
   const intervals = [];
-  const statusEvents = related.filter((event) => event.eventType === "status_changed" && event.occurredAt);
+  const statusEvents = related.filter(
+    (event) => event.eventType === "status_changed" && event.occurredAt && inObservation(event.occurredAt, window),
+  );
   const created = related.find((event) => event.eventType === "case_created");
   let completeness = "unknown";
   let cursorStatus = null;
   let cursorStart = caseRecord.createdAt;
+  let discontinuous = false;
+  let ambiguousInitial = false;
+  let sameTimestampAmbiguity = false;
   if (statusEvents.length === 0) {
     if (caseRecord.currentStatusReference && caseRecord.createdAt) {
       cursorStatus = caseRecord.currentStatusReference;
@@ -229,6 +243,7 @@ export function reconstructLifecycle(caseRecord, events, window) {
       completeness = created?.occurredAt && first.occurredAt ? "complete" : "incomplete";
     } else {
       completeness = "incomplete";
+      ambiguousInitial = true;
       cursorStatus = first.newValue;
       cursorStart = first.occurredAt;
     }
@@ -237,8 +252,17 @@ export function reconstructLifecycle(caseRecord, events, window) {
   const points = [];
   if (cursorStatus && cursorStart) points.push({ at: cursorStart, status: cursorStatus, syntheticStart: true });
   for (const event of statusEvents) {
+    if (cursorStatus && event.previousValue && event.previousValue !== cursorStatus) discontinuous = true;
+    if (points.length > 0 && points[points.length - 1].at === event.occurredAt) sameTimestampAmbiguity = true;
+    cursorStatus = event.newValue;
     points.push({ at: event.occurredAt, status: event.newValue, previous: event.previousValue });
   }
+  const lastObservedStatus = statusEvents.length ? statusEvents[statusEvents.length - 1].newValue : null;
+  const currentConflicts =
+    lastObservedStatus &&
+    caseRecord.currentStatusReference &&
+    lastObservedStatus !== caseRecord.currentStatusReference &&
+    (!caseRecord.updatedAt || inObservation(caseRecord.updatedAt, window));
 
   for (let index = 0; index < points.length; index += 1) {
     const start = points[index];
@@ -348,7 +372,9 @@ export function reconstructLifecycle(caseRecord, events, window) {
     const ms = parseTimestamp(event.occurredAt).utcMs;
     return createdMs !== null && ms !== null && ms < createdMs && event.eventType !== "case_created";
   });
-  if (leading) completeness = completeness === "complete" ? "incomplete" : completeness;
+  if (leading || discontinuous || ambiguousInitial || currentConflicts || sameTimestampAmbiguity || issue.changelogComplete === false) {
+    completeness = completeness === "unknown" ? "unknown" : "incomplete";
+  }
 
   return {
     caseRecord: { ...caseRecord, lifecycleCompleteness: completeness },
@@ -364,8 +390,8 @@ export function normalizeIssues(issues, meta, window, statusCatalog = [], reques
   for (const issue of issues) {
     let caseRecord = normalizeCase(issue, meta);
     const issueEvents = eventsFromIssue(issue, caseRecord, meta);
-    caseRecord = applyObservationStatus(caseRecord, issueEvents);
-    const lifecycle = reconstructLifecycle(caseRecord, issueEvents, window);
+    caseRecord = applyObservationStatus(caseRecord, issueEvents, window);
+    const lifecycle = reconstructLifecycle(caseRecord, issueEvents, window, issue);
     cases.push(lifecycle.caseRecord);
     events.push(...issueEvents);
     intervals.push(...lifecycle.intervals);

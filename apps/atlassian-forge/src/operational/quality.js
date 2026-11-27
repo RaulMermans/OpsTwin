@@ -167,17 +167,17 @@ export function assessDataQuality(normalized, extraction, window) {
   );
   const representativeness = quality(
     "representativeness",
-    "Whether extraction finished within page and record budgets.",
+    "Whether retrieved pages are a statistical sample of operations. Extraction completeness is not representativeness.",
     extractedOk ? 1 : 0,
     1,
-    extractedOk ? (n === 0 ? "warning" : "pass") : "fail",
+    extractedOk ? "warning" : "fail",
     extractedOk
       ? n === 0
-        ? "Extraction completed and observed zero cases."
-        : "Extraction completed within configured budgets."
+        ? "Extraction finished and observed zero cases. Completeness of retrieval is not representativeness."
+        : "All requested pages were retrieved. That does not establish that the cohort represents future or unobserved work."
       : `Extraction was incomplete (${extraction.truncatedReason ?? "interrupted"}).`,
-    "A truncated import is not a complete operational picture.",
-    "Raise budgets only after measuring Forge runtime cost.",
+    "A finished page walk is not a sampling design.",
+    "Keep calibration blocked until population coverage is argued separately.",
   );
   const authorization = quality(
     "authorization_coverage",
@@ -228,19 +228,33 @@ export function descriptiveEvidence(normalized, window, provenanceBase) {
     .filter((item) => item.intervalType === "recorded_work" && item.durationMinutes !== null)
     .map((item) => item.durationMinutes)
     .sort((a, b) => a - b);
-  const reopened = cases.filter((item) => item.observationStatus === "reopened").length;
   const arrivals = cases.filter((item) => item.createdAt && Date.parse(item.createdAt) >= Date.parse(window.start) && Date.parse(item.createdAt) < Date.parse(window.end)).length;
   const openAtEnd = cases.filter((item) => {
     if (!item.createdAt || Date.parse(item.createdAt) >= Date.parse(window.end)) return false;
-    if (!item.resolvedAt) return item.observationStatus !== "resolved";
-    return Date.parse(item.resolvedAt) >= Date.parse(window.end);
+    if (item.observationStatus === "open" || item.observationStatus === "reopened") return true;
+    if (item.observationStatus === "resolved" && item.resolvedAt) return Date.parse(item.resolvedAt) >= Date.parse(window.end);
+    return false;
   }).length;
   const transitions = events.filter((item) => item.eventType === "status_changed").length;
   const assigneeTransitions = events.filter((item) => item.eventType === "assigned" || item.eventType === "reassigned").length;
   const slaEvents = events.filter((item) => item.eventType === "sla_cycle_observed");
   const slaBreached = slaEvents.filter((item) => item.previousValue === "breached").length;
+  const slaKnown = slaEvents.filter((item) => item.previousValue === "breached" || item.previousValue === "not_breached").length;
+  const reopeningEvents = events.filter((item) => item.eventType === "reopened").length;
+  const everReopened = new Set(events.filter((item) => item.eventType === "reopened").map((item) => item.caseId)).size;
+  const currentlyReopened = cases.filter((item) => item.observationStatus === "reopened").length;
+  const worklogCases = new Set(events.filter((item) => item.eventType === "worklog_recorded").map((item) => item.caseId)).size;
+  const residenceAll = intervals.filter((item) => item.intervalType === "status_residence").length;
+  const workAll = intervals.filter((item) => item.intervalType === "recorded_work").length;
 
-  function metric(metricId, definition, value, unit, population, sampleSize, excluded, limitations) {
+  function boundedShare(numerator, denominator) {
+    if (!denominator) return null;
+    const value = numerator / denominator;
+    if (value < 0 || value > 1) return null;
+    return value;
+  }
+
+  function metric(metricId, definition, value, unit, population, sampleSize, excluded, limitations, coverage) {
     return {
       metricId,
       definition,
@@ -250,7 +264,7 @@ export function descriptiveEvidence(normalized, window, provenanceBase) {
       sampleSize,
       observationWindow: windowLabel,
       excludedRecords: excluded,
-      coverage: cases.length ? sampleSize / cases.length : null,
+      coverage: coverage === undefined ? boundedShare(sampleSize, cases.length) : coverage,
       provenance: derived,
       interpretationLimitations: limitations,
     };
@@ -262,7 +276,9 @@ export function descriptiveEvidence(normalized, window, provenanceBase) {
     metric("request_type_distribution", "Counts by request type reference.", countBy(cases, (item) => item.requestTypeReference), "counts", "all snapshot cases", cases.length, 0, "Missing request types are grouped as unclassified. Issue type is a different concept."),
     metric("priority_distribution", "Counts by source priority reference.", countBy(cases, (item) => item.priorityReference), "counts", "all snapshot cases", cases.length, 0, "Priority names are source labels, not simulated classes."),
     metric("resolution_count", "Cases whose latest observed resolution stands at window end.", resolved.length, "cases", "resolved with timestamps", resolved.length, cases.length - resolved.length, "Reopened cases are excluded from this count."),
-    metric("reopen_count", "Cases whose latest observed resolution episode was followed by a reopen.", reopened, "cases", "reopened cases", reopened, cases.length - reopened, "Reopen is changelog-derived, not inferred from status names."),
+    metric("reopen_count", "Cases currently reopened at the observation cutoff.", currentlyReopened, "cases", "currently reopened cases", currentlyReopened, cases.length - currentlyReopened, "This is not the count of reopening events or of cases ever reopened."),
+    metric("cases_ever_reopened", "Distinct cases with at least one reopened event.", everReopened, "cases", "cases with a reopen event", everReopened, cases.length - everReopened, "Ever-reopened is not the same as currently reopened."),
+    metric("reopening_event_count", "Number of reopened events.", reopeningEvents, "events", "reopened events", reopeningEvents, 0, "Event counts do not use the case count as a coverage denominator.", 1),
     metric(
       "cycle_time_minutes",
       "Elapsed lifetime from created to resolved for complete resolved cases.",
@@ -280,34 +296,36 @@ export function descriptiveEvidence(normalized, window, provenanceBase) {
       "minutes",
       "status residence intervals with a duration",
       residences.length,
-      intervals.filter((item) => item.intervalType === "status_residence").length - residences.length,
+      residenceAll - residences.length,
       "A long residence does not prove a processing bottleneck.",
     ),
-    metric("status_transition_count", "Number of observed status_changed events.", transitions, "events", "status changelog items", transitions, 0, "Transitions are not handoffs unless assignment also changed."),
+    metric("status_transition_count", "Number of observed status_changed events.", transitions, "events", "status changelog items", transitions, 0, "Transitions are not handoffs unless assignment also changed. Coverage is not case-based.", 1),
     metric("open_cases_at_window_end", "Cases created before window end and not resolved before window end.", openAtEnd, "cases", "open at cutoff", openAtEnd, cases.length - openAtEnd, "Right-censored; not a steady-state WIP theorem result."),
     metric(
       "worklog_coverage_share",
       "Share of cases with recorded worklogs.",
-      cases.length ? new Set(events.filter((item) => item.eventType === "worklog_recorded").map((item) => item.caseId)).size / cases.length : null,
+      boundedShare(worklogCases, cases.length),
       "share",
       "all snapshot cases",
-      cases.length,
-      0,
-      "Recorded work duration is not utilization.",
+      worklogCases,
+      cases.length - worklogCases,
+      "Recorded work duration is not utilization. Missing worklogs are not zero.",
+      boundedShare(worklogCases, cases.length),
     ),
     metric(
       "recorded_work_minutes",
       "Distribution of recorded worklog durations.",
-      { sampleSize: work.length, p50: percentile(work, 50), mean: work.length ? work.reduce((a, b) => a + b, 0) / work.length : null },
+      work.length ? { sampleSize: work.length, p50: percentile(work, 50), mean: work.reduce((a, b) => a + b, 0) / work.length } : null,
       "minutes",
       "worklog intervals with duration",
       work.length,
-      0,
+      workAll - work.length,
       "Missing worklogs are not zero work.",
+      boundedShare(work.length, workAll),
     ),
-    metric("sla_cycle_count", "Observed SLA cycle records.", slaEvents.length, "cycles", "retrieved SLA records", slaEvents.length, 0, "SLA completion uses the source calendar; missing SLA is not a met target."),
-    metric("sla_breach_count", "SLA cycles flagged breached by the source.", slaBreached, "cycles", "SLA cycles with a breach flag", slaBreached, slaEvents.length - slaBreached, "Breach flags are observed source values, not simulated SLA rules."),
-    metric("assignee_transition_count", "Assigned and reassigned events.", assigneeTransitions, "events", "assignee changelog items", assigneeTransitions, 0, "Unique assignees are not licensed agent capacity."),
+    metric("sla_cycle_count", "Observed SLA cycle records, including earlier completed cycles and ongoing cycles.", slaEvents.length, "cycles", "retrieved SLA records", slaEvents.length, 0, "SLA completion uses the source calendar; missing SLA is not a met target.", 1),
+    metric("sla_breach_count", "SLA cycles flagged breached by the source.", slaBreached, "cycles", "SLA cycles with a known breach flag", slaBreached, slaEvents.length - slaKnown, "Unknown breach flags are not coerced to false.", boundedShare(slaKnown, slaEvents.length)),
+    metric("assignee_transition_count", "Assigned and reassigned events.", assigneeTransitions, "events", "assignee changelog items", assigneeTransitions, 0, "Unique assignees are not licensed agent capacity.", 1),
   ];
 }
 

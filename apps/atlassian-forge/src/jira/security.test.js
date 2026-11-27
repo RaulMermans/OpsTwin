@@ -8,6 +8,10 @@ import { rejectBrowserProjectSubstitution, installationRefFromContext } from "./
 const index = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../index.js"), "utf8");
 const ingest = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "./ingest.js"), "utf8");
 
+test("resolver constructor uses Forge default-export interop", () => {
+  assert.match(index, /typeof ResolverModule === "function"/);
+});
+
 test("operational import never uses asApp and never forwards issues to the simulation remote", () => {
   assert.match(index, /importOperationalSnapshot/);
   assert.doesNotMatch(index, /asApp\(/);

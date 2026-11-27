@@ -1,10 +1,12 @@
-import Resolver from "@forge/resolver";
+import ResolverModule from "@forge/resolver";
 import api, { invokeRemote, route } from "@forge/api";
 import { classifyJiraResponse, classifyNetworkFailure } from "./jira/classify-response.js";
 import { installationRefFromContext, projectKeyFromContext, rejectBrowserProjectSubstitution } from "./jira/context.js";
 import { ingestOperationalData } from "./jira/ingest.js";
+import { describeJiraPath } from "./jira/route.js";
 import { generateSynthetic } from "./operational/synthetic.js";
 
+const Resolver = typeof ResolverModule === "function" ? ResolverModule : ResolverModule.default;
 const resolver = new Resolver();
 const REMOTE_KEY = "opstwin-simulation";
 const COMPARE_PATH = "/api/integrations/atlassian/v1/compare";
@@ -28,7 +30,30 @@ async function requestJson(path, method = "GET", body) {
     options.headers = { "content-type": "application/json" };
     options.body = JSON.stringify(body);
   }
-  const response = await api.asUser().requestJira(route`${path}`, options);
+  const described = describeJiraPath(path);
+  if (described.kind === "unsupported") {
+    throw new Error(`Unsupported Jira path ${described.pathname}`);
+  }
+  const p = described.params;
+  const routes = {
+    myself: () => route`/rest/api/3/myself`,
+    field: () => route`/rest/api/3/field`,
+    servicedesk: () => route`/rest/servicedeskapi/servicedesk`,
+    "search-jql": () =>
+      method === "POST"
+        ? route`/rest/api/3/search/jql`
+        : p.nextPageToken
+          ? route`/rest/api/3/search/jql?jql=${p.jql}&maxResults=${p.maxResults}&fields=${p.fields}&expand=${p.expand}&nextPageToken=${p.nextPageToken}`
+          : route`/rest/api/3/search/jql?jql=${p.jql}&maxResults=${p.maxResults}&fields=${p.fields}&expand=${p.expand}`,
+    "project-statuses": () => route`/rest/api/3/project/${described.projectKey}/statuses`,
+    project: () => route`/rest/api/3/project/${described.projectKey}`,
+    changelog: () => route`/rest/api/3/issue/${described.issueKey}/changelog?startAt=${p.startAt}&maxResults=${p.maxResults}`,
+    worklog: () => route`/rest/api/3/issue/${described.issueKey}/worklog?startAt=${p.startAt}&maxResults=${p.maxResults}`,
+    "request-type": () =>
+      route`/rest/servicedeskapi/servicedesk/${described.serviceDeskId}/requesttype?start=${p.start}&limit=${p.limit}`,
+    sla: () => route`/rest/servicedeskapi/request/${described.issueKey}/sla`,
+  };
+  const response = await api.asUser().requestJira(routes[described.kind](), options);
   return { status: response.status, body: await readJson(response), headers: headerMap(response) };
 }
 
@@ -169,7 +194,11 @@ resolver.define("importOperationalSnapshot", async (request) => {
     });
   } catch (error) {
     const classified = classifyNetworkFailure(error);
-    return { status: "failed", classification: classified.kind, message: classified.message };
+    return {
+      status: "failed",
+      classification: classified.kind,
+      message: error instanceof Error ? error.message : classified.message,
+    };
   }
 });
 

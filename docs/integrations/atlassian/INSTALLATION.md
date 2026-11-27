@@ -39,7 +39,9 @@ Payment method was **not** added. Marketplace and production app environment wer
 
 ## CG-2 operational import
 
-No new OAuth scopes. Import uses existing `read:jira-work` and `read:servicedesk-request`. Deploy the CG-2 branch to the existing development environment; do not register a second app.
+No new OAuth scopes. Import uses existing `read:jira-work` and `read:servicedesk-request`. Deploy the CG-2.1 revision to the existing development environment; do not register a second app.
+
+Synchronous import budget: 20s deadline, 40 cases, 8 search pages, dedicated changelog pagination, Retry-After honored only when it fits the remaining deadline. Do not claim 40-case live support without measured invocation evidence. Snapshot storage remains session-only.
 
 ## CG-1 remote hosting
 
