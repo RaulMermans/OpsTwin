@@ -2,6 +2,7 @@
 
 These JSON Schema Draft 2020-12 contracts define implementation-neutral boundaries. Durations use minutes, `schemaVersion` is required, and unexpected fields are rejected where practical.
 
+- `operational-snapshot.schema.json` (`os.1.0.0`): observed operational evidence. Not a simulation model.
 - `operational-model.schema.json` (`0.2.0`): collection-based seeded operational workflow.
 - `simulation-request.schema.json` (`0.3.0`): model, seed/run-label overrides, observation window, and result detail.
 - `simulation-result.schema.json` (`0.3.0`): shared internal, API, and CLI result with observation metadata, time-weighted metrics, integrity, detail counts, and selected canonical events.

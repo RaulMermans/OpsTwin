@@ -41,3 +41,17 @@ export function afterConfigChange(previous) {
   if (!previous.evidence) return previous;
   return { ...previous, evidence: null, status: "ready", message: "Previous results are stale because the configuration changed." };
 }
+
+export const WINDOW_PRESETS = [30, 60, 90];
+
+export function defaultImportConfig() {
+  return { windowDays: 30 };
+}
+
+export function afterFailedImport(previousSnapshot) {
+  return { snapshot: null, previousSnapshot: previousSnapshot ?? null, stale: Boolean(previousSnapshot) };
+}
+
+export function metricById(snapshot, metricId) {
+  return snapshot?.descriptiveEvidence?.find((item) => item.metricId === metricId) ?? null;
+}
