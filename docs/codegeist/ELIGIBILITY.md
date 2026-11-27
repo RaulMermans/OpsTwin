@@ -17,6 +17,10 @@ Open to individuals of majority age, teams, and organizations, with territorial 
 
 OpsTwin Core existed before that date (public GitHub, production Vercel). The Forge application is the Codegeist Project. This must be disclosed on the submission form.
 
+### Historical attribution (this clone)
+
+This workstation clone is grafted: only `cf5a7eb` (2026-11-22, tagged `cg0-pre-hackathon-baseline`) and `42f04a1` (2026-11-26, CG-0 Forge foundation) are present. The tag date is **after** the 2026-10-27 competition start, so it is **not** a true pre-hackathon baseline. The last commit before 2026-10-27 is not available in this shallow/grafted history. Do not rewrite the tag. CG-0 Codegeist-specific work is `42f04a1`. Core product work on `master` through `cf5a7eb` is pre-CG-0 relative to this clone, not proven pre-hackathon.
+
 **Third-party / OSS:** allowed if licensed and the submission **enhances** the underlying product. MIT Core + new Forge layer matches this clause, subject to organizer interpretation.
 
 **External backends:** Forge Remote is an official capability. It is compatible with **general** eligibility.

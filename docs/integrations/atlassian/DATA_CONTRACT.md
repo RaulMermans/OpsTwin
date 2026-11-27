@@ -1,4 +1,8 @@
-# Data contract (CG-0)
+# Data contract
+
+CG-1 remote request `cg1.v1` selects a synthetic catalog experiment and intervention parameters. It is not an operational-model payload and must not include `baselineModel`, issues, or tokens.
+
+CG-0 mapping below remains the CG-2 ingestion contract.
 
 Integration data is **not** a Core schema change. Until a versioned JSON Schema is added in CG-2, the adapter must emit the existing operational model `0.2.0` and comparison request `0.5.0`.
 

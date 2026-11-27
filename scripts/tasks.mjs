@@ -151,8 +151,8 @@ const tasks = {
     const forgeRoot = resolve(root, "apps", "atlassian-forge");
     const uiRoot = resolve(forgeRoot, "static", "transformation-lab");
     tasks["verify:atlassian-isolation"]();
-    run("npm", ["install"], forgeRoot);
-    run("npm", ["install"], uiRoot);
+    run("npm", ["ci"], forgeRoot);
+    run("npm", ["ci"], uiRoot);
     run("npm", ["test"], forgeRoot);
     run("npm", ["run", "build"], forgeRoot);
   },

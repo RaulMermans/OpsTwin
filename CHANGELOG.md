@@ -5,7 +5,9 @@ checkpoints recorded in `SCRATCHPAD.md` and `docs/sprints/`.
 
 ## Unreleased
 
-Codegeist CG-0: isolated `apps/atlassian-forge` foundation, Atlassian integration docs, and Forge skills/MCP project config. No Core simulation contract changes. Live Forge authentication remains blocked.
+Codegeist CG-1: FIT-authenticated synthetic comparison adapter at `POST /api/integrations/atlassian/v1/compare`, Forge Remote compute egress, JSM request-type resolver, and CG-0 security-defect closure. Public `/api/simulation/*` contracts are unchanged.
+
+Codegeist CG-0: isolated `apps/atlassian-forge` foundation, Atlassian integration docs, and Forge skills/MCP project config. No Core simulation contract changes.
 
 Public repository and portfolio preparation (Sprint 13): case-study README,
 repository governance files (`SECURITY.md`, `CONTRIBUTING.md`, this file),

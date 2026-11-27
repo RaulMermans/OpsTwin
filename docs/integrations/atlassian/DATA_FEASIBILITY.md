@@ -1,6 +1,6 @@
 # Jira / JSM data feasibility
 
-**Verification status:** local classifiers unit-tested; live API **blocked** (no Forge session, no API token in this sprint). Owner-provided facts are treated as starting claims, not live-verified.
+**Verification status:** classifiers are endpoint-aware. Live Jira/JSM reads go through the Forge resolver with `asUser()`. Hosted bodies are still an acceptance gate, not assumed from unit tests.
 
 Intended site: `https://opstwin-dev.atlassian.net`, project key `OPS`.
 

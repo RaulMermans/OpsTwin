@@ -217,15 +217,17 @@ function checkNoSecretsOrLocalPaths() {
     }
     const content = readTracked(relativePath);
     if (content === null) continue;
-    if (
-      /(^|\/)\.cursor\/skills\//.test(relativePath) ||
-      /(^|\/)\.claude\/skills\/forge-/.test(relativePath)
-    ) {
-      continue;
-    }
+    const secretAllowlist = [
+      /^\.claude\/skills\/forge-security-review\/assets\/security-rules\/forge-secrets-storage\/hardcoded-secrets\.mdc$/,
+      /^\.cursor\/skills\/forge-security-review\/assets\/security-rules\/forge-secrets-storage\/hardcoded-secrets\.mdc$/,
+    ];
+    const allowlistedSecretDoc = secretAllowlist.some((pattern) => pattern.test(relativePath));
 
     for (const pattern of SECRET_PATTERNS) {
       if (pattern.test(content)) {
+        if (allowlistedSecretDoc) {
+          continue;
+        }
         fail(`possible secret pattern (${pattern}) in tracked file: ${relativePath}`);
       }
     }
@@ -238,6 +240,13 @@ function checkNoSecretsOrLocalPaths() {
     if (!isHistorical && LOCAL_PATH_PATTERN.test(content)) {
       fail(`absolute local filesystem path found in current-state file: ${relativePath}`);
     }
+  }
+  if (!files.includes(".cursor/mcp.json")) {
+    fail(".cursor/mcp.json must remain in the secret-scan file set");
+  }
+  const privateKeyCanary = ["-----BEGIN", " PRIVATE KEY-----"].join("") + "\nMIIB fake scanner canary";
+  if (!SECRET_PATTERNS.some((pattern) => pattern.test(privateKeyCanary))) {
+    fail("private-key detector no longer matches a synthetic scanner canary");
   }
   ok(`scanned ${files.length} tracked files for secrets, .env files, _vercel_share tokens, and local paths`);
 }

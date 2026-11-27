@@ -18,6 +18,10 @@ def test_vercel_services_configuration_is_same_origin_and_bounded() -> None:
     }
     assert config["rewrites"] == [
         {"source": "/api/simulation/(.*)", "destination": {"service": "simulation"}},
+        {
+            "source": "/api/integrations/atlassian/(.*)",
+            "destination": {"service": "simulation"},
+        },
         {"source": "/(.*)", "destination": {"service": "web"}},
     ]
     serialized = json.dumps(config)

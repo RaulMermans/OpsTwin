@@ -26,6 +26,8 @@ Hackathon start 2026-10-27; internal freeze 2026-12-18; submit 2026-12-21.
 **P1:** first live `asUser` project GET.  
 **P2:** second-site install test.
 
+**Implementation:** Python adapter on the existing FastAPI service (ADR-024). Custom UI remains a function resolver; comparison uses `invokeRemote`.
+
 **Acceptance:** `forge_live_installation_status=pass`; at least one FIT-authenticated Remote call; Core `pnpm verify` still green.
 
 **Tests:** extend fit tests with hosted JWKS mock; contract that Remote body is a comparison request, not Jira issues.

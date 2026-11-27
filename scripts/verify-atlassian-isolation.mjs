@@ -25,6 +25,8 @@ let failures = 0;
 for (const scanRoot of scanRoots) {
   for (const file of walk(scanRoot)) {
     if (!/\.(py|ts|tsx|js|json)$/.test(file)) continue;
+    const rel = relative(root, file).replaceAll("\\", "/");
+    if (rel.startsWith("apps/simulation-api/app/integrations/")) continue;
     const content = readFileSync(file, "utf8");
     for (const pattern of forbidden) {
       if (pattern.test(content)) {
