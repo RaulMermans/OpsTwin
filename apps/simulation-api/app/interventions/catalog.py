@@ -97,6 +97,11 @@ InterventionConfig = Annotated[
 ]
 
 
+class NamedAlternative(ContractModel):
+    alternative_id: str = Field(min_length=1, max_length=64, pattern=r"^[a-z0-9][a-z0-9-]{0,62}$")
+    intervention: InterventionConfig
+
+
 def _pool(model: OperationalModel, pool_id: str) -> int:
     match = next((pool for pool in model.resource_pools if pool.id == pool_id), None)
     if match is None:
@@ -167,20 +172,29 @@ def _route_override(route_id: str, target_id: str, value: float) -> dict[str, An
     }
 
 
+def triage_success_targets(model: OperationalModel) -> dict[tuple[str, str | None], float]:
+    route = next((item for item in model.routes if item.id == "triage-success"), None)
+    if route is None:
+        return {}
+    return {(option.target_type, option.target_id): option.probability for option in route.options}
+
+
+def hybrid_compatible(model: OperationalModel) -> bool:
+    targets = triage_success_targets(model)
+    return ("stage", "resolution") in targets and ("completion", None) in targets
+
+
 def baseline_inventory(model: OperationalModel) -> dict[str, Any]:
+    targets = triage_success_targets(model)
+    routing = targets.get(("stage", "resolution"))
     return {
         "template": "support-triage-resolution.1",
         "triageMean": _exponential_mean(model, "triage"),
         "resolutionMean": _exponential_mean(model, "resolution"),
         "triageCapacity": _pool(model, "triage-team"),
         "resolutionCapacity": _pool(model, "resolution-team"),
-        "routingTriageToResolution": next(
-            option.probability
-            for route in model.routes
-            if route.id == "triage-success"
-            for option in route.options
-            if option.target_id == "resolution"
-        ),
+        "routingTriageToResolution": routing,
+        "hybridCompatible": hybrid_compatible(model),
         "canonicalItemCount": model.sources[0].item_count,
         "queuePolicy": "fifo",
         "arrivalProcess": "poisson",
@@ -222,19 +236,12 @@ def materialize_overrides(
             approximations,
             f"AI-assisted {intervention.stage_id} (effective-mean model)",
         )
-    route = next((item for item in model.routes if item.id == "triage-success"), None)
-    if route is None:
-        raise InterventionError(
-            "unsupported_topology", "Hybrid automation requires the triage-success route."
-        )  # noqa: E501
-    targets = {
-        (option.target_type, option.target_id): option.probability for option in route.options
-    }  # noqa: E501
-    if ("stage", "resolution") not in targets or ("completion", None) not in targets:
+    if not hybrid_compatible(model):
         raise InterventionError(
             "hybrid_route_unsupported",
-            "Hybrid auto-complete needs an existing triage route to both resolution and completion. Topology cannot be added.",  # noqa: E501
+            "This baseline does not support automated resolution. Select a compatible transformation baseline.",  # noqa: E501
         )
+    targets = triage_success_targets(model)
     old_resolution = targets[("stage", "resolution")]
     new_resolution = old_resolution * (1.0 - float(intervention.auto_complete_fraction))
     overrides = [

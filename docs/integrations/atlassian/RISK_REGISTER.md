@@ -31,5 +31,6 @@
 | R27 | Holdout leakage | High | Medium | Fake validation | Eng | Training-only estimation tests | Thresholds changed after eval | Fail the sprint | Mitigated |
 | R28 | Synthetic circularity | Medium | High | Overclaim | Eng | Misspecified/nonstationary profiles | Recovery treated as reality | Claim register | Mitigated |
 | R29 | Unsafe snapshot egress | High | Medium | Privacy | Eng | Fixture-ID remote only | Snapshot field on /calibrate | Keep 403 | Mitigated |
-| R30 | Deadline-driven scope into CG-4 | Medium | High | Unvalidated interventions | Eng | Stop after CG-3.1 scientific closure | Intervention code in this branch | Revert | Open |
+| R30 | Deadline-driven scope into CG-4 | Medium | High | Unvalidated interventions | Eng | Stop after CG-3.1 scientific closure | Intervention code in this branch | Revert | Closed into CG-5 |
+| R32 | Multi-scenario timeout on Forge 25s | High | Medium | Incomplete live comparison | Eng | Default 20 items × 5 runs, shared baseline | Live duration exceeds budget | Drop to 20×2 and label exploratory | Open |
 | R31 | Silent template defaults for estimated routing/service | High | High | Model disagrees with estimates | Eng | Bind or refuse; structural vs empirical origin | Hardcoded route p=1 | Parameter-binding tests | Mitigated in CG-3.1 |

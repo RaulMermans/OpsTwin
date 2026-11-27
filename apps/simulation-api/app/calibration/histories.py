@@ -15,6 +15,7 @@ ProfileId = Literal[
     "misspecified",
     "mixed",
     "shift",
+    "hybrid",
 ]
 
 WINDOW_START = datetime(2026, 1, 1, tzinfo=UTC)
@@ -109,7 +110,7 @@ def ground_truth(profile: ProfileId) -> dict[str, Any]:
         "resolution_mean": 12.0,
         "triage_capacity": 4,
         "resolution_capacity": 6,
-        "identifiable_without_assumptions": profile in {"golden", "observable"},
+        "identifiable_without_assumptions": profile in {"golden", "observable", "hybrid"},
         "hidden": {
             "capacity": hidden_capacity,
             "service_time": profile in {"partial", "noisy", "mixed"},
@@ -140,7 +141,7 @@ def generate_history(profile: ProfileId, seed: int) -> dict[str, Any]:
     cases: list[dict[str, Any]] = []
     events: list[dict[str, Any]] = []
     intervals: list[dict[str, Any]] = []
-    include_worklogs = profile in {"golden", "observable"}
+    include_worklogs = profile in {"golden", "observable", "hybrid"}
     misspecified = profile == "misspecified"
     mixed = profile == "mixed"
     noisy = profile == "noisy"
@@ -165,11 +166,14 @@ def generate_history(profile: ProfileId, seed: int) -> dict[str, Any]:
         triage = max(0.5, rng.expovariate(1 / 8.0))
         resolution = max(0.5, rng.expovariate(1 / 12.0))
         extra = rng.expovariate(1 / 15.0) if misspecified else 0.0
+        auto_complete = profile == "hybrid" and rng.random() < 0.25
         if noisy and rng.random() < 0.2:
             events.append(_event(f"e-{index}-gap", case_id, "status_changed", created, "s-open", None, evidence))  # noqa: E501
         in_progress = created + timedelta(minutes=1)
         after_triage = in_progress + timedelta(minutes=triage)
-        done_at = after_triage + timedelta(minutes=resolution + extra)
+        done_at = (
+            after_triage if auto_complete else after_triage + timedelta(minutes=resolution + extra)
+        )
         resolved = done_at < end
         cases.append(
             {
@@ -194,29 +198,36 @@ def generate_history(profile: ProfileId, seed: int) -> dict[str, Any]:
         )
         events.append(_event(f"e-{index}-c", case_id, "case_created", created, None, case_id, evidence))  # noqa: E501
         events.append(_event(f"e-{index}-t", case_id, "status_changed", in_progress, "s-open", "s-triage", evidence))  # noqa: E501
-        events.append(_event(f"e-{index}-r", case_id, "status_changed", after_triage, "s-triage", "s-res", evidence))  # noqa: E501
-        if misspecified:
-            review_at = after_triage + timedelta(minutes=resolution)
-            events.append(_event(f"e-{index}-v", case_id, "status_changed", review_at, "s-res", "s-review", evidence))  # noqa: E501
+        if auto_complete:
             if resolved:
-                events.append(_event(f"e-{index}-d", case_id, "status_changed", done_at, "s-review", "s-done", evidence))  # noqa: E501
+                events.append(_event(f"e-{index}-d", case_id, "status_changed", after_triage, "s-triage", "s-done", evidence))  # noqa: E501
                 events.append(_event(f"e-{index}-x", case_id, "resolved", done_at, None, "done", evidence))  # noqa: E501
-        elif resolved:
-            events.append(_event(f"e-{index}-d", case_id, "status_changed", done_at, "s-res", "s-done", evidence))  # noqa: E501
-            events.append(_event(f"e-{index}-x", case_id, "resolved", done_at, None, "done", evidence))  # noqa: E501
+        else:
+            events.append(_event(f"e-{index}-r", case_id, "status_changed", after_triage, "s-triage", "s-res", evidence))  # noqa: E501
+            if misspecified:
+                review_at = after_triage + timedelta(minutes=resolution)
+                events.append(_event(f"e-{index}-v", case_id, "status_changed", review_at, "s-res", "s-review", evidence))  # noqa: E501
+                if resolved:
+                    events.append(_event(f"e-{index}-d", case_id, "status_changed", done_at, "s-review", "s-done", evidence))  # noqa: E501
+                    events.append(_event(f"e-{index}-x", case_id, "resolved", done_at, None, "done", evidence))  # noqa: E501
+            elif resolved:
+                events.append(_event(f"e-{index}-d", case_id, "status_changed", done_at, "s-res", "s-done", evidence))  # noqa: E501
+                events.append(_event(f"e-{index}-x", case_id, "resolved", done_at, None, "done", evidence))  # noqa: E501
         intervals.append(_interval(f"i-{index}-life", case_id, "elapsed_lifetime", created, done_at if resolved else None, resolved))  # noqa: E501
         intervals.append(_interval(f"i-{index}-open", case_id, "status_residence", created, in_progress, True))  # noqa: E501
         intervals.append(_interval(f"i-{index}-tri", case_id, "status_residence", in_progress, after_triage, True))  # noqa: E501
         if include_worklogs:
             events.append(_event(f"e-{index}-w1", case_id, "worklog_recorded", in_progress, None, str(triage), evidence))  # noqa: E501
-            events.append(
-                _event(f"e-{index}-w2", case_id, "worklog_recorded", after_triage, None, str(resolution), evidence)  # noqa: E501
-            )
             work_triage = _interval(f"i-{index}-wt", case_id, "recorded_work", in_progress, after_triage, True)  # noqa: E501
             work_triage["statusReference"] = "s-triage"
-            work_res = _interval(f"i-{index}-wr", case_id, "recorded_work", after_triage, after_triage + timedelta(minutes=resolution), True)  # noqa: E501
-            work_res["statusReference"] = "s-res"
-            intervals.extend([work_triage, work_res])
+            intervals.append(work_triage)
+            if not auto_complete:
+                events.append(
+                    _event(f"e-{index}-w2", case_id, "worklog_recorded", after_triage, None, str(resolution), evidence)  # noqa: E501
+                )
+                work_res = _interval(f"i-{index}-wr", case_id, "recorded_work", after_triage, after_triage + timedelta(minutes=resolution), True)  # noqa: E501
+                work_res["statusReference"] = "s-res"
+                intervals.append(work_res)
         elif noisy and rng.random() < 0.3:
             intervals.append(_interval(f"i-{index}-w", case_id, "recorded_work", in_progress, None, False))  # noqa: E501
 

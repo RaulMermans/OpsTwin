@@ -21,17 +21,22 @@ FIXTURE_IDS: dict[str, ProfileId] = {
     "cg3-temporal-shift": "shift",
 }
 
+LABORATORY_FIXTURES: dict[str, ProfileId] = {
+    **FIXTURE_IDS,
+    "cg5-hybrid-support": "hybrid",
+}
+
 
 def load_fixture(fixture_id: str, seed: int = 20260327) -> dict[str, Any]:
-    profile = FIXTURE_IDS.get(fixture_id)
+    profile = LABORATORY_FIXTURES.get(fixture_id)
     if profile is None:
         raise KeyError(fixture_id)
     return generate_history(profile, seed)
 
 
 def request_for_fixture(fixture_id: str, snapshot: dict[str, Any], *, approve: bool) -> CalibrationRequest:  # noqa: E501
-    profile = FIXTURE_IDS[fixture_id]
-    treat_worklogs = profile in {"golden", "observable"}
+    profile = LABORATORY_FIXTURES[fixture_id]
+    treat_worklogs = profile in {"golden", "observable", "hybrid"}
     mapping = default_mapping(reviewed=True, include_review=profile == "misspecified")
     payload: dict[str, Any] = {
         "snapshotReference": fixture_id,

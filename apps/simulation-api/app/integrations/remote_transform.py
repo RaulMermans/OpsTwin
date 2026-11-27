@@ -8,9 +8,9 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
+from pydantic import Field, ValidationError, model_validator
 
-from app.calibration.catalog import FIXTURE_IDS, load_fixture, request_for_fixture
+from app.calibration.catalog import LABORATORY_FIXTURES, load_fixture, request_for_fixture
 from app.calibration.workflow import calibrate
 from app.domain.models import ContractModel
 from app.integrations.fit import (
@@ -22,8 +22,18 @@ from app.integrations.fit import (
 )
 from app.integrations.remote_compare import _error, _installation_ref
 from app.integrations.telemetry import emit
-from app.interventions.catalog import ExperimentExecution, InterventionConfig, InterventionError
-from app.interventions.execute import InterventionEvidence, run_intervention_experiment
+from app.interventions.catalog import (
+    ExperimentExecution,
+    InterventionConfig,
+    InterventionError,
+    NamedAlternative,
+)
+from app.interventions.execute import (
+    InterventionEvidence,
+    MultiExperimentEvidence,
+    run_intervention_experiment,
+    run_multi_intervention_experiment,
+)
 from app.scenarios.coordinator import ComparisonWorkBudgetError, ScenarioComparisonError
 
 router = APIRouter(prefix="/api/integrations/atlassian/v1")
@@ -36,16 +46,34 @@ FixtureId = Literal[
     "cg3-misspecified",
     "cg3-mixed-origin",
     "cg3-temporal-shift",
+    "cg5-hybrid-support",
 ]
 
 
 class AtlassianTransformRequest(ContractModel):
-    contract_version: Literal["cg4.v1"] = "cg4.v1"
+    contract_version: Literal["cg4.v1", "cg5.v1"] = "cg4.v1"
     fixture_id: FixtureId
     approve_lab_assumptions: bool = False
     random_seed: int = 20_260_327
-    intervention: InterventionConfig
+    intervention: InterventionConfig | None = None
+    alternatives: list[NamedAlternative] | None = Field(default=None, max_length=3)
     execution: ExperimentExecution = ExperimentExecution()
+    experiment_id: str | None = Field(default=None, max_length=128)
+    request_id: str | None = Field(default=None, max_length=128)
+
+    @model_validator(mode="after")
+    def require_catalog_mode(self) -> AtlassianTransformRequest:
+        if self.contract_version == "cg5.v1":
+            if not self.alternatives:
+                raise ValueError("cg5.v1 requires alternatives")
+            if self.intervention is not None:
+                raise ValueError("cg5.v1 uses alternatives rather than a single intervention")
+            return self
+        if self.intervention is None:
+            raise ValueError("cg4.v1 requires one intervention")
+        if self.alternatives:
+            raise ValueError("cg4.v1 does not accept alternatives")
+        return self
 
 
 @router.post("/transform")
@@ -82,7 +110,7 @@ async def transform_remote(request: Request) -> JSONResponse:
             "correlationId": correlation_id,
             "operation": "transform",
             "installationRef": _installation_ref(str(verified["installationId"])),
-            "contractVersion": "cg4.v1",
+            "contractVersion": "cg5.v1",
         },
     )
     try:
@@ -100,13 +128,13 @@ async def transform_remote(request: Request) -> JSONResponse:
         return _error(
             403,
             "NON_SYNTHETIC_REJECTED",
-            "CG-4 remote experiments accept synthetic fixture identifiers only.",
+            "Remote experiments accept synthetic fixture identifiers only.",
         )
     try:
         transform_request = AtlassianTransformRequest.model_validate(payload)
     except ValidationError:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
-    if transform_request.fixture_id not in FIXTURE_IDS:
+    if transform_request.fixture_id not in LABORATORY_FIXTURES:
         return _error(
             422, "UNKNOWN_FIXTURE", "The fixture identifier is not in the synthetic catalog."
         )  # noqa: E501
@@ -117,8 +145,19 @@ async def transform_remote(request: Request) -> JSONResponse:
         approve=transform_request.approve_lab_assumptions,
     )
 
-    def _execute() -> InterventionEvidence:
+    def _execute() -> InterventionEvidence | MultiExperimentEvidence:
         artifact = calibrate(snapshot, engine_request)
+        if transform_request.contract_version == "cg5.v1":
+            assert transform_request.alternatives is not None
+            return run_multi_intervention_experiment(
+                artifact,
+                transform_request.alternatives,
+                transform_request.execution,
+                fixture_id=transform_request.fixture_id,
+                experiment_id=transform_request.experiment_id or str(uuid.uuid4()),
+                request_id=transform_request.request_id,
+            )
+        assert transform_request.intervention is not None
         return run_intervention_experiment(
             artifact,
             transform_request.intervention,
@@ -146,14 +185,20 @@ async def transform_remote(request: Request) -> JSONResponse:
         {
             "correlationId": correlation_id,
             "fixtureId": transform_request.fixture_id,
-            "kind": transform_request.intervention.kind,
+            "kind": (
+                "multi"
+                if transform_request.intervention is None
+                else transform_request.intervention.kind
+            ),
             "durationMs": duration_ms,
-            "integrityStatus": evidence.integrity_status,
+            "integrityStatus": getattr(evidence, "integrity_status", None),
             "synthetic": True,
         },
     )
     body = evidence.model_dump(by_alias=True, exclude_none=True)
     body["disclosure"] = "Synthetic laboratory experiment. Not this Jira project's history."
     if body.get("synthetic") is not True or body.get("identitiesAgree") is not True:
+        return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")
+    if transform_request.contract_version == "cg5.v1" and body.get("contractVersion") != "cg5.v1":
         return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")
     return JSONResponse(content=body)
