@@ -19,3 +19,6 @@
 | CG-3 offline calibration | Source + pytest | `app/calibration`, ADR-026 |
 | CG-3.1 scientific integrity of calibration | Source + pytest + benchmark matrix | P0 binding, worklogs, holdout, identities; live calibration still not claimed |
 | CG-3 live operational calibration | Not claimed | Live snapshot transfer not enabled |
+| CG-4 intervention adapters over existing comparison | Source + pytest | `app/interventions`, ADR-027 |
+| CG-4 live Jira experiment on OPS | Owner-clicked 2026-11-27 | Golden + assumptions → constructed `32206b92…`; capacity +1/+1, 40×5 paired runs; hosted transform 401 without FIT; Forge development 3.4.0 |
+| CG-4 live operational calibration of OPS history | Not claimed | Transform/calibrate remotes remain synthetic fixture-ID only |

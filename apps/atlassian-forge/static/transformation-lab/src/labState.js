@@ -73,3 +73,56 @@ export function afterCalibrationChange(previous) {
     message: "Previous calibration results are stale because the configuration changed.",
   };
 }
+
+export function defaultTransform() {
+  return {
+    kind: "capacity",
+    extraTriageCapacity: 1,
+    extraResolutionCapacity: 1,
+    stageId: "triage",
+    coverage: 0.5,
+    processingReduction: 0.4,
+    reviewOverheadMinutes: 0.25,
+    autoCompleteFraction: 0.25,
+    itemCount: 40,
+    runCount: 5,
+  };
+}
+
+export function transformPayload(calibration, transform) {
+  let intervention;
+  if (transform.kind === "capacity") {
+    intervention = {
+      kind: "capacity",
+      extraTriageCapacity: transform.extraTriageCapacity,
+      extraResolutionCapacity: transform.extraResolutionCapacity,
+    };
+  } else if (transform.kind === "ai_assisted") {
+    intervention = {
+      kind: "ai_assisted",
+      stageId: transform.stageId,
+      coverage: transform.coverage,
+      processingReduction: transform.processingReduction,
+      reviewOverheadMinutes: transform.reviewOverheadMinutes,
+    };
+  } else {
+    intervention = {
+      kind: "hybrid",
+      autoCompleteFraction: transform.autoCompleteFraction,
+      coverage: 0,
+      processingReduction: 0,
+      reviewOverheadMinutes: 0,
+    };
+  }
+  return {
+    fixtureId: calibration.fixtureId,
+    approveLabAssumptions: calibration.approveLabAssumptions,
+    randomSeed: 20260327,
+    intervention,
+    execution: {
+      itemCount: transform.itemCount,
+      runCount: transform.runCount,
+      baseSeed: 20261127,
+    },
+  };
+}

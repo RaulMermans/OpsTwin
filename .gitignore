@@ -20,3 +20,5 @@ dist/
 artifacts/
 .DS_Store
 .forge/
+.vercel
+.env*
