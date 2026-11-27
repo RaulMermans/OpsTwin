@@ -6,7 +6,8 @@
 JSM project (OPS)
   -> Forge Custom UI (apps/atlassian-forge/static/transformation-lab)
   -> Forge resolver (user context, project key from extension context)
-  -> [CG-1] Forge Remote + FIT validation
+  -> [CG-2] asUser Jira/JSM ingest -> operational snapshot os.1.0.0 (session)
+  -> [CG-1] Forge Remote + FIT validation (synthetic catalog only)
   -> OpsTwin simulation service (existing 0.5.0/0.7.0 contracts)
 ```
 

@@ -40,4 +40,4 @@ Hackathon start 2026-10-27; internal freeze 2026-12-18; submit 2026-12-21.
 
 **Out of scope:** calibration, final UI, Marketplace.
 
-Later sprints inherit ADR-023 and the intervention matrix. Full per-sprint P0/P1 tables for CG-2–CG-8 remain planning-level until CG-1 closes live auth.
+CG-2 implementation: `docs/codegeist/sprints/CG-02.md`, snapshot `os.1.0.0`, ADR-025. Live CG-1 FIT unauthenticated 401 is closed; Forge-side live import still requires a development deploy of this branch.

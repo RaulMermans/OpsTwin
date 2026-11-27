@@ -1,5 +1,13 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-2 checkpoint — 2026-11-27
+
+- Branch `feat/codegeist-cg2-operational-data` from CG-1 `cabf1d4`. Working tree was clean. Not pushed.
+- `cg1_entry_gate_status`: PARTIAL PASS. Forge logged in; install `b1bb872d-...` on `opstwin-dev.atlassian.net` development v3; hosted compare returns 401 without FIT. Live asUser bodies and in-Jira comparison not re-clicked this session. No second app created.
+- Implemented `os.1.0.0` snapshots, Jira/JSM ingest, quality/evidence, synthetic lab, Operational Data UI. Snapshots stay in session; simulation remote remains synthetic-only.
+- Live CG-2 import requires owner `forge deploy -e development` of this branch (no new write scopes).
+- Offline golden fingerprint `7ab03a5f32049b484d0df0d20b31adeb3795659abf29bfe4f758dc81e6a87589`.
+
 ## Codegeist CG-1 checkpoint — 2026-11-26
 
 - Branch `feat/codegeist-cg1-secure-integration` from CG-0 `42f04a1`. CG-0 was already committed; working tree was clean. Not pushed.

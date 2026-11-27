@@ -7,7 +7,7 @@
   "main": "src/index.js",
   "scripts": {
     "build": "npm --prefix static/transformation-lab run build",
-    "test": "node --test src/remote/fit.test.js src/jira/classify-response.test.js src/jira/context.test.js src/manifest.test.js src/isolation.test.js src/app-identity.test.js src/ui/lab-state.test.js",
+    "test": "node --test src/remote/*.test.js src/jira/*.test.js src/operational/*.test.js src/manifest.test.js src/isolation.test.js src/app-identity.test.js src/ui/lab-state.test.js",
     "lint:manifest": "node src/manifest.test.js"
   },
   "dependencies": {

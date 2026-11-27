@@ -5,6 +5,8 @@
 - Never commit API tokens, OAuth headers, FIT values, or `.env` files.
 - Owner runs `forge login` in their own terminal. Tokens are not pasted into chat.
 - Resolvers use **user context** (`api.asUser()`) and the Forge **extension project key**, not client-supplied IDs.
+- Operational snapshots stay in the Forge resolver/UI session. They are not posted to the simulation remote.
+- Assignees are stored as `ref_` plus a truncated SHA-256 of `accountId`. Descriptions, comments, attachments, and emails are not requested.
 - Display conditions are not authorization.
 - Do not log Authorization headers or JWTs (`sanitizeRemoteLog`).
 - Payload cap for future Remote: 64 KiB.

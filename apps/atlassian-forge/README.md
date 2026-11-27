@@ -4,6 +4,10 @@ Atlassian application layer for **OpsTwin for Jira — AI Transformation Lab**.
 
 This package is isolated from OpsTwin Core. The simulation engine remains in `apps/simulation-api` and must never import Forge modules.
 
+## Status (CG-2)
+
+Operational snapshots (`os.1.0.0`) are produced inside the resolver with `asUser()`. The CG-1 synthetic comparison remote is unchanged.
+
 ## Status (CG-1)
 
 - Official app identity: `ari:cloud:ecosystem::app/73670daa-a329-4491-8a96-89bf239b203b` in Developer Space **OpsTwin**

@@ -6,17 +6,18 @@ Intended site: `https://opstwin-dev.atlassian.net`, project key `OPS`.
 
 ## Feasibility matrix
 
-| Endpoint | Scopes | Fields of interest | Pagination | Privacy | Modeling | Live |
+| Endpoint | Method | Scopes | Pagination | Fields requested | Failure | Live (CG-2) |
 |---|---|---|---|---|---|---|
-| `GET /rest/api/3/project/{key}` | `read:jira-work` | key, name, projectTypeKey | n/a | low | provenance | blocked |
-| `GET /rest/api/3/project/{key}/statuses` | `read:jira-work` | status names | n/a | low | stage proxy | blocked |
-| `GET /rest/api/3/search/jql` | `read:jira-work` | key, created, resolved, status, issuetype | nextPageToken | medium — restrict fields | arrivals, WIP | blocked |
-| `GET /rest/api/3/issue/{id}/changelog` | `read:jira-work` | status transitions | yes | medium | occupancy, reopen | blocked |
-| `GET /rest/api/3/issue/{id}/worklog` | `read:jira-work` | time spent | yes | high (author) | handling time | blocked |
-| `GET /rest/servicedeskapi/servicedesk` | `read:servicedesk-request` | service desk id | yes | low | desk identity | blocked |
-| `GET /rest/servicedeskapi/servicedesk/{id}/requesttype` | `read:servicedesk-request` | request types | yes | low | class mix | blocked |
-| `GET /rest/servicedeskapi/request/{key}/sla` | `read:servicedesk-request` | cycle, breached, goal | n/a | medium | SLA vs sim time | blocked |
-| Permissions `/mypermissions` | `read:jira-work` | BROWSE_PROJECTS | n/a | low | distinguish 403 vs empty | blocked |
+| `/rest/api/3/project/{key}` | GET | `read:jira-work` | n/a | id, key, name | 401/403/404/malformed | implemented; body gated on install |
+| `/rest/api/3/project/{key}/statuses` | GET | `read:jira-work` | n/a | id, name, statusCategory | optional if 403 | implemented |
+| `/rest/api/3/search/jql` | GET | `read:jira-work` | `nextPageToken` / `isLast` | created, resolutiondate, status, priority, assignee, project, updated, request-type custom field; expand changelog | empty ≠ 403; malformed ≠ empty | implemented |
+| `/rest/api/3/issue/{id}/changelog` | GET | `read:jira-work` | startAt | status, assignee, priority, resolution items | 403 → changelogCapability forbidden | implemented fallback |
+| `/rest/api/3/issue/{id}/worklog` | GET | `read:jira-work` | startAt | id, started, timeSpentSeconds (no author display name) | 403 → unknown coverage | implemented |
+| `/rest/api/3/field` | GET | `read:jira-work` | n/a | request-type custom field id | optional | implemented |
+| `/rest/servicedeskapi/servicedesk` | GET | `read:servicedesk-request` | start/limit | id, projectKey | empty ≠ 403 | implemented |
+| `/rest/servicedeskapi/servicedesk/{id}/requesttype` | GET | `read:servicedesk-request` | start/limit | id, name | optional | implemented |
+| `/rest/servicedeskapi/request/{key}/sla` | GET | `read:servicedesk-request` | n/a | cycle start/stop, elapsed millis, breached | 404 → unavailable | implemented |
+| `POST /rest/api/3/changelog/bulkfetch` | POST | `read:jira-work` | nextPageToken | not used at 40-case budget | n/a | deferred |
 
 Sources: [Jira REST v3](https://developer.atlassian.com/cloud/jira/platform/rest/v3/), [JSM REST](https://developer.atlassian.com/cloud/jira/service-desk/rest/), retrieved 2026-11-26.
 

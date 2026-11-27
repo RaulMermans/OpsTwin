@@ -1,31 +1,13 @@
 import Resolver from "@forge/resolver";
 import api, { invokeRemote, route } from "@forge/api";
 import { classifyJiraResponse, classifyNetworkFailure } from "./jira/classify-response.js";
+import { installationRefFromContext, projectKeyFromContext, rejectBrowserProjectSubstitution } from "./jira/context.js";
+import { ingestOperationalData } from "./jira/ingest.js";
+import { generateSynthetic } from "./operational/synthetic.js";
 
 const resolver = new Resolver();
 const REMOTE_KEY = "opstwin-simulation";
 const COMPARE_PATH = "/api/integrations/atlassian/v1/compare";
-
-function projectKeyFromContext(context) {
-  const fromExtension = context?.extension?.project?.key;
-  if (typeof fromExtension === "string" && fromExtension.trim()) {
-    return fromExtension.trim();
-  }
-  return null;
-}
-
-function rejectBrowserProjectSubstitution(context, payload) {
-  const trusted = projectKeyFromContext(context);
-  const supplied = payload && typeof payload === "object" ? payload.projectKey : undefined;
-  if (typeof supplied === "string" && supplied.trim() && supplied.trim() !== trusted) {
-    return {
-      status: "blocked",
-      kind: "untrusted_project",
-      message: "Project identity must come from Forge context, not from the browser.",
-    };
-  }
-  return null;
-}
 
 async function readJson(response) {
   try {
@@ -35,12 +17,27 @@ async function readJson(response) {
   }
 }
 
+function headerMap(response) {
+  const retryAfter = response.headers?.get?.("retry-after") ?? response.headers?.["retry-after"];
+  return retryAfter ? { "retry-after": retryAfter } : {};
+}
+
+async function requestJson(path, method = "GET", body) {
+  const options = { method };
+  if (body) {
+    options.headers = { "content-type": "application/json" };
+    options.body = JSON.stringify(body);
+  }
+  const response = await api.asUser().requestJira(route`${path}`, options);
+  return { status: response.status, body: await readJson(response), headers: headerMap(response) };
+}
+
 resolver.define("getLabIdentity", (request) => {
   const projectKey = projectKeyFromContext(request.context);
   return {
     product: "OpsTwin for Jira",
     surface: "AI Transformation Lab",
-    sprint: "CG-1",
+    sprint: "CG-2",
     status: "Development integration",
     projectKey,
     accountIdPresent: Boolean(request.context?.accountId),
@@ -148,6 +145,49 @@ resolver.define("getRequestTypes", async (request) => {
     classification: typesClassified.kind,
     message: typesClassified.message,
     requestTypes,
+  };
+});
+
+resolver.define("importOperationalSnapshot", async (request) => {
+  const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
+  if (substitution) return substitution;
+  const projectKey = projectKeyFromContext(request.context);
+  if (!projectKey) {
+    return {
+      status: "blocked",
+      kind: "missing_context",
+      message: "Forge did not provide a project key in the trusted invocation context.",
+    };
+  }
+  try {
+    return await ingestOperationalData({
+      projectKey,
+      installationRef: installationRefFromContext(request.context),
+      payload: request.payload && typeof request.payload === "object" ? request.payload : {},
+      now: new Date(),
+      requestJson,
+    });
+  } catch (error) {
+    const classified = classifyNetworkFailure(error);
+    return { status: "failed", classification: classified.kind, message: classified.message };
+  }
+});
+
+resolver.define("loadSyntheticOperationalDemo", (request) => {
+  const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
+  if (substitution) return substitution;
+  if (!projectKeyFromContext(request.context)) {
+    return {
+      status: "blocked",
+      kind: "missing_context",
+      message: "Forge did not provide a project key in the trusted invocation context.",
+    };
+  }
+  const profile = request.payload?.profile === "stress" ? "stress" : "golden";
+  return {
+    status: "completed",
+    mode: "synthetic-demo",
+    snapshot: generateSynthetic(profile, 20261127, new Date("2026-10-15T00:00:00.000Z")),
   };
 });
 

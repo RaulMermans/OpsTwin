@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { afterConfigChange, comparisonPayload, defaultConfig } from "../../static/transformation-lab/src/labState.js";
+import { afterConfigChange, afterFailedImport, comparisonPayload, defaultConfig } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
   const stale = afterConfigChange({
@@ -10,6 +10,12 @@ test("configuration changes invalidate displayed evidence", () => {
   });
   assert.equal(stale.evidence, null);
   assert.equal(stale.status, "ready");
+});
+
+test("failed imports do not keep the previous snapshot as current", () => {
+  const result = afterFailedImport({ snapshotId: "old" });
+  assert.equal(result.snapshot, null);
+  assert.equal(result.stale, true);
 });
 
 test("payloads stay on the synthetic catalog and omit project identity", () => {

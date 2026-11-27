@@ -1,0 +1,1208 @@
+{
+  "schemaVersion": "os.1.0.0",
+  "snapshotId": "snap_e04b89b599da33f533bfb0f7",
+  "connectorVersion": "jira-jsm.1.0.0",
+  "sourceSystem": "jira-jsm",
+  "sourceProject": {
+    "reference": "project:OPS",
+    "key": "OPS",
+    "name": "OpsTwin IT Support Lab",
+    "serviceDeskId": "1"
+  },
+  "authorizedInstallationRef": "offline-synthetic",
+  "observationWindow": {
+    "start": "2026-09-15T00:00:00.000Z",
+    "end": "2026-10-15T00:00:00.000Z",
+    "convention": "closed-start-open-end-utc"
+  },
+  "importTimestamp": "2026-10-15T00:00:00.000Z",
+  "importStartedAt": "2026-10-15T00:00:00.000Z",
+  "importCompletedAt": "2026-10-15T00:00:00.000Z",
+  "importConfiguration": {
+    "windowDays": 30,
+    "recordLimit": 1000,
+    "pageLimit": 10,
+    "cohortPolicy": "open-during-window",
+    "includeWorklogs": true,
+    "includeSla": true
+  },
+  "cases": [
+    {
+      "schemaVersion": "os.1.0.0",
+      "caseId": "15738e784b60714b2dec903f",
+      "sourceReference": "OPS-GOLD-3",
+      "sourceSystem": "jira-jsm",
+      "projectReference": "project:OPS",
+      "requestTypeReference": "rt-access",
+      "priorityReference": "1",
+      "createdAt": "2026-09-20T08:00:00.000Z",
+      "resolvedAt": "2026-09-21T08:00:00.000Z",
+      "currentStatusReference": "1",
+      "observationStatus": "reopened",
+      "lifecycleCompleteness": "complete",
+      "assigneeReference": "ref_d5c59eae1d5659b9",
+      "updatedAt": "2026-10-04T08:00:00.000Z",
+      "createdAtInvalid": false,
+      "syntheticOrigin": true,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "schemaVersion": "os.1.0.0",
+      "caseId": "30566c646e2efd173d3bc3ae",
+      "sourceReference": "OPS-GOLD-2",
+      "sourceSystem": "jira-jsm",
+      "projectReference": "project:OPS",
+      "requestTypeReference": "rt-hardware",
+      "priorityReference": "3",
+      "createdAt": "2026-10-03T12:00:00.000Z",
+      "resolvedAt": null,
+      "currentStatusReference": "1",
+      "observationStatus": "open",
+      "lifecycleCompleteness": "incomplete",
+      "assigneeReference": null,
+      "updatedAt": "2026-10-03T12:00:00.000Z",
+      "createdAtInvalid": false,
+      "syntheticOrigin": true,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-2",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "schemaVersion": "os.1.0.0",
+      "caseId": "4755177835ce720864755646",
+      "sourceReference": "OPS-GOLD-1",
+      "sourceSystem": "jira-jsm",
+      "projectReference": "project:OPS",
+      "requestTypeReference": "rt-help",
+      "priorityReference": "2",
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "resolvedAt": "2026-10-02T09:00:00.000Z",
+      "currentStatusReference": "3",
+      "observationStatus": "resolved",
+      "lifecycleCompleteness": "complete",
+      "assigneeReference": "ref_92dd39f4d7d21cad",
+      "updatedAt": "2026-10-02T09:00:00.000Z",
+      "createdAtInvalid": false,
+      "syntheticOrigin": true,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    }
+  ],
+  "events": [
+    {
+      "eventId": "db1d5e43d15bf560cabd0bcb",
+      "caseId": "15738e784b60714b2dec903f",
+      "eventType": "case_created",
+      "occurredAt": "2026-09-20T08:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": null,
+      "newValue": "1",
+      "sourceReference": "OPS-GOLD-3:created",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3:created",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "24f050fc841d2e2e1abff8e9",
+      "caseId": "15738e784b60714b2dec903f",
+      "eventType": "status_changed",
+      "occurredAt": "2026-09-21T08:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "1",
+      "newValue": "3",
+      "sourceReference": "OPS-GOLD-3:changelog:c5",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3:changelog:c5",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "b6cda41d7d83dd46083f7981",
+      "caseId": "15738e784b60714b2dec903f",
+      "eventType": "resolved",
+      "occurredAt": "2026-09-21T08:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": null,
+      "newValue": "10000",
+      "sourceReference": "OPS-GOLD-3:changelog:c6",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3:changelog:c6",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "583e0579ca152cc3e517b1ad",
+      "caseId": "15738e784b60714b2dec903f",
+      "eventType": "sla_cycle_observed",
+      "occurredAt": "2026-09-21T08:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "breached",
+      "newValue": "Time to resolution",
+      "sourceReference": "OPS-GOLD-3:sla:s2",
+      "durationMinutes": 1440,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "request-sla",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3:sla:s2",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "39622addf8abbf6dbdb7de03",
+      "caseId": "4755177835ce720864755646",
+      "eventType": "case_created",
+      "occurredAt": "2026-10-01T09:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": null,
+      "newValue": "3",
+      "sourceReference": "OPS-GOLD-1:created",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1:created",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "c5162429cb153bbba193e5aa",
+      "caseId": "4755177835ce720864755646",
+      "eventType": "status_changed",
+      "occurredAt": "2026-10-01T10:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "1",
+      "newValue": "2",
+      "sourceReference": "OPS-GOLD-1:changelog:c1",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1:changelog:c1",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "9ea8000e87f67b5f6cd840e9",
+      "caseId": "4755177835ce720864755646",
+      "eventType": "assigned",
+      "occurredAt": "2026-10-01T10:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": null,
+      "newValue": "ref_92dd39f4d7d21cad",
+      "sourceReference": "OPS-GOLD-1:changelog:c4",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1:changelog:c4",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "83cb1a4cfcf82389fce10b03",
+      "caseId": "4755177835ce720864755646",
+      "eventType": "worklog_recorded",
+      "occurredAt": "2026-10-01T11:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": null,
+      "newValue": "w1",
+      "sourceReference": "OPS-GOLD-1:worklog:w1",
+      "durationMinutes": 60,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "issue-worklog",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1:worklog:w1",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "286b871fc836567adefe2ccb",
+      "caseId": "4755177835ce720864755646",
+      "eventType": "status_changed",
+      "occurredAt": "2026-10-02T09:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "2",
+      "newValue": "3",
+      "sourceReference": "OPS-GOLD-1:changelog:c2",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1:changelog:c2",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "de7170f1f9f87f7619211e97",
+      "caseId": "4755177835ce720864755646",
+      "eventType": "resolved",
+      "occurredAt": "2026-10-02T09:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": null,
+      "newValue": "10000",
+      "sourceReference": "OPS-GOLD-1:changelog:c3",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1:changelog:c3",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "5d0cdf5fdb5699654a08a9e6",
+      "caseId": "4755177835ce720864755646",
+      "eventType": "sla_cycle_observed",
+      "occurredAt": "2026-10-02T09:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "not_breached",
+      "newValue": "Time to resolution",
+      "sourceReference": "OPS-GOLD-1:sla:s1",
+      "durationMinutes": 1440,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "request-sla",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-1:sla:s1",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "e4854d538f66ede7b9a593fc",
+      "caseId": "30566c646e2efd173d3bc3ae",
+      "eventType": "case_created",
+      "occurredAt": "2026-10-03T12:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": null,
+      "newValue": "1",
+      "sourceReference": "OPS-GOLD-2:created",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-2:created",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "384fcb2da03db8a8ef784821",
+      "caseId": "15738e784b60714b2dec903f",
+      "eventType": "status_changed",
+      "occurredAt": "2026-10-04T08:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "3",
+      "newValue": "1",
+      "sourceReference": "OPS-GOLD-3:changelog:c8",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3:changelog:c8",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "3025867bdbf556f55dc52a0c",
+      "caseId": "15738e784b60714b2dec903f",
+      "eventType": "reassigned",
+      "occurredAt": "2026-10-04T08:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "ref_92dd39f4d7d21cad",
+      "newValue": "ref_d5c59eae1d5659b9",
+      "sourceReference": "OPS-GOLD-3:changelog:c9",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3:changelog:c9",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    },
+    {
+      "eventId": "e28892034708cb122855dcbb",
+      "caseId": "15738e784b60714b2dec903f",
+      "eventType": "reopened",
+      "occurredAt": "2026-10-04T08:00:00.000Z",
+      "observedAt": "2026-10-15T00:00:00.000Z",
+      "previousValue": "10000",
+      "newValue": null,
+      "sourceReference": "OPS-GOLD-3:changelog:c7",
+      "durationMinutes": null,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": null,
+        "sourceRecordReference": "OPS-GOLD-3:changelog:c7",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "synthetic",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": null,
+        "transportAuthenticity": "offline_fixture"
+      }
+    }
+  ],
+  "statuses": [
+    {
+      "statusId": "1",
+      "displayName": "Open",
+      "sourceCategory": "new",
+      "operationalClass": "unresolved",
+      "mappingStatus": "unresolved",
+      "classificationProvenance": "CG-2 does not map source statuses onto simulation stages."
+    },
+    {
+      "statusId": "2",
+      "displayName": "In Progress",
+      "sourceCategory": "indeterminate",
+      "operationalClass": "unresolved",
+      "mappingStatus": "unresolved",
+      "classificationProvenance": "CG-2 does not map source statuses onto simulation stages."
+    },
+    {
+      "statusId": "3",
+      "displayName": "Done",
+      "sourceCategory": "done",
+      "operationalClass": "unresolved",
+      "mappingStatus": "unresolved",
+      "classificationProvenance": "CG-2 does not map source statuses onto simulation stages."
+    }
+  ],
+  "requestTypes": [
+    {
+      "requestTypeId": "rt-access",
+      "name": "Request admin access"
+    },
+    {
+      "requestTypeId": "rt-hardware",
+      "name": "Request new hardware"
+    },
+    {
+      "requestTypeId": "rt-help",
+      "name": "Get IT help"
+    }
+  ],
+  "intervals": [
+    {
+      "intervalId": "07c42674e1b092b0317b60df",
+      "caseId": "15738e784b60714b2dec903f",
+      "intervalType": "sla_elapsed",
+      "startAt": "2026-09-21T08:00:00.000Z",
+      "endAt": "2026-09-21T08:00:00.000Z",
+      "durationMinutes": 1440,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": null
+    },
+    {
+      "intervalId": "0cd246dd00afa6b16a17cf7c",
+      "caseId": "4755177835ce720864755646",
+      "intervalType": "sla_elapsed",
+      "startAt": "2026-10-02T09:00:00.000Z",
+      "endAt": "2026-10-02T09:00:00.000Z",
+      "durationMinutes": 1440,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": null
+    },
+    {
+      "intervalId": "1007cd2004022c3529d5d119",
+      "caseId": "4755177835ce720864755646",
+      "intervalType": "recorded_work",
+      "startAt": "2026-10-01T11:00:00.000Z",
+      "endAt": "2026-10-01T11:00:00.000Z",
+      "durationMinutes": 60,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": null
+    },
+    {
+      "intervalId": "2448f96afb80aba9374e3852",
+      "caseId": "15738e784b60714b2dec903f",
+      "intervalType": "elapsed_lifetime",
+      "startAt": "2026-09-20T08:00:00.000Z",
+      "endAt": "2026-10-15T00:00:00.000Z",
+      "durationMinutes": 35520,
+      "censoring": "right",
+      "complete": false,
+      "statusReference": null
+    },
+    {
+      "intervalId": "29a42c5169e64ab51c4ebb0c",
+      "caseId": "4755177835ce720864755646",
+      "intervalType": "elapsed_lifetime",
+      "startAt": "2026-10-01T09:00:00.000Z",
+      "endAt": "2026-10-02T09:00:00.000Z",
+      "durationMinutes": 1440,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": null
+    },
+    {
+      "intervalId": "3afedfa1df4057c3bf8b553c",
+      "caseId": "30566c646e2efd173d3bc3ae",
+      "intervalType": "elapsed_lifetime",
+      "startAt": "2026-10-03T12:00:00.000Z",
+      "endAt": "2026-10-15T00:00:00.000Z",
+      "durationMinutes": 16560,
+      "censoring": "right",
+      "complete": false,
+      "statusReference": null
+    },
+    {
+      "intervalId": "4ab092c85d1fcadf1d2b5d1e",
+      "caseId": "30566c646e2efd173d3bc3ae",
+      "intervalType": "status_residence",
+      "startAt": "2026-10-03T12:00:00.000Z",
+      "endAt": "2026-10-15T00:00:00.000Z",
+      "durationMinutes": 16560,
+      "censoring": "right",
+      "complete": false,
+      "statusReference": "1"
+    },
+    {
+      "intervalId": "5cd2cef070f11533d5f8f4fb",
+      "caseId": "4755177835ce720864755646",
+      "intervalType": "status_residence",
+      "startAt": "2026-10-02T09:00:00.000Z",
+      "endAt": "2026-10-02T09:00:00.000Z",
+      "durationMinutes": 0,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": "3"
+    },
+    {
+      "intervalId": "84e4792722d3117c8cd5498a",
+      "caseId": "4755177835ce720864755646",
+      "intervalType": "status_residence",
+      "startAt": "2026-10-01T10:00:00.000Z",
+      "endAt": "2026-10-02T09:00:00.000Z",
+      "durationMinutes": 1380,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": "2"
+    },
+    {
+      "intervalId": "adfae789e83e7c02ebe5e005",
+      "caseId": "15738e784b60714b2dec903f",
+      "intervalType": "status_residence",
+      "startAt": "2026-09-21T08:00:00.000Z",
+      "endAt": "2026-10-04T08:00:00.000Z",
+      "durationMinutes": 18720,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": "3"
+    },
+    {
+      "intervalId": "b0d05699211dc8267406223c",
+      "caseId": "15738e784b60714b2dec903f",
+      "intervalType": "status_residence",
+      "startAt": "2026-10-04T08:00:00.000Z",
+      "endAt": "2026-10-15T00:00:00.000Z",
+      "durationMinutes": 15360,
+      "censoring": "right",
+      "complete": false,
+      "statusReference": "1"
+    },
+    {
+      "intervalId": "c79b72cb58359e8a728b74f5",
+      "caseId": "4755177835ce720864755646",
+      "intervalType": "status_residence",
+      "startAt": "2026-10-01T09:00:00.000Z",
+      "endAt": "2026-10-01T10:00:00.000Z",
+      "durationMinutes": 60,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": "1"
+    },
+    {
+      "intervalId": "c94f67db84deb0056d944c04",
+      "caseId": "15738e784b60714b2dec903f",
+      "intervalType": "status_residence",
+      "startAt": "2026-09-20T08:00:00.000Z",
+      "endAt": "2026-09-21T08:00:00.000Z",
+      "durationMinutes": 1440,
+      "censoring": "none",
+      "complete": true,
+      "statusReference": "1"
+    }
+  ],
+  "descriptiveEvidence": [
+    {
+      "metricId": "observed_case_count",
+      "definition": "Number of normalized cases in the snapshot.",
+      "value": 3,
+      "unit": "cases",
+      "population": "all snapshot cases",
+      "sampleSize": 3,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 1,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Count is not staffing capacity."
+    },
+    {
+      "metricId": "arrivals_in_window",
+      "definition": "Cases whose created timestamp falls inside the observation window.",
+      "value": 3,
+      "unit": "cases",
+      "population": "created in window",
+      "sampleSize": 3,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 1,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Excludes cases already open at window start."
+    },
+    {
+      "metricId": "request_type_distribution",
+      "definition": "Counts by request type reference.",
+      "value": [
+        {
+          "key": "rt-access",
+          "count": 1
+        },
+        {
+          "key": "rt-hardware",
+          "count": 1
+        },
+        {
+          "key": "rt-help",
+          "count": 1
+        }
+      ],
+      "unit": "counts",
+      "population": "all snapshot cases",
+      "sampleSize": 3,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 1,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Missing request types are grouped as unclassified. Issue type is a different concept."
+    },
+    {
+      "metricId": "priority_distribution",
+      "definition": "Counts by source priority reference.",
+      "value": [
+        {
+          "key": "1",
+          "count": 1
+        },
+        {
+          "key": "2",
+          "count": 1
+        },
+        {
+          "key": "3",
+          "count": 1
+        }
+      ],
+      "unit": "counts",
+      "population": "all snapshot cases",
+      "sampleSize": 3,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 1,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Priority names are source labels, not simulated classes."
+    },
+    {
+      "metricId": "resolution_count",
+      "definition": "Cases whose latest observed resolution stands at window end.",
+      "value": 1,
+      "unit": "cases",
+      "population": "resolved with timestamps",
+      "sampleSize": 1,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 2,
+      "coverage": 0.3333333333333333,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Reopened cases are excluded from this count."
+    },
+    {
+      "metricId": "reopen_count",
+      "definition": "Cases whose latest observed resolution episode was followed by a reopen.",
+      "value": 1,
+      "unit": "cases",
+      "population": "reopened cases",
+      "sampleSize": 1,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 2,
+      "coverage": 0.3333333333333333,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Reopen is changelog-derived, not inferred from status names."
+    },
+    {
+      "metricId": "cycle_time_minutes",
+      "definition": "Elapsed lifetime from created to resolved for complete resolved cases.",
+      "value": {
+        "sampleSize": 1,
+        "p50": 1440,
+        "p90": 1440,
+        "mean": 1440
+      },
+      "unit": "minutes",
+      "population": "resolved cases with complete elapsed lifetime",
+      "sampleSize": 1,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 2,
+      "coverage": 0.3333333333333333,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Elapsed lifetime is not active processing time and not SLA elapsed time."
+    },
+    {
+      "metricId": "status_residence_minutes",
+      "definition": "Observed residence in source statuses, including waiting and inactivity.",
+      "value": {
+        "sampleSize": 7,
+        "p50": 1440,
+        "p90": 18720
+      },
+      "unit": "minutes",
+      "population": "status residence intervals with a duration",
+      "sampleSize": 7,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 2.3333333333333335,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "A long residence does not prove a processing bottleneck."
+    },
+    {
+      "metricId": "status_transition_count",
+      "definition": "Number of observed status_changed events.",
+      "value": 4,
+      "unit": "events",
+      "population": "status changelog items",
+      "sampleSize": 4,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 1.3333333333333333,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Transitions are not handoffs unless assignment also changed."
+    },
+    {
+      "metricId": "open_cases_at_window_end",
+      "definition": "Cases created before window end and not resolved before window end.",
+      "value": 1,
+      "unit": "cases",
+      "population": "open at cutoff",
+      "sampleSize": 1,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 2,
+      "coverage": 0.3333333333333333,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Right-censored; not a steady-state WIP theorem result."
+    },
+    {
+      "metricId": "worklog_coverage_share",
+      "definition": "Share of cases with recorded worklogs.",
+      "value": 0.3333333333333333,
+      "unit": "share",
+      "population": "all snapshot cases",
+      "sampleSize": 3,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 1,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Recorded work duration is not utilization."
+    },
+    {
+      "metricId": "recorded_work_minutes",
+      "definition": "Distribution of recorded worklog durations.",
+      "value": {
+        "sampleSize": 1,
+        "p50": 60,
+        "mean": 60
+      },
+      "unit": "minutes",
+      "population": "worklog intervals with duration",
+      "sampleSize": 1,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 0.3333333333333333,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Missing worklogs are not zero work."
+    },
+    {
+      "metricId": "sla_cycle_count",
+      "definition": "Observed SLA cycle records.",
+      "value": 2,
+      "unit": "cycles",
+      "population": "retrieved SLA records",
+      "sampleSize": 2,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 0.6666666666666666,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "SLA completion uses the source calendar; missing SLA is not a met target."
+    },
+    {
+      "metricId": "sla_breach_count",
+      "definition": "SLA cycles flagged breached by the source.",
+      "value": 1,
+      "unit": "cycles",
+      "population": "SLA cycles with a breach flag",
+      "sampleSize": 1,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 1,
+      "coverage": 0.3333333333333333,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Breach flags are observed source values, not simulated SLA rules."
+    },
+    {
+      "metricId": "assignee_transition_count",
+      "definition": "Assigned and reassigned events.",
+      "value": 2,
+      "unit": "events",
+      "population": "assignee changelog items",
+      "sampleSize": 2,
+      "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+      "excludedRecords": 0,
+      "coverage": 0.6666666666666666,
+      "provenance": {
+        "sourceSystem": "jira-jsm",
+        "sourceProject": "project:OPS",
+        "sourceEndpoint": "synthetic:golden:20261127",
+        "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+        "sourceRecordReference": "project:OPS",
+        "transformationVersion": "os.1.0.0-normalize",
+        "evidenceClass": "derived",
+        "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+        "derivationMethod": "deterministic-descriptive-os.1.0.0",
+        "transportAuthenticity": "offline_fixture"
+      },
+      "interpretationLimitations": "Unique assignees are not licensed agent capacity."
+    }
+  ],
+  "dataQuality": [
+    {
+      "metricId": "completeness",
+      "definition": "Share of cases with a valid created timestamp.",
+      "numerator": 3,
+      "denominator": 3,
+      "value": 1,
+      "status": "pass",
+      "explanation": "3 of 3 cases have a valid created timestamp.",
+      "consequence": "Missing created timestamps prevent arrival and lifetime measurement.",
+      "recommendedNextAction": "Inspect source created fields; do not impute zeros."
+    },
+    {
+      "metricId": "validity",
+      "definition": "Share of cases without invalid timestamps.",
+      "numerator": 3,
+      "denominator": 3,
+      "value": 1,
+      "status": "pass",
+      "explanation": "No invalid created timestamps were detected.",
+      "consequence": "Invalid timestamps are excluded from temporal metrics.",
+      "recommendedNextAction": "Reject or repair source records; do not coerce clocks."
+    },
+    {
+      "metricId": "consistency",
+      "definition": "Cases whose events do not precede creation.",
+      "numerator": 3,
+      "denominator": 3,
+      "value": 1,
+      "status": "pass",
+      "explanation": "Related timestamps were compared without rewriting source history.",
+      "consequence": "Inconsistent histories produce unknown intervals.",
+      "recommendedNextAction": "Keep unknown intervals visible in the snapshot."
+    },
+    {
+      "metricId": "uniqueness",
+      "definition": "Deduplicated case identifiers relative to raw case count.",
+      "numerator": 3,
+      "denominator": 3,
+      "value": 1,
+      "status": "pass",
+      "explanation": "Duplicate identities are removed during normalization.",
+      "consequence": "Duplicates would inflate demand counts.",
+      "recommendedNextAction": "Keep deterministic dedupe keys."
+    },
+    {
+      "metricId": "temporal_coverage",
+      "definition": "Configured observation window length in days.",
+      "numerator": 30,
+      "denominator": 90,
+      "value": 0.3333333333333333,
+      "status": "pass",
+      "explanation": "Window is 2026-09-15T00:00:00.000Z to 2026-10-15T00:00:00.000Z (closed-start-open-end-utc).",
+      "consequence": "Metrics apply only inside this window.",
+      "recommendedNextAction": "Re-import with a longer window if coverage is insufficient."
+    },
+    {
+      "metricId": "lifecycle_coverage",
+      "definition": "Share of cases with reconstructable status history.",
+      "numerator": 2,
+      "denominator": 3,
+      "value": 0.6666666666666666,
+      "status": "warning",
+      "explanation": "2 cases have complete histories; 2 have at least one status change.",
+      "consequence": "Missing changelogs prevent status residence measurement.",
+      "recommendedNextAction": "Do not treat current status as a full history."
+    },
+    {
+      "metricId": "worklog_coverage",
+      "definition": "Share of cases with at least one recorded worklog.",
+      "numerator": 1,
+      "denominator": 3,
+      "value": 0.3333333333333333,
+      "status": "pass",
+      "explanation": "Worklog capability is retrieved.",
+      "consequence": "Recorded work is not active processing time.",
+      "recommendedNextAction": "Leave work duration unknown when worklogs are absent."
+    },
+    {
+      "metricId": "sla_coverage",
+      "definition": "Share of cases with an observed SLA cycle.",
+      "numerator": 2,
+      "denominator": 3,
+      "value": 0.6666666666666666,
+      "status": "pass",
+      "explanation": "SLA capability is retrieved.",
+      "consequence": "SLA elapsed time uses the source calendar and is not interchangeable with residence time.",
+      "recommendedNextAction": "Do not substitute status duration for SLA elapsed time."
+    },
+    {
+      "metricId": "classification_coverage",
+      "definition": "Share of cases with both a request type and a current status reference.",
+      "numerator": 3,
+      "denominator": 3,
+      "value": 1,
+      "status": "pass",
+      "explanation": "3 cases have request types; 3 have current statuses. Issue type is not treated as request type.",
+      "consequence": "Unclassified cases cannot be used as typed demand mix without assumptions.",
+      "recommendedNextAction": "Keep unclassified records explicit."
+    },
+    {
+      "metricId": "representativeness",
+      "definition": "Whether extraction finished within page and record budgets.",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "status": "pass",
+      "explanation": "Extraction completed within configured budgets.",
+      "consequence": "A truncated import is not a complete operational picture.",
+      "recommendedNextAction": "Raise budgets only after measuring Forge runtime cost."
+    },
+    {
+      "metricId": "authorization_coverage",
+      "definition": "Whether records were retrieved with user-context project authorization.",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "status": "pass",
+      "explanation": "Records were constrained to the trusted project context.",
+      "consequence": "Unauthorized data must not be shown as an operational snapshot.",
+      "recommendedNextAction": "Keep asUser() and reject browser project substitution."
+    }
+  ],
+  "completenessStatus": "complete",
+  "readiness": "potentially_suitable_for_calibration_assessment",
+  "provenance": {
+    "sourceSystem": "jira-jsm",
+    "sourceProject": "project:OPS",
+    "sourceEndpoint": "synthetic:golden:20261127",
+    "extractionTimestamp": "2026-10-15T00:00:00.000Z",
+    "sourceRecordReference": "project:OPS",
+    "transformationVersion": "os.1.0.0-normalize",
+    "evidenceClass": "synthetic",
+    "observationWindow": "2026-09-15T00:00:00.000Z/2026-10-15T00:00:00.000Z",
+    "derivationMethod": "bounded-import-os.1.0.0",
+    "transportAuthenticity": "offline_fixture"
+  },
+  "contentFingerprint": "7ab03a5f32049b484d0df0d20b31adeb3795659abf29bfe4f758dc81e6a87589",
+  "limitations": [
+    "This snapshot is observational evidence, not a calibrated simulation model.",
+    "Status residence time is not active processing time.",
+    "Recorded work duration is not utilization.",
+    "Live transport does not change synthetic data origin."
+  ],
+  "extraction": {
+    "complete": true,
+    "truncatedReason": null,
+    "pageCount": 1,
+    "retryCount": 0,
+    "inconsistentSource": false,
+    "worklogCapability": "retrieved",
+    "slaCapability": "retrieved",
+    "changelogCapability": "retrieved"
+  }
+}

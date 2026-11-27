@@ -36,6 +36,16 @@ Durable integration rules:
 - Never infer project authorization from installation identity alone.
 - Never claim hosted integration success based on local mocks.
 - Never exclude entire directories from security scans without justified, reviewed exceptions.
+- Missing operational evidence must never become an assumed zero.
+- Jira status residence time must never be treated automatically as active service time.
+- Live transport does not establish genuine historical data origin.
+- Valid snapshots require explicit completeness and provenance.
+- Partial extraction must never be presented as complete.
+- Tenant and project authorization are separate concerns.
+- Snapshot fingerprints must be reproducible.
+- Calibration must remain distinct from ingestion.
+
+Read `docs/codegeist/sprints/CG-02.md` and `docs/adrs/ADR-025-canonical-operational-snapshots.md` before changing operational ingest or snapshot contracts.
 
 ## Context discipline
 
