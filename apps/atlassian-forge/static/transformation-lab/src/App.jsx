@@ -248,6 +248,15 @@ export function App() {
   }
 
   function applyBaselineResult(result, mode) {
+    if (result?.status === "review_required" || result?.kind === "missing_principal") {
+      setCalibration((current) => ({
+        ...current,
+        status: result.status === "review_required" ? "preview" : "failed",
+        message: result.message,
+      }));
+      if (result.status === "review_required") setMappingReviewed(false);
+      return;
+    }
     if (result?.status === "ok" && result.evidence) {
       setCalibration((current) => ({
         ...current,
@@ -336,7 +345,11 @@ export function App() {
     try {
       const result = await invoke("constructBaseline", {
         sourceMode: "jira",
-        windowDays: importConfig.windowDays,
+        windowDays: importState.snapshot.importConfiguration?.windowDays ?? importConfig.windowDays,
+        observationWindow: {
+          ...importState.snapshot.observationWindow,
+          windowDays: importState.snapshot.importConfiguration?.windowDays ?? importConfig.windowDays,
+        },
         calibration: construct
           ? sourceLinkedCalibrationPayload(calibration.evidence, jiraStaffing, mappingReviewed, statusMapping)
           : undefined,

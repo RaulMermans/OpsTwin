@@ -1,12 +1,21 @@
 # OpsTwin Scratchpad
 
-## Codegeist CG-7.1 checkpoint — 2026-11-27
+## Codegeist CG-7.1 checkpoint — 2026-11-28
 
-- Branch `feat/codegeist-cg7.1-release-blockers` from CG-7 `5f9d98b`. Tag `checkpoint/cg7.1-start`. Not pushed. Commit not created until owner asks.
-- CSV template validates as `os.1.0.0` (partial completeness). Browser Jira snapshots rejected. Tokens bind project/principal/purpose. Mapping editor added.
-- Realistic golden: released 1200 h, cash 12000, investment 8000, net 4000, ROI 0.5. Implausible 72000-min busy withholds cash.
-- Demo 80×8 seed 20261127 congested 1+1: cycle 733.929 / 158.584 / 640.909 / 302.317. The 20×2 AI regression vs baseline is not stable.
-- Live Jira Custom UI journeys and second site still not verified. Feature freeze documented. CG-8 not started.
+- Branch `feat/codegeist-cg7.1-release-blockers`. RC commit `6d3b82a`. Not pushed. Rollback git `checkpoint/cg7.1-start` (`5f9d98b`).
+- Snapshot continuity: construct re-extracts using the reviewed observation window. Clock drift no longer invalidates an unchanged cohort. Material source change returns `review_required` without replacing the reviewed fingerprint.
+- Auth: no shared `scope:installation-user-context` fallback. Missing principal fails closed. FIT principal must match when present. Jira source access is rechecked before construct/transform/economics. Signed `sourceMode` must match the request. Jira-hosted synthetic origin stays synthetic on the artifact and token.
+- Local BYOD: synthetic + manual + CSV each completed transform and economics. CSV stays enabled.
+- Hosted: preview `dpl_GyjpyQVqHdMjrvzL7b9sn2cVP7RB`. Production `dpl_Fg2pyDcFU7KUBVr4P6VnAFZ1Wb39` aliased to `https://ops-twin.vercel.app`. HMAC secret preserved. Homepage 200, health 200, unauth construct 401 `FIT_INVALID`, public simulate integrity passed (16). Previous production rollback: `dpl_BsEjmQGguZYQSbdtR5FMjh7aXqJh`.
+- Forge development **3.9.0** deployed (compact `experimentId`); OPS install `b1bb872d-ce8d-4b4a-ba6b-d61fcd61b815`. No Forge production / Marketplace.
+- Playwright (iframe `contentFrame`, signed in as raulmermans@gmail.com) on OPS lab 2026-11-28:
+  - Synthetic FIT path already complete (20×2 integrity passed; hybrid economics ROI withheld).
+  - Jira import 30d and 90d: **valid empty dataset**, 0 cases, `authorization_coverage: pass`, calibration refused. Window 90d `2026-08-30T08:03:28.791Z → 2026-11-28T08:03:28.791Z`. Not a malformed empty. Continuity fingerprint reuse **not exercised** (no live tickets).
+  - Manual exploratory 800/30d, 1+1, 12/40, p=0.9: constructed, hybrid yes, fingerprint `07f6095ebf9acbd88fe73b65201e4d932f4628d77b064ea7363423301f7d451c`.
+  - CSV template validate + mapping review + source-linked construct: model fingerprint `e9f56ad46b00292041fb18216f8d105b25a030c5101d708fe837ac0148f91116`, historical validation **failed** (`empty_system_generative`).
+  - Malformed CSV: alert `Row 2 has an invalid UTC timestamp.`
+  - Correlation IDs not shown in the Custom UI. Forge invokes are GraphQL `useInvokeExtensionRelayMutation` only.
+- `pnpm verify` 352 pytest; `pnpm verify:forge` 94 tests. CG-8 not started.
 
 ## Codegeist CG-7 checkpoint — 2026-11-27
 

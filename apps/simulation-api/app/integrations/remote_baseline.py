@@ -22,6 +22,7 @@ from app.integrations.evidence_token import (
     EvidenceTokenError,
     artifact_claims,
     authorized_scope_from_payload,
+    bind_request_principal,
     sign_claims,
 )
 from app.integrations.fit import (
@@ -76,6 +77,7 @@ async def construct_baseline_remote(request: Request) -> JSONResponse:
         return _error(403, "UNTRUSTED_MODEL_REJECTED", "Arbitrary models and source records are not accepted.")  # noqa: E501
     try:
         project_key, principal_id = authorized_scope_from_payload(payload)
+        principal_id = bind_request_principal(verified, principal_id)
         construct_request = BaselineConstructRequest.model_validate(payload)
     except EvidenceTokenError as error:
         return _error(422, error.code.upper(), error.message)
@@ -109,6 +111,8 @@ async def construct_baseline_remote(request: Request) -> JSONResponse:
                 principal_id=principal_id,
                 extra={
                     "sourceMode": construct_request.source_mode,
+                    "synthetic": extra.get("synthetic") is True,
+                    "evidenceClass": extra.get("evidenceClass"),
                     "modelFingerprint": artifact.model_fingerprint,
                     "reconstruction": reconstruction,
                 },

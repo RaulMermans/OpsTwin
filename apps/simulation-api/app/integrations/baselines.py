@@ -201,6 +201,13 @@ def construct_baseline(
             }
         )
         return None, extra
+    computed = snapshot.get("contentFingerprint")
+    reviewed = request.calibration.snapshot_fingerprint
+    if computed != reviewed:
+        raise BaselineError(
+            "review_required",
+            "Authorized source records changed after the reviewed snapshot. Re-import and review mapping again.",  # noqa: E501
+        )
     artifact = calibrate(snapshot, request.calibration)
     extra.update(
         {
@@ -214,6 +221,10 @@ def construct_baseline(
     )
     extra["historicallyValidated"] = artifact.readiness_status == "validated_for_defined_scope"
     extra.pop("snapshot", None)
+    if extra["evidenceClass"] == "synthetic":
+        provenance = dict(artifact.provenance or {})
+        provenance["evidenceClass"] = "synthetic"
+        artifact = artifact.model_copy(update={"provenance": provenance})
     return artifact, extra
 
 

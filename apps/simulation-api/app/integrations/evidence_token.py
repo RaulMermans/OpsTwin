@@ -6,6 +6,7 @@ import hmac
 import json
 import os
 import time
+from collections.abc import Mapping
 from typing import Any
 
 from app.interventions.execute import MultiExperimentEvidence
@@ -15,6 +16,7 @@ MAX_CLAIMS_BYTES = 48 * 1024
 DEFAULT_TTL_SECONDS = 6 * 60 * 60
 # Existing ev1 tokens without project/principal fail bind_context after CG-7.1; TTL is 6 hours.
 DEV_FALLBACK_KEY = "opstwin-dev-evidence-hmac-not-for-production"
+SHARED_PRINCIPAL = "scope:installation-user-context"
 
 
 class EvidenceTokenError(ValueError):
@@ -141,6 +143,36 @@ def bind_context(
         raise EvidenceTokenError("unsupported_token", "The token cannot be reused for this purpose.")  # noqa: E501
 
 
+def principal_from_verified(verified: Mapping[str, Any] | None) -> str | None:
+    if not isinstance(verified, Mapping):
+        return None
+    payload = verified.get("payload")
+    if not isinstance(payload, Mapping):
+        return None
+    principal = payload.get("principal")
+    if not isinstance(principal, Mapping):
+        return None
+    account = principal.get("accountId")
+    if not isinstance(account, str) or not account.strip():
+        return None
+    return account.strip()
+
+
+def bind_request_principal(verified: Mapping[str, Any] | None, principal_id: str) -> str:
+    if not principal_id or principal_id == SHARED_PRINCIPAL:
+        raise EvidenceTokenError(
+            "scope_mismatch",
+            "A verified user identity is required for signed evidence.",
+        )
+    fit_principal = principal_from_verified(verified)
+    if fit_principal and fit_principal != principal_id:
+        raise EvidenceTokenError(
+            "scope_mismatch",
+            "Authorized principal does not match the Forge invocation identity.",
+        )
+    return principal_id
+
+
 def authorized_scope_from_payload(payload: dict[str, Any]) -> tuple[str, str]:
     project = payload.get("authorizedProjectKey")
     principal = payload.get("authorizedPrincipal")
@@ -148,6 +180,11 @@ def authorized_scope_from_payload(payload: dict[str, Any]) -> tuple[str, str]:
         raise EvidenceTokenError("scope_mismatch", "Authorized project context is required.")
     if not isinstance(principal, str) or not principal.strip():
         raise EvidenceTokenError("scope_mismatch", "Authorized principal context is required.")
+    if principal.strip() == SHARED_PRINCIPAL:
+        raise EvidenceTokenError(
+            "scope_mismatch",
+            "Shared installation principal context cannot authorize signed evidence.",
+        )
     return project.strip(), principal.strip()
 
 

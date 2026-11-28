@@ -41,6 +41,38 @@ export function observationWindow(windowDays, now = new Date()) {
   };
 }
 
+export function reviewedObservationWindow(candidate, now = new Date()) {
+  if (!candidate || typeof candidate !== "object") {
+    return { error: "Jira baseline construction requires the reviewed observation window." };
+  }
+  if (!isUtcIso(candidate.start) || !isUtcIso(candidate.end)) {
+    return { error: "Observation window boundaries must be UTC timestamps." };
+  }
+  if (candidate.convention !== "closed-start-open-end-utc") {
+    return { error: "Unsupported window convention." };
+  }
+  const windowDays = candidate.windowDays;
+  if (!WINDOW_DAYS.has(windowDays)) {
+    return { error: "Observation window must be 30, 60, or 90 days." };
+  }
+  const start = Date.parse(candidate.start);
+  const end = Date.parse(candidate.end);
+  if (end - start !== windowDays * 24 * 60 * 60 * 1000) {
+    return { error: "Observation window length does not match the authorized duration." };
+  }
+  if (end > now.getTime() + 120000) {
+    return { error: "Observation window cannot end in the future." };
+  }
+  return {
+    window: {
+      start: new Date(start).toISOString(),
+      end: new Date(end).toISOString(),
+      convention: candidate.convention,
+      windowDays,
+    },
+  };
+}
+
 export function inWindow(iso, window) {
   const parsed = parseTimestamp(iso);
   if (!parsed.ok) return false;

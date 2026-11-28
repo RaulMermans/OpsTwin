@@ -20,6 +20,7 @@ from app.integrations.evidence_token import (
     artifact_claims,
     authorized_scope_from_payload,
     bind_context,
+    bind_request_principal,
     compact_operational_evidence,
     sign_claims,
     verify_claims,
@@ -49,6 +50,7 @@ from app.interventions.execute import (
 from app.scenarios.coordinator import ComparisonWorkBudgetError, ScenarioComparisonError
 
 router = APIRouter(prefix="/api/integrations/atlassian/v1")
+SourceMode = Literal["synthetic", "manual", "jira", "csv"]
 FixtureId = Literal[
     "cg3-golden-analytical",
     "cg3-fully-observable",
@@ -65,7 +67,7 @@ FixtureId = Literal[
 class AtlassianTransformRequest(ContractModel):
     contract_version: Literal["cg4.v1", "cg5.v1"] = "cg4.v1"
     fixture_id: FixtureId | None = None
-    source_mode: Literal["synthetic", "manual", "jira", "csv"] = "synthetic"
+    source_mode: SourceMode = "synthetic"
     baseline_token: str | None = None
     approve_lab_assumptions: bool = False
     random_seed: int = 20_260_327
@@ -150,6 +152,7 @@ async def transform_remote(request: Request) -> JSONResponse:
         )
     try:
         project_key, principal_id = authorized_scope_from_payload(payload)
+        principal_id = bind_request_principal(verified, principal_id)
         payload.pop("authorizedProjectKey", None)
         payload.pop("authorizedPrincipal", None)
         transform_request = AtlassianTransformRequest.model_validate(payload)
@@ -159,7 +162,7 @@ async def transform_remote(request: Request) -> JSONResponse:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
     environment_type = environment_type_from_verified(verified)
 
-    def _artifact() -> CalibrationArtifact:
+    def _artifact() -> tuple[CalibrationArtifact, SourceMode, bool]:
         if transform_request.baseline_token:
             claims = verify_claims(transform_request.baseline_token)
             bind_context(
@@ -172,7 +175,26 @@ async def transform_remote(request: Request) -> JSONResponse:
                 kind="baseline",
                 purpose="transform",
             )
-            return reconstruct_from_claims(claims)
+            token_mode = claims.get("sourceMode")
+            if token_mode not in {"synthetic", "manual", "jira", "csv"}:
+                raise EvidenceTokenError(
+                    "scope_mismatch",
+                    "Signed baseline evidence is missing a valid source mode.",
+                )
+            if token_mode != transform_request.source_mode:
+                raise EvidenceTokenError(
+                    "scope_mismatch",
+                    "Requested source mode does not match signed baseline evidence.",
+                )
+            artifact = reconstruct_from_claims(claims)
+            source_mode = transform_request.source_mode
+            provenance = artifact.provenance or {}
+            synthetic = (
+                claims.get("synthetic") is True
+                or source_mode == "synthetic"
+                or provenance.get("evidenceClass") == "synthetic"
+            )
+            return artifact, source_mode, synthetic
         assert transform_request.fixture_id is not None
         if transform_request.fixture_id not in LABORATORY_FIXTURES:
             raise KeyError(transform_request.fixture_id)
@@ -182,12 +204,10 @@ async def transform_remote(request: Request) -> JSONResponse:
             snapshot,
             approve=transform_request.approve_lab_assumptions,
         )
-        return calibrate(snapshot, engine_request)
+        return calibrate(snapshot, engine_request), "synthetic", True
 
     def _execute() -> InterventionEvidence | MultiExperimentEvidence:
-        artifact = _artifact()
-        source_mode = transform_request.source_mode
-        synthetic = source_mode == "synthetic"
+        artifact, source_mode, synthetic = _artifact()
         if transform_request.contract_version == "cg5.v1":
             assert transform_request.alternatives is not None
             return run_multi_intervention_experiment(
@@ -243,11 +263,11 @@ async def transform_remote(request: Request) -> JSONResponse:
         },
     )
     body = evidence.model_dump(by_alias=True, exclude_none=True)
-    if transform_request.source_mode == "synthetic":
+    if body.get("synthetic") is True:
         body["disclosure"] = "Synthetic laboratory experiment. Not this Jira project's history."
-    elif transform_request.source_mode == "manual":
+    elif body.get("sourceMode") == "manual":
         body["disclosure"] = "User-defined exploratory experiment. Not historically calibrated."
-    elif transform_request.source_mode == "csv":
+    elif body.get("sourceMode") == "csv":
         body["disclosure"] = "CSV-sourced exploratory experiment. Not independently audited history."  # noqa: E501
     else:
         body["disclosure"] = "Source-linked experiment. Import success is not historical validation."  # noqa: E501
@@ -264,7 +284,8 @@ async def transform_remote(request: Request) -> JSONResponse:
                 project_key=project_key,
                 principal_id=principal_id,
                 extra={
-                    "sourceMode": transform_request.source_mode,
+                    "sourceMode": getattr(evidence, "source_mode", None)
+                    or transform_request.source_mode,
                     "experimentIdentity": body.get("experimentIdentity"),
                     "evidence": compact_operational_evidence(evidence)
                     if isinstance(evidence, MultiExperimentEvidence)
