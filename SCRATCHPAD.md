@@ -1,5 +1,25 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-7.1 — reconstruct fix 2026-11-28
+
+- Jira/CSV transform failed after FIT accept: compact reconstruction dumps `exclude_none`, diagnostic `ParameterEstimate.value` is null, reconstruct raised uncaught `ValidationError`. Same fingerprint as live Jira exploratory model (`2a5324ff72a5a001…`). Manual path reconstructs from spec, so it worked.
+- Fix: `value` defaults to `None`; transform catches reconstruct `ValidationError` as 422; Forge transform/economics resolvers wrap uncaught errors; Custom UI execution selects include 80×8. Resolver `timeoutSeconds` is invalid for queue/project pages — not used.
+- Local: `test_csv_baseline_token_completes_remote_transform` 200 complete; `test_cg7_byod.py` 15 passed; Forge 98 tests + UI build.
+- Hosted: production `dpl_4PYB627CiNLCVPgTHhwDNC7yr32E` aliased to `https://ops-twin.vercel.app`. `GET /api/simulation/health` 200. Unauth transform 401 `FIT_INVALID`. HMAC unchanged. Forge development **3.11.0**. Live Custom UI click of Jira transform not re-captured (iframe). Not pushed.
+- GitHub `origin/master` remains PR #13 `6ed94d1`. CG-8 not started.
+
+## Codegeist CG-7.1 live acceptance — 2026-11-28 (final)
+
+- Branch `feat/codegeist-cg7.1-release-blockers`. Local HEAD will move past `515711e` with fail-closed project GET + non-synthetic economics fixture omission. Do not treat browser `sourceMode` as permission. Project GET ≠ issue-level access (`docs/integrations/atlassian/SECURITY.md`).
+- GitHub `origin/master` is PR #13 `6ed94d1` (includes `515711e`). Not pushed from this working tree until authorized.
+- Production alias: `dpl_68NFGnTRqs5sL2QgT4J11DpDErWV` → `https://ops-twin.vercel.app`. Previous RC `dpl_Fg2pyDcFU7KUBVr4P6VnAFZ1Wb39` READY. HMAC unchanged. Health 200. Unauth construct 401 `FIT_INVALID`.
+- Forge CLI major 3, install `b1bb872d-ce8d-4b4a-ba6b-d61fcd61b815` Up-to-date. Sprint notes 3.9.0 vs docs commit 3.8.0: 3.9.0 is the compact-`experimentId` deploy.
+- OPS lab: five `[OpsTwin synthetic]` Get IT help issues. Import 5 cases, window `2026-10-29T09:10:24.437Z → 2026-11-28T09:10:24.437Z`, request types unclassified, lifecycle_coverage fail (no status-change histories), authorization_coverage pass. Exploratory Jira model `2a5324ff72a5a001bdd61a4cd03f04d514f7d2f89189ffbd18190720895e193b`, validation `empty_system_generative`.
+- Jira multi-scenario invoke: Forge unexpected error after FIT accept (`transform` 09:15:33Z). Not presented as a completed Jira experiment.
+- Manual 800/30d/1+1/12+40/p=0.9: fingerprint `07f6095ebf9acbd88fe73b65201e4d932f4628d77b064ea7363423301f7d451c`. 40×5 human+hybrid: cycle 319.044 / 122.289 / hybrid 200.588, integrity passed. Economics blocked on synthetic fixture identity until Forge upgrade of this commit.
+- CSV template: fingerprint `e9f56ad46b00292041fb18216f8d105b25a030c5101d708fe837ac0148f91116`, validation failed (`empty_system_generative`). Not an empirically validated forecast.
+- `pnpm verify:forge` 97 tests + UI build. `pnpm verify` not re-run (no Core/Python edits). CG-8 not started.
+
 ## Codegeist CG-7.1 checkpoint — 2026-11-28
 
 - Branch `feat/codegeist-cg7.1-release-blockers`. RC commit `6d3b82a`. Not pushed. Rollback git `checkpoint/cg7.1-start` (`5f9d98b`).

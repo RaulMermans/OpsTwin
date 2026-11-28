@@ -31,6 +31,31 @@ function classifyCollection(body, itemFields) {
   return classifyArrayCollection(body, "values", itemFields);
 }
 
+const UNAUTHORIZED_SOURCE = {
+  status: "blocked",
+  kind: "unauthorized_source",
+  message:
+    "Current Jira permissions do not allow consuming source-linked evidence for this project. Re-authorize and import again.",
+};
+
+export function currentSourceAccessDecision(status, body, projectKey) {
+  const classified = classifyJiraResponse(status, body, "project");
+  if (classified.kind === "ok") {
+    if (typeof body?.key === "string" && body.key === projectKey) {
+      return null;
+    }
+    return UNAUTHORIZED_SOURCE;
+  }
+  if (
+    classified.kind === "authentication_failed" ||
+    classified.kind === "permission_denied" ||
+    classified.kind === "not_found"
+  ) {
+    return UNAUTHORIZED_SOURCE;
+  }
+  return { status: "failed", classification: classified.kind, message: classified.message };
+}
+
 export function classifyNetworkFailure(error) {
   const message = error instanceof Error ? error.message : "The upstream request failed.";
   if (/timeout/i.test(message)) {

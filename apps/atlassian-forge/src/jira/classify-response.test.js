@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyJiraResponse, classifyNetworkFailure } from "./classify-response.js";
+import { classifyJiraResponse, classifyNetworkFailure, currentSourceAccessDecision } from "./classify-response.js";
 
 test("permission and authentication failures are distinct from empty datasets", () => {
   assert.equal(classifyJiraResponse(403, { issues: [] }, "issue-search").kind, "permission_denied");
@@ -42,6 +42,17 @@ test("worklog and SLA envelopes reject empty objects", () => {
   assert.equal(classifyJiraResponse(200, { values: [{ id: "h", created: "2026-01-01T00:00:00.000Z" }] }, "changelog-collection").kind, "ok");
   assert.equal(classifyJiraResponse(200, [], "project-statuses").kind, "empty");
   assert.equal(classifyJiraResponse(200, [{ id: "customfield_1" }], "field-metadata").kind, "ok");
+});
+
+test("current project access fails closed unless a valid matching project object is returned", () => {
+  const ok = { id: "10000", key: "OPS", name: "OpsTwin IT Support Lab" };
+  assert.equal(currentSourceAccessDecision(200, ok, "OPS"), null);
+  assert.equal(currentSourceAccessDecision(200, { ...ok, key: "OTHER" }, "OPS").kind, "unauthorized_source");
+  assert.equal(currentSourceAccessDecision(403, {}, "OPS").kind, "unauthorized_source");
+  assert.equal(currentSourceAccessDecision(429, {}, "OPS").classification, "rate_limited");
+  assert.equal(currentSourceAccessDecision(503, {}, "OPS").classification, "upstream_failure");
+  assert.equal(currentSourceAccessDecision(200, { key: "OPS" }, "OPS").classification, "malformed");
+  assert.equal(currentSourceAccessDecision(200, null, "OPS").status, "failed");
 });
 
 test("malformed statuses, invalid JSON, rate limits, and 5xx stay explicit", () => {

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import test from "node:test";
-import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, hybridSupported, selectedAlternatives, sourceLinkedCalibrationPayload, transformPayload } from "../../static/transformation-lab/src/labState.js";
+import { fileURLToPath } from "node:url";
+import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, economicsPayload, hybridSupported, selectedAlternatives, sourceLinkedCalibrationPayload, transformPayload } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
   const stale = afterConfigChange({
@@ -82,6 +85,41 @@ test("reviewed mapping edits are sent instead of untouched suggestions", () => {
   assert.equal(payload.operationalMapping.statuses[0].role, "processing");
   assert.equal(payload.operationalMapping.statuses[0].stageId, "resolution");
   assert.equal(payload.operationalMapping.reviewed, true);
+});
+
+test("non-synthetic economics omit the synthetic fixture identity", () => {
+  const experiment = {
+    evidence: {
+      experimentIdentity: "a".repeat(32),
+      evidenceToken: "ev1.token",
+    },
+  };
+  const assumptions = { evaluationBasis: "fixed_workload" };
+  const manual = economicsPayload(
+    { fixtureId: "cg5-hybrid-support", sourceMode: "manual", evidence: { hybridCompatible: true, constructedModel: {} } },
+    defaultTransform(),
+    experiment,
+    assumptions,
+    {},
+    "req-e",
+  );
+  assert.equal(manual.fixtureId, undefined);
+  assert.equal(manual.sourceMode, "manual");
+  const synthetic = economicsPayload(
+    { fixtureId: "cg5-hybrid-support", sourceMode: "synthetic", evidence: { hybridCompatible: true, constructedModel: {} } },
+    defaultTransform(),
+    experiment,
+    assumptions,
+    {},
+    "req-e",
+  );
+  assert.equal(synthetic.fixtureId, "cg5-hybrid-support");
+});
+
+test("custom UI exposes product-max execution volume", () => {
+  const app = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../static/transformation-lab/src/App.jsx"), "utf8");
+  assert.match(app, /\[20, 40, 80\]/);
+  assert.match(app, /\[2, 5, 8\]/);
 });
 
 test("hybrid is omitted when the baseline has no completion route", () => {

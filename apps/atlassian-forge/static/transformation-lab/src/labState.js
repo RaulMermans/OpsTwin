@@ -233,7 +233,7 @@ export function economicsPayload(calibration, transform, experiment, assumptions
   const alternatives = selectedAlternatives(transform, calibration);
   const payload = {
     contractVersion: "cg7.v1",
-    fixtureId: calibration.fixtureId,
+    fixtureId: (calibration.sourceMode || "synthetic") === "synthetic" ? calibration.fixtureId : undefined,
     alternatives,
     execution: {
       itemCount: transform.itemCount,

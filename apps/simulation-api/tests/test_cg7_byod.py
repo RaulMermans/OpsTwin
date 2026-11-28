@@ -595,3 +595,84 @@ def test_transform_rejects_inconsistent_source_mode(monkeypatch: pytest.MonkeyPa
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "SCOPE_MISMATCH"
+
+
+def test_csv_baseline_token_completes_remote_transform(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.integrations import remote_transform
+    from app.integrations.fit import REGISTERED_APP_ID
+
+    installation = "ari:cloud:ecosystem::installation/22222222-2222-4222-8222-222222222222"
+    monkeypatch.setattr(
+        remote_transform,
+        "verify_forge_invocation_token",
+        lambda *_args, **_kwargs: {"installationId": installation, "payload": {}},
+    )
+    snapshot = parse_csv_event_log(CSV_TEMPLATE)
+    artifact, extra = construct_baseline(
+        BaselineConstructRequest(
+            source_mode="csv",
+            csv_text=CSV_TEMPLATE,
+            calibration=_csv_calibration(snapshot),
+        )
+    )
+    assert artifact is not None
+    token = sign_claims(
+        artifact_claims(
+            kind="baseline",
+            purpose="transform",
+            app_id=REGISTERED_APP_ID,
+            installation_id=installation,
+            environment_type="DEVELOPMENT",
+            project_key="OPS",
+            principal_id="user-1",
+            extra={
+                "sourceMode": "csv",
+                "synthetic": False,
+                "modelFingerprint": artifact.model_fingerprint,
+                "reconstruction": compact_reconstruction(
+                    artifact,
+                    BaselineConstructRequest(source_mode="csv", csv_text=CSV_TEMPLATE),
+                ),
+            },
+        )
+    )
+    response = TestClient(app).post(
+        "/api/integrations/atlassian/v1/transform",
+        json={
+            "contractVersion": "cg5.v1",
+            "sourceMode": "csv",
+            "baselineToken": token,
+            "alternatives": [
+                {
+                    "alternativeId": "human-expansion",
+                    "intervention": {
+                        "kind": "capacity",
+                        "extraTriageCapacity": 0,
+                        "extraResolutionCapacity": 1,
+                    },
+                },
+                {
+                    "alternativeId": "ai-assisted",
+                    "intervention": {
+                        "kind": "ai_assisted",
+                        "stageId": "triage",
+                        "coverage": 0.5,
+                        "processingReduction": 0.4,
+                        "reviewOverheadMinutes": 0.25,
+                    },
+                },
+            ],
+            "execution": {"itemCount": 20, "runCount": 2, "baseSeed": 20261127},
+            "authorizedProjectKey": "OPS",
+            "authorizedPrincipal": "user-1",
+            "experimentId": "csv-remote-20x2",
+            "requestId": "req-csv-1",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["experimentStatus"] == "complete"
+    assert body["sourceMode"] == "csv"
+    assert body["synthetic"] is False
+    assert extra["sourceMode"] == "csv"
+    assert isinstance(body.get("evidenceToken"), str)
