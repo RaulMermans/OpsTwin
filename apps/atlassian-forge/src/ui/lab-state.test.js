@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, hybridSupported, selectedAlternatives, sourceLinkedCalibrationPayload, transformPayload } from "../../static/transformation-lab/src/labState.js";
+import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, economicsPayload, hybridSupported, selectedAlternatives, sourceLinkedCalibrationPayload, transformPayload } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
   const stale = afterConfigChange({
@@ -82,6 +82,35 @@ test("reviewed mapping edits are sent instead of untouched suggestions", () => {
   assert.equal(payload.operationalMapping.statuses[0].role, "processing");
   assert.equal(payload.operationalMapping.statuses[0].stageId, "resolution");
   assert.equal(payload.operationalMapping.reviewed, true);
+});
+
+test("non-synthetic economics omit the synthetic fixture identity", () => {
+  const experiment = {
+    evidence: {
+      experimentIdentity: "a".repeat(32),
+      evidenceToken: "ev1.token",
+    },
+  };
+  const assumptions = { evaluationBasis: "fixed_workload" };
+  const manual = economicsPayload(
+    { fixtureId: "cg5-hybrid-support", sourceMode: "manual", evidence: { hybridCompatible: true, constructedModel: {} } },
+    defaultTransform(),
+    experiment,
+    assumptions,
+    {},
+    "req-e",
+  );
+  assert.equal(manual.fixtureId, undefined);
+  assert.equal(manual.sourceMode, "manual");
+  const synthetic = economicsPayload(
+    { fixtureId: "cg5-hybrid-support", sourceMode: "synthetic", evidence: { hybridCompatible: true, constructedModel: {} } },
+    defaultTransform(),
+    experiment,
+    assumptions,
+    {},
+    "req-e",
+  );
+  assert.equal(synthetic.fixtureId, "cg5-hybrid-support");
 });
 
 test("hybrid is omitted when the baseline has no completion route", () => {

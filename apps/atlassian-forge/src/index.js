@@ -1,6 +1,6 @@
 import ResolverModule from "@forge/resolver";
 import api, { invokeRemote, route } from "@forge/api";
-import { classifyJiraResponse, classifyNetworkFailure } from "./jira/classify-response.js";
+import { classifyJiraResponse, classifyNetworkFailure, currentSourceAccessDecision } from "./jira/classify-response.js";
 import { installationRefFromContext, projectKeyFromContext, rejectBrowserProjectSubstitution } from "./jira/context.js";
 import { ingestOperationalData } from "./jira/ingest.js";
 import { describeJiraPath } from "./jira/route.js";
@@ -52,15 +52,7 @@ function authorizedRemoteScope(request) {
 async function requireCurrentSourceAccess(projectKey) {
   try {
     const response = await requestJson(`/rest/api/3/project/${projectKey}`, "GET");
-    if (response.status === 401 || response.status === 403 || response.status === 404) {
-      return {
-        status: "blocked",
-        kind: "unauthorized_source",
-        message:
-          "Current Jira permissions do not allow consuming source-linked evidence for this project. Re-authorize and import again.",
-      };
-    }
-    return null;
+    return currentSourceAccessDecision(response.status, response.body, projectKey);
   } catch (error) {
     const classified = classifyNetworkFailure(error);
     return { status: "failed", classification: classified.kind, message: classified.message };
@@ -410,11 +402,9 @@ resolver.define("runTransformationExperiment", async (request) => {
         ? "cg3-partially-observable"
         : "cg3-golden-analytical";
   const multi = payload.contractVersion === "cg5.v1" && Array.isArray(payload.alternatives);
+  const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
+  if (denied) return denied;
   const sourceMode = payload.sourceMode === "manual" || payload.sourceMode === "jira" || payload.sourceMode === "csv" ? payload.sourceMode : "synthetic";
-  if (sourceMode === "jira") {
-    const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
-    if (denied) return denied;
-  }
   const body = multi
     ? {
         contractVersion: "cg5.v1",
@@ -495,13 +485,11 @@ resolver.define("runEconomicEvaluation", async (request) => {
       message: "A failed experiment cannot produce an economic comparison.",
     };
   }
-  if (payload.sourceMode === "jira") {
-    const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
-    if (denied) return denied;
-  }
+  const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
+  if (denied) return denied;
   const body = {
     contractVersion: "cg7.v1",
-    fixtureId: payload.fixtureId,
+    fixtureId: payload.sourceMode === "manual" || payload.sourceMode === "jira" || payload.sourceMode === "csv" ? undefined : payload.fixtureId,
     alternatives: payload.alternatives,
     execution: payload.execution,
     experimentIdentity: payload.experimentIdentity,
@@ -558,6 +546,8 @@ resolver.define("constructBaseline", async (request) => {
   const auth = authorizedRemoteScope(request);
   if (auth.error) return auth.error;
   const projectKey = auth.scope.authorizedProjectKey;
+  const denied = await requireCurrentSourceAccess(projectKey);
+  if (denied) return denied;
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
   const sourceMode = payload.sourceMode;
   const body = { contractVersion: "cg7.v1", sourceMode, ...auth.scope };
@@ -568,8 +558,6 @@ resolver.define("constructBaseline", async (request) => {
   } else if (sourceMode === "manual") {
     body.manual = payload.manual;
   } else if (sourceMode === "jira") {
-    const denied = await requireCurrentSourceAccess(projectKey);
-    if (denied) return denied;
     if (!payload.observationWindow) {
       return {
         status: "failed",
