@@ -230,6 +230,7 @@ export function economicsPayload(calibration, transform, experiment, assumptions
     },
     experimentIdentity: experiment.evidence.experimentIdentity,
     evidenceToken: experiment.evidence.evidenceToken,
+    sourceMode: calibration.sourceMode || "synthetic",
     assumptions,
     constraints: Object.fromEntries(
       Object.entries(constraints)

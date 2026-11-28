@@ -14,6 +14,7 @@ from app.integrations.evidence_token import (
     EvidenceTokenError,
     authorized_scope_from_payload,
     bind_context,
+    bind_request_principal,
     verify_claims,
 )
 from app.integrations.fit import (
@@ -98,6 +99,7 @@ async def evaluate_economics_remote(request: Request) -> JSONResponse:
     payload.pop("evidence", None)
     try:
         project_key, principal_id = authorized_scope_from_payload(payload)
+        principal_id = bind_request_principal(verified, principal_id)
         payload.pop("authorizedProjectKey", None)
         payload.pop("authorizedPrincipal", None)
         evaluation_request = DecisionEvaluationRequest.model_validate(payload)

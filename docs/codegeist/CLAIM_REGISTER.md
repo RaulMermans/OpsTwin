@@ -31,6 +31,7 @@
 | CG-7.1 trusted Jira extraction | Source + Forge tests | Resolver re-extracts; `trustedExtraction` required; browser snapshots rejected |
 | CG-7.1 artifact project/principal scope | Source + pytest | Cross-project, cross-principal, and wrong-purpose tokens rejected |
 | CG-7.1 financial feasibility | Source + pytest | Implausible busy hours withhold cash; realistic golden ROI 0.5 |
+| CG-7.1 snapshot continuity | Source + Forge tests | Reviewed window reused; clock drift no longer mismatches unchanged records; changed source is review-required |
 | CG-7.1 live Jira journeys | Not claimed | Custom UI iframe acceptance still requires owner session |
 | CG-7.1 second-site isolation | Not claimed | No second installation |
 | CG-7 historical organizational calibration | Not claimed | Exploratory models only unless holdout passes |

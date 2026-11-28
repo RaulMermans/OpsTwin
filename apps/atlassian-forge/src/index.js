@@ -17,15 +17,54 @@ const TRANSFORM_PATH = "/api/integrations/atlassian/v1/transform";
 const ECONOMICS_PATH = "/api/integrations/atlassian/v1/evaluate-economics";
 const BASELINE_PATH = "/api/integrations/atlassian/v1/construct-baseline";
 
+function missingPrincipalResponse() {
+  return {
+    status: "blocked",
+    kind: "missing_principal",
+    message:
+      "A verified user identity is required for signed evidence. Sign in to Jira and retry. Tokens issued without user scope cannot be reused.",
+  };
+}
+
 function authorizedRemoteScope(request) {
   const accountId = request.context?.accountId;
+  const projectKey = projectKeyFromContext(request.context);
+  if (typeof accountId !== "string" || !accountId.trim() || accountId.trim() === "scope:installation-user-context") {
+    return { error: missingPrincipalResponse() };
+  }
+  if (!projectKey) {
+    return {
+      error: {
+        status: "blocked",
+        kind: "missing_context",
+        message: "Forge did not provide a project key in the trusted invocation context.",
+      },
+    };
+  }
   return {
-    authorizedProjectKey: projectKeyFromContext(request.context),
-    authorizedPrincipal:
-      typeof accountId === "string" && accountId.trim()
-        ? accountId.trim()
-        : "scope:installation-user-context",
+    scope: {
+      authorizedProjectKey: projectKey,
+      authorizedPrincipal: accountId.trim(),
+    },
   };
+}
+
+async function requireCurrentSourceAccess(projectKey) {
+  try {
+    const response = await requestJson(`/rest/api/3/project/${projectKey}`, "GET");
+    if (response.status === 401 || response.status === 403 || response.status === 404) {
+      return {
+        status: "blocked",
+        kind: "unauthorized_source",
+        message:
+          "Current Jira permissions do not allow consuming source-linked evidence for this project. Re-authorize and import again.",
+      };
+    }
+    return null;
+  } catch (error) {
+    const classified = classifyNetworkFailure(error);
+    return { status: "failed", classification: classified.kind, message: classified.message };
+  }
 }
 
 async function readJson(response) {
@@ -361,13 +400,8 @@ resolver.define("runSyntheticCalibration", async (request) => {
 resolver.define("runTransformationExperiment", async (request) => {
   const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
   if (substitution) return substitution;
-  if (!projectKeyFromContext(request.context)) {
-    return {
-      status: "blocked",
-      kind: "missing_context",
-      message: "Forge did not provide a project key in the trusted invocation context.",
-    };
-  }
+  const auth = authorizedRemoteScope(request);
+  if (auth.error) return auth.error;
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
   const fixtureId =
     payload.fixtureId === "cg5-hybrid-support"
@@ -377,6 +411,10 @@ resolver.define("runTransformationExperiment", async (request) => {
         : "cg3-golden-analytical";
   const multi = payload.contractVersion === "cg5.v1" && Array.isArray(payload.alternatives);
   const sourceMode = payload.sourceMode === "manual" || payload.sourceMode === "jira" || payload.sourceMode === "csv" ? payload.sourceMode : "synthetic";
+  if (sourceMode === "jira") {
+    const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
+    if (denied) return denied;
+  }
   const body = multi
     ? {
         contractVersion: "cg5.v1",
@@ -389,7 +427,7 @@ resolver.define("runTransformationExperiment", async (request) => {
         execution: payload.execution ?? { itemCount: 20, runCount: 5, baseSeed: 20261127 },
         experimentId: payload.experimentId,
         requestId: payload.requestId,
-        ...authorizedRemoteScope(request),
+        ...auth.scope,
       }
     : {
         contractVersion: "cg4.v1",
@@ -399,7 +437,7 @@ resolver.define("runTransformationExperiment", async (request) => {
         randomSeed: payload.randomSeed ?? 20260327,
         intervention: payload.intervention,
         execution: payload.execution ?? { itemCount: 40, runCount: 5, baseSeed: 20261127 },
-        ...authorizedRemoteScope(request),
+        ...auth.scope,
       };
   let remote;
   try {
@@ -447,13 +485,8 @@ resolver.define("runTransformationExperiment", async (request) => {
 resolver.define("runEconomicEvaluation", async (request) => {
   const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
   if (substitution) return substitution;
-  if (!projectKeyFromContext(request.context)) {
-    return {
-      status: "blocked",
-      kind: "missing_context",
-      message: "Forge did not provide a project key in the trusted invocation context.",
-    };
-  }
+  const auth = authorizedRemoteScope(request);
+  if (auth.error) return auth.error;
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
   if (payload.evidence?.experimentStatus === "failed") {
     return {
@@ -461,6 +494,10 @@ resolver.define("runEconomicEvaluation", async (request) => {
       classification: "invalid_request",
       message: "A failed experiment cannot produce an economic comparison.",
     };
+  }
+  if (payload.sourceMode === "jira") {
+    const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
+    if (denied) return denied;
   }
   const body = {
     contractVersion: "cg7.v1",
@@ -472,7 +509,7 @@ resolver.define("runEconomicEvaluation", async (request) => {
     assumptions: payload.assumptions,
     constraints: payload.constraints ?? {},
     explore: payload.explore,
-    ...authorizedRemoteScope(request),
+    ...auth.scope,
   };
   let remote;
   try {
@@ -518,17 +555,12 @@ resolver.define("runEconomicEvaluation", async (request) => {
 resolver.define("constructBaseline", async (request) => {
   const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
   if (substitution) return substitution;
-  const projectKey = projectKeyFromContext(request.context);
-  if (!projectKey) {
-    return {
-      status: "blocked",
-      kind: "missing_context",
-      message: "Forge did not provide a project key in the trusted invocation context.",
-    };
-  }
+  const auth = authorizedRemoteScope(request);
+  if (auth.error) return auth.error;
+  const projectKey = auth.scope.authorizedProjectKey;
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
   const sourceMode = payload.sourceMode;
-  const body = { contractVersion: "cg7.v1", sourceMode, ...authorizedRemoteScope(request) };
+  const body = { contractVersion: "cg7.v1", sourceMode, ...auth.scope };
   if (sourceMode === "synthetic") {
     body.fixtureId = payload.fixtureId;
     body.approveLabAssumptions = payload.approveLabAssumptions === true;
@@ -536,12 +568,24 @@ resolver.define("constructBaseline", async (request) => {
   } else if (sourceMode === "manual") {
     body.manual = payload.manual;
   } else if (sourceMode === "jira") {
+    const denied = await requireCurrentSourceAccess(projectKey);
+    if (denied) return denied;
+    if (!payload.observationWindow) {
+      return {
+        status: "failed",
+        classification: "invalid_request",
+        message: "Jira baseline construction requires the reviewed observation window from the authorized extraction.",
+      };
+    }
     let ingested;
     try {
       ingested = await ingestOperationalData({
         projectKey,
         installationRef: installationRefFromContext(request.context),
-        payload: { windowDays: payload.windowDays ?? 30 },
+        payload: {
+          windowDays: payload.windowDays ?? payload.observationWindow.windowDays ?? 30,
+          observationWindow: payload.observationWindow,
+        },
         now: new Date(),
         requestJson,
       });
@@ -592,6 +636,9 @@ resolver.define("constructBaseline", async (request) => {
       remoteBody && remoteBody.error && typeof remoteBody.error.message === "string"
         ? remoteBody.error.message
         : "Baseline construction failed.";
+    if (remoteBody?.error?.code === "REVIEW_REQUIRED") {
+      return { status: "review_required", classification: "source_changed", httpStatus: remote.status, message };
+    }
     return {
       status: "failed",
       classification: remote.status === 408 ? "timeout" : "remote_error",

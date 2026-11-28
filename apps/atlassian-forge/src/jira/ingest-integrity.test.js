@@ -404,3 +404,39 @@ test("fingerprints change with completeness and runtime contract validation runs
   assert.equal(contentFingerprint(complete), complete.contentFingerprint);
   assert.equal(validateSnapshot(complete).ok, true);
 });
+
+test("a later extraction clock changes the fingerprint when the observation window is recomputed", async () => {
+  const search = { status: 200, body: { issues: [opsIssue()], isLast: true } };
+  const first = await ingest(router(handlers([["/rest/api/3/search/jql", search]])), { windowDays: 30 }, { now: new Date("2026-10-15T00:00:00.000Z") });
+  const drifted = await ingest(router(handlers([["/rest/api/3/search/jql", search]])), { windowDays: 30 }, { now: new Date("2026-10-15T01:00:00.000Z") });
+  assert.equal(first.status, "completed");
+  assert.notEqual(first.snapshot.contentFingerprint, drifted.snapshot.contentFingerprint);
+  const continued = await ingest(
+    router(handlers([["/rest/api/3/search/jql", search]])),
+    {
+      windowDays: 30,
+      observationWindow: { ...first.snapshot.observationWindow, windowDays: 30 },
+    },
+    { now: new Date("2026-10-15T01:00:00.000Z") },
+  );
+  assert.equal(continued.snapshot.contentFingerprint, first.snapshot.contentFingerprint);
+});
+
+test("preserved window still detects material source change", async () => {
+  const firstIssue = opsIssue();
+  const changedIssue = opsIssue({ key: "OPS-9", id: "109" });
+  const first = await ingest(
+    router(handlers([["/rest/api/3/search/jql", { status: 200, body: { issues: [firstIssue], isLast: true } }]])),
+    { windowDays: 30 },
+    { now: new Date("2026-10-15T00:00:00.000Z") },
+  );
+  const changed = await ingest(
+    router(handlers([["/rest/api/3/search/jql", { status: 200, body: { issues: [changedIssue], isLast: true } }]])),
+    {
+      windowDays: 30,
+      observationWindow: { ...first.snapshot.observationWindow, windowDays: 30 },
+    },
+    { now: new Date("2026-10-15T01:00:00.000Z") },
+  );
+  assert.notEqual(changed.snapshot.contentFingerprint, first.snapshot.contentFingerprint);
+});

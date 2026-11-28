@@ -1,7 +1,7 @@
 import { classifyJiraResponse, classifyNetworkFailure } from "./classify-response.js";
 import { fetchWithRetry } from "./http.js";
 import { paginateOffset, paginateToken } from "./paginate.js";
-import { cohortJql, observationWindow, overlapsObservationWindow } from "../operational/time.js";
+import { cohortJql, observationWindow, overlapsObservationWindow, reviewedObservationWindow } from "../operational/time.js";
 import { statusRecord } from "../operational/normalize.js";
 import { buildSnapshot } from "../operational/snapshot.js";
 import { validateSnapshot } from "../operational/validate.js";
@@ -145,8 +145,15 @@ export async function ingestOperationalData({
 }) {
   const parsed = parseWindowDays(payload);
   if (parsed.error) return failed("invalid_configuration", parsed.error);
-  const window = observationWindow(parsed.windowDays, now);
-  window.windowDays = parsed.windowDays;
+  let window;
+  if (payload?.observationWindow) {
+    const reviewed = reviewedObservationWindow(payload.observationWindow, now);
+    if (reviewed.error) return failed("invalid_configuration", reviewed.error);
+    window = reviewed.window;
+  } else {
+    window = observationWindow(parsed.windowDays, now);
+    window.windowDays = parsed.windowDays;
+  }
   const startedMs = clock.nowMs();
   const importStartedAt = new Date(startedMs).toISOString();
   const stages = [];

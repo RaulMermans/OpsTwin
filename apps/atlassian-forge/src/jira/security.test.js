@@ -16,7 +16,14 @@ test("jira baseline construction re-extracts and does not trust browser snapshot
   const constructBlock = index.slice(index.indexOf('resolver.define("constructBaseline"'));
   assert.match(constructBlock, /trustedExtraction = true/);
   assert.match(constructBlock, /ingestOperationalData/);
+  assert.match(constructBlock, /observationWindow/);
   assert.doesNotMatch(constructBlock, /payload\.snapshot/);
+});
+
+test("sensitive artifact operations fail closed without a verified user identity", () => {
+  assert.match(index, /missing_principal/);
+  assert.match(index, /unauthorized_source/);
+  assert.doesNotMatch(index, /: "scope:installation-user-context"/);
 });
 
 test("operational import never uses asApp and never forwards issues to the simulation remote", () => {

@@ -1,12 +1,12 @@
 # OpsTwin Scratchpad
 
-## Codegeist CG-7.1 checkpoint — 2026-11-27
+## Codegeist CG-7.1 checkpoint — 2026-11-28
 
-- Branch `feat/codegeist-cg7.1-release-blockers` from CG-7 `5f9d98b`. Tag `checkpoint/cg7.1-start`. Not pushed. Commit not created until owner asks.
-- CSV template validates as `os.1.0.0` (partial completeness). Browser Jira snapshots rejected. Tokens bind project/principal/purpose. Mapping editor added.
-- Realistic golden: released 1200 h, cash 12000, investment 8000, net 4000, ROI 0.5. Implausible 72000-min busy withholds cash.
-- Demo 80×8 seed 20261127 congested 1+1: cycle 733.929 / 158.584 / 640.909 / 302.317. The 20×2 AI regression vs baseline is not stable.
-- Live Jira Custom UI journeys and second site still not verified. Feature freeze documented. CG-8 not started.
+- Branch `feat/codegeist-cg7.1-release-blockers` from CG-7 `5f9d98b`. HEAD still `2c09815` plus uncommitted continuity/auth fixes. Not pushed. RC commit awaits owner approval.
+- Snapshot continuity: construct re-extracts using the reviewed observation window. Clock drift no longer invalidates an unchanged cohort. Material source change returns `review_required` without replacing the reviewed fingerprint.
+- Auth: no shared `scope:installation-user-context` fallback. Missing principal fails closed. FIT principal must match when present. Jira source access is rechecked before construct/transform/economics. Signed `sourceMode` must match the request. Jira-hosted synthetic origin stays synthetic on the artifact and token.
+- Local BYOD: synthetic + manual + CSV each completed transform and economics. CSV stays enabled. Jira live construct still needs owner session.
+- `pnpm verify` 352 pytest; `pnpm verify:forge` 94 tests. Production still `dpl_BsEjmQGguZYQSbdtR5FMjh7aXqJh`; preview `dpl_C7n7BuWfbobDLJB8AJq6osAFiKPd` does not include these fixes. Forge development 3.7.0. CG-8 not started.
 
 ## Codegeist CG-7 checkpoint — 2026-11-27
 

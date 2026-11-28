@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.calibration.contracts import CalibrationRequest
 from app.calibration.manual import ManualBaselineSpec, construct_manual_artifact, spec_fingerprint
 from app.calibration.mapping import suggest_status_mapping
-from app.calibration.snapshot import validate_snapshot_structure
+from app.calibration.snapshot import content_fingerprint, validate_snapshot_structure
 from app.economics.decision import DecisionError, DecisionEvaluationRequest, evaluate_decision
 from app.integrations.baselines import (
     BaselineConstructRequest,
@@ -354,3 +354,244 @@ def test_construct_baseline_requires_fit() -> None:
     )
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "FIT_INVALID"
+
+
+def _jira_snapshot_from_csv() -> dict:
+    snapshot = parse_csv_event_log(CSV_TEMPLATE)
+    snapshot["sourceSystem"] = "jira-jsm"
+    snapshot["sourceProject"] = {
+        "reference": "project:OPS",
+        "key": "OPS",
+        "name": "Ops",
+        "serviceDeskId": None,
+    }
+    snapshot["provenance"]["evidenceClass"] = "observed"
+    snapshot["provenance"]["transportAuthenticity"] = "live_api"
+    snapshot["provenance"]["sourceProject"] = "project:OPS"
+    for case in snapshot["cases"]:
+        case["syntheticOrigin"] = True
+        case["projectReference"] = "project:OPS"
+        case["sourceSystem"] = "jira-jsm"
+    snapshot["contentFingerprint"] = content_fingerprint(snapshot)
+    return snapshot
+
+
+def test_changed_source_fingerprint_requires_review() -> None:
+    preview, extra = construct_baseline(
+        BaselineConstructRequest(
+            source_mode="jira",
+            snapshot=_jira_snapshot_from_csv(),
+            trusted_extraction=True,
+            authorized_project_key="OPS",
+        )
+    )
+    assert preview is None
+    reviewed = extra["snapshot"]
+    calibration = _csv_calibration(reviewed).model_copy(update={"snapshot_fingerprint": "a" * 64})
+    with pytest.raises(BaselineError, match="changed after the reviewed"):
+        construct_baseline(
+            BaselineConstructRequest(
+                source_mode="jira",
+                snapshot=reviewed,
+                trusted_extraction=True,
+                authorized_project_key="OPS",
+                calibration=calibration,
+            )
+        )
+
+
+def test_jira_hosted_synthetic_origin_is_preserved() -> None:
+    preview, extra = construct_baseline(
+        BaselineConstructRequest(
+            source_mode="jira",
+            snapshot=_jira_snapshot_from_csv(),
+            trusted_extraction=True,
+            authorized_project_key="OPS",
+        )
+    )
+    assert preview is None
+    reviewed = extra["snapshot"]
+    artifact, built = construct_baseline(
+        BaselineConstructRequest(
+            source_mode="jira",
+            snapshot=reviewed,
+            trusted_extraction=True,
+            authorized_project_key="OPS",
+            calibration=_csv_calibration(reviewed),
+        )
+    )
+    assert artifact is not None
+    assert built["synthetic"] is True
+    assert built["evidenceClass"] == "synthetic"
+    assert artifact.provenance["evidenceClass"] == "synthetic"
+    assert built["snapshotFingerprint"] == reviewed["contentFingerprint"]
+
+
+def test_csv_template_completes_simulation_and_economics() -> None:
+    from app.domain.decision import DecisionAssumptions
+    from app.interventions.catalog import (
+        AssistedIntervention,
+        CapacityIntervention,
+        ExperimentExecution,
+        NamedAlternative,
+    )
+    from app.interventions.execute import run_multi_intervention_experiment
+
+    snapshot = parse_csv_event_log(CSV_TEMPLATE)
+    artifact, extra = construct_baseline(
+        BaselineConstructRequest(
+            source_mode="csv",
+            csv_text=CSV_TEMPLATE,
+            calibration=_csv_calibration(snapshot),
+        )
+    )
+    assert artifact is not None
+    assert artifact.constructed_model is not None
+    alternatives = [
+        NamedAlternative(
+            alternative_id="human-expansion",
+            intervention=CapacityIntervention(extra_triage_capacity=0, extra_resolution_capacity=1),
+        ),
+        NamedAlternative(
+            alternative_id="ai-assisted",
+            intervention=AssistedIntervention(
+                stage_id="triage",
+                coverage=0.5,
+                processing_reduction=0.4,
+                review_overhead_minutes=0.25,
+            ),
+        ),
+    ]
+    execution = ExperimentExecution(item_count=20, run_count=2, base_seed=20261127)
+    evidence = run_multi_intervention_experiment(
+        artifact,
+        alternatives,
+        execution,
+        experiment_id="csv-complete",
+        source_mode="csv",
+        synthetic=False,
+    )
+    assert evidence.experiment_status == "complete"
+    assert evidence.identities_agree is True
+    assert evidence.source_mode == "csv"
+    assert evidence.synthetic is False
+    result = evaluate_decision(
+        DecisionEvaluationRequest(
+            alternatives=alternatives,
+            execution=execution,
+            experiment_identity=evidence.experiment_identity,
+            evidence=evidence,
+            assumptions=DecisionAssumptions(
+                origin="csv_exploratory",
+                evaluation_basis="fixed_workload",
+                realization_mechanism="none",
+            ),
+        )
+    )
+    assert result.integrity_status == "passed"
+    assert result.synthetic is False
+    assert extra["sourceMode"] == "csv"
+
+
+def test_shared_principal_and_missing_principal_are_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.integrations import remote_baseline
+    from app.integrations.fit import REGISTERED_APP_ID
+
+    installation = "ari:cloud:ecosystem::installation/22222222-2222-4222-8222-222222222222"
+    monkeypatch.setattr(
+        remote_baseline,
+        "verify_forge_invocation_token",
+        lambda *_args, **_kwargs: {"installationId": installation, "payload": {}},
+    )
+    client = TestClient(app)
+    missing = client.post(
+        "/api/integrations/atlassian/v1/construct-baseline",
+        json={
+            "contractVersion": "cg7.v1",
+            "sourceMode": "synthetic",
+            "fixtureId": "cg3-golden-analytical",
+            "authorizedProjectKey": "OPS",
+        },
+    )
+    assert missing.status_code == 422
+    assert missing.json()["error"]["code"] == "SCOPE_MISMATCH"
+    shared = client.post(
+        "/api/integrations/atlassian/v1/construct-baseline",
+        json={
+            "contractVersion": "cg7.v1",
+            "sourceMode": "synthetic",
+            "fixtureId": "cg3-golden-analytical",
+            "authorizedProjectKey": "OPS",
+            "authorizedPrincipal": "scope:installation-user-context",
+        },
+    )
+    assert shared.status_code == 422
+    monkeypatch.setattr(
+        remote_baseline,
+        "verify_forge_invocation_token",
+        lambda *_args, **_kwargs: {
+            "installationId": installation,
+            "payload": {"principal": {"accountId": "user-real"}},
+        },
+    )
+    mismatched = client.post(
+        "/api/integrations/atlassian/v1/construct-baseline",
+        json={
+            "contractVersion": "cg7.v1",
+            "sourceMode": "synthetic",
+            "fixtureId": "cg3-golden-analytical",
+            "authorizedProjectKey": "OPS",
+            "authorizedPrincipal": "user-1",
+        },
+    )
+    assert mismatched.status_code == 422
+    assert REGISTERED_APP_ID
+
+
+def test_transform_rejects_inconsistent_source_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.integrations import remote_transform
+    from app.integrations.fit import REGISTERED_APP_ID
+
+    installation = "ari:cloud:ecosystem::installation/22222222-2222-4222-8222-222222222222"
+    monkeypatch.setattr(
+        remote_transform,
+        "verify_forge_invocation_token",
+        lambda *_args, **_kwargs: {"installationId": installation, "payload": {}},
+    )
+    token = sign_claims(
+        artifact_claims(
+            kind="baseline",
+            purpose="transform",
+            app_id=REGISTERED_APP_ID,
+            installation_id=installation,
+            environment_type="DEVELOPMENT",
+            project_key="OPS",
+            principal_id="user-1",
+            extra={"sourceMode": "jira", "synthetic": True, "modelFingerprint": "a" * 64},
+        )
+    )
+    response = TestClient(app).post(
+        "/api/integrations/atlassian/v1/transform",
+        json={
+            "contractVersion": "cg5.v1",
+            "sourceMode": "csv",
+            "baselineToken": token,
+            "alternatives": [
+                {
+                    "alternativeId": "human-expansion",
+                    "intervention": {
+                        "kind": "capacity",
+                        "extraTriageCapacity": 0,
+                        "extraResolutionCapacity": 1,
+                    },
+                }
+            ],
+            "execution": {"itemCount": 20, "runCount": 2, "baseSeed": 20261127},
+            "authorizedProjectKey": "OPS",
+            "authorizedPrincipal": "user-1",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "SCOPE_MISMATCH"
