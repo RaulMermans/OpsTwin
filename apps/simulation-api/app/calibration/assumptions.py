@@ -9,8 +9,13 @@ from app.calibration.contracts import (
 )
 
 CAPACITY_IDS = {"resource.triage-team.capacity", "resource.resolution-team.capacity"}
-DURATION_IDS = {"triage.processing_time.mean", "resolution.processing_time.mean"}
+DURATION_IDS = {
+    "arrival.mean_interarrival_time",
+    "triage.processing_time.mean",
+    "resolution.processing_time.mean",
+}
 EXPECTED_UNITS = {
+    "arrival.mean_interarrival_time": "minutes",
     "triage.processing_time.mean": "minutes",
     "resolution.processing_time.mean": "minutes",
     "resource.triage-team.capacity": "servers",

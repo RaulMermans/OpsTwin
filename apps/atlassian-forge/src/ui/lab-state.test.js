@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, hybridSupported, selectedAlternatives, transformPayload } from "../../static/transformation-lab/src/labState.js";
+import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, hybridSupported, selectedAlternatives, sourceLinkedCalibrationPayload, transformPayload } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
   const stale = afterConfigChange({
@@ -70,6 +70,18 @@ test("financial assumption changes keep operational evidence stale-only", () => 
   });
   assert.equal(stale.evidence.operationalExperimentIdentity, "abc");
   assert.equal(stale.status, "stale");
+});
+
+test("reviewed mapping edits are sent instead of untouched suggestions", () => {
+  const payload = sourceLinkedCalibrationPayload(
+    { snapshotFingerprint: "abc", suggestedMapping: { statuses: [{ statusId: "s-res", role: "completed", stageId: null }] } },
+    { triageCapacity: 1, resolutionCapacity: 1, triageMeanMinutes: 8, resolutionMeanMinutes: 20 },
+    true,
+    [{ statusId: "s-res", role: "processing", stageId: "resolution" }],
+  );
+  assert.equal(payload.operationalMapping.statuses[0].role, "processing");
+  assert.equal(payload.operationalMapping.statuses[0].stageId, "resolution");
+  assert.equal(payload.operationalMapping.reviewed, true);
 });
 
 test("hybrid is omitted when the baseline has no completion route", () => {

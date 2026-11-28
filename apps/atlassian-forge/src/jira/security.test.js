@@ -12,6 +12,13 @@ test("resolver constructor uses Forge default-export interop", () => {
   assert.match(index, /typeof ResolverModule === "function"/);
 });
 
+test("jira baseline construction re-extracts and does not trust browser snapshots", () => {
+  const constructBlock = index.slice(index.indexOf('resolver.define("constructBaseline"'));
+  assert.match(constructBlock, /trustedExtraction = true/);
+  assert.match(constructBlock, /ingestOperationalData/);
+  assert.doesNotMatch(constructBlock, /payload\.snapshot/);
+});
+
 test("operational import never uses asApp and never forwards issues to the simulation remote", () => {
   assert.match(index, /importOperationalSnapshot/);
   assert.doesNotMatch(index, /asApp\(/);

@@ -10,6 +10,7 @@ from app.main import app
 
 INSTALLATION_ID = "ari:cloud:ecosystem::installation/22222222-2222-4222-8222-222222222222"
 PATH = "/api/integrations/atlassian/v1/transform"
+SCOPE = {"authorizedProjectKey": "OPS", "authorizedPrincipal": "user-1"}
 
 
 @pytest.fixture
@@ -63,6 +64,7 @@ def test_placeholder_item_count_cannot_be_requested(authorized: None) -> None:
             "randomSeed": 21,
             "intervention": {"kind": "capacity", "extraResolutionCapacity": 1},
             "execution": {"itemCount": 1, "runCount": 2, "baseSeed": 20261127},
+            **SCOPE,
         },
     )
     assert response.status_code == 422
@@ -82,6 +84,7 @@ def test_synthetic_capacity_experiment_returns_paired_evidence(authorized: None)
                 "extraResolutionCapacity": 0,
             },  # noqa: E501
             "execution": {"itemCount": 20, "runCount": 2, "baseSeed": 20261127},
+            **SCOPE,
         },
     )
     assert response.status_code == 200, response.text
@@ -122,6 +125,7 @@ def test_multi_experiment_returns_shared_baseline_metrics(authorized: None) -> N
                 },
             ],
             "execution": {"itemCount": 20, "runCount": 2, "baseSeed": 20261127},
+            **SCOPE,
         },
     )
     assert response.status_code == 200, response.text

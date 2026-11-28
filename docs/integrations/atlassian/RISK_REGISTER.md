@@ -31,6 +31,9 @@
 | R27 | Holdout leakage | High | Medium | Fake validation | Eng | Training-only estimation tests | Thresholds changed after eval | Fail the sprint | Mitigated |
 | R28 | Synthetic circularity | Medium | High | Overclaim | Eng | Misspecified/nonstationary profiles | Recovery treated as reality | Claim register | Mitigated |
 | R29 | Unsafe snapshot egress | High | Medium | Privacy | Eng | Minimized snapshots only, FIT, HMAC, no issue text | Unbounded payload | Keep size limits | Open in CG-7 |
+| R35 | Browser-forged Jira snapshots | High | High | Fake provenance | Eng | Resolver re-extract + trustedExtraction | Browser snapshot posted as jira | Reject | Mitigated in CG-7.1 |
+| R36 | CSV schema invalid vs advertised upload | High | High | Broken input mode | Eng | Canonical os.1.0.0 adapter | Template fails validator | Disable CSV | Mitigated in CG-7.1 |
+| R37 | Impossible busy hours converted to cash | High | High | False investment case | Eng | Staffed-hour feasibility check | ROI with 12000 h from 20 cases | Withhold cash | Mitigated in CG-7.1 |
 | R33 | Browser-forged economic metrics | High | High | False ROI | Eng | Signed evidence tokens | Economics without token | Reject | Mitigated in CG-7 |
 | R34 | Finite workload annualized as cash | High | High | False payback | Eng | Explicit evaluation basis | Recurring without demand | Withhold ROI | Mitigated in CG-7 |
 | R30 | Deadline-driven scope into CG-4 | Medium | High | Unvalidated interventions | Eng | Stop after CG-3.1 scientific closure | Intervention code in this branch | Revert | Closed into CG-5 |

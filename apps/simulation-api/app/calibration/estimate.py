@@ -163,6 +163,26 @@ def estimate_arrivals(
     if exposure <= 0:
         raise EstimationError("invalid_evidence", "Training exposure time must be positive.")
     if len(stamps) < config.min_arrival_sample:
+        approved = _approved(request, "arrival.mean_interarrival_time")
+        if approved is not None:
+            value = finite_number(approved.proposed_value, label="arrival.mean_interarrival_time")
+            return (
+                ParameterEstimate(
+                    parameter_id="arrival.mean_interarrival_time",
+                    target_model_path="sources[0].arrival.meanInterarrivalTime",
+                    parameter_type="mean_interarrival_minutes",
+                    value=value,
+                    unit="minutes",
+                    estimation_method="approved_assumption",
+                    evidence_class="assumed",
+                    identifiability_status="assumption_required",
+                    sample_size=len(stamps),
+                    source_references=["cases.createdAt"],
+                    limitations=["Arrival rate is an approved assumption because the training sample is below the configured minimum."],  # noqa: E501
+                    origin="approved_assumption",
+                ),
+                diagnostics,
+            )
         return (
             ParameterEstimate(
                 parameter_id="arrival.mean_interarrival_time",

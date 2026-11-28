@@ -219,6 +219,47 @@ def evaluate_strategy_economics(
     elif assumptions.realization_mechanism != "none":
         realizable = None
         notes.append("Released hours were unavailable, so realizable cash is unavailable.")
+    current_exposure = (
+        (assumptions.baseline_triage_fte + assumptions.baseline_resolution_fte)
+        * assumptions.paid_hours_per_month
+        * months
+    )
+    financial_unsupported = False
+    if basis == "recurring_period" and baseline_busy is not None and not withhold_period:
+        period_busy = baseline_busy * scale
+        if current_exposure > 0 and period_busy > current_exposure * 1.05:
+            notes.append(
+                f"Modeled period processing ({period_busy:.1f} h) exceeds staffed paid hours "
+                f"({current_exposure:.1f} h). Cash realization is withheld."
+            )
+            financial_unsupported = True
+            realizable = None
+    if (
+        not financial_unsupported
+        and released_hours is not None
+        and current_exposure > 0
+        and released_hours > current_exposure + 1e-6
+    ):
+        notes.append(
+            f"Released hours ({released_hours:.1f}) exceed staffed paid hours "
+            f"({current_exposure:.1f} h) in the evaluation period."
+        )
+        payroll_like = assumptions.realization_mechanism in {
+            "realizable_payroll_reduction",
+            "reduced_overtime",
+        }
+        if payroll_like:
+            notes.append(
+                "Payroll or overtime cash is withheld because it cannot exceed paid working hours."
+            )
+            financial_unsupported = True
+            realizable = None
+        elif assumptions.realization_mechanism in {"avoided_hiring", "reduced_outsourcing"}:
+            notes.append(
+                "This cash result depends on avoided future expenditure, not a reduction of current payroll."  # noqa: E501
+            )
+    if financial_unsupported:
+        notes.append("Financial recommendation is withheld. Operational results remain available.")
     net = None
     roi = None
     if realizable is not None:
@@ -285,6 +326,7 @@ def evaluate_strategy_economics(
         payback_status=payback_status,
         evaluation_months=months,
         withhold_period=withhold_period,
+        financial_unsupported=financial_unsupported,
     )
     return StrategyEconomics(
         strategy_id=strategy_id,
@@ -332,6 +374,7 @@ def _classify(
     payback_status: str,
     evaluation_months: int = 12,
     withhold_period: bool = False,
+    financial_unsupported: bool = False,
 ) -> DecisionState:
     months = evaluation_months
     if constraints.maximum_cycle_time is not None and cycle is not None:
@@ -361,6 +404,12 @@ def _classify(
     if withhold_period:
         if improved_ops:
             return "suitable_for_controlled_pilot_evaluation"
+        if released:
+            return "capacity_releasing_without_cash_savings"
+        return "insufficient_evidence_for_a_decision"
+    if financial_unsupported:
+        if improved_ops:
+            return "operationally_beneficial_financially_unattractive"
         if released:
             return "capacity_releasing_without_cash_savings"
         return "insufficient_evidence_for_a_decision"
