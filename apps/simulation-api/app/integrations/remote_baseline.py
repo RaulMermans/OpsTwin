@@ -13,11 +13,17 @@ from app.calibration.construct import ConstructionError
 from app.integrations.baselines import (
     BaselineConstructRequest,
     BaselineError,
+    compact_reconstruction,
     construct_baseline,
     public_calibration,
 )
 from app.integrations.csv_events import CsvImportError
-from app.integrations.evidence_token import EvidenceTokenError, sign_claims
+from app.integrations.evidence_token import (
+    EvidenceTokenError,
+    artifact_claims,
+    authorized_scope_from_payload,
+    sign_claims,
+)
 from app.integrations.fit import (
     FitValidationError,
     assert_payload_bounds,
@@ -69,7 +75,10 @@ async def construct_baseline_remote(request: Request) -> JSONResponse:
     if {"model", "issues", "jira", "oauth", "token", "baselineModel"}.intersection(payload):
         return _error(403, "UNTRUSTED_MODEL_REJECTED", "Arbitrary models and source records are not accepted.")  # noqa: E501
     try:
+        project_key, principal_id = authorized_scope_from_payload(payload)
         construct_request = BaselineConstructRequest.model_validate(payload)
+    except EvidenceTokenError as error:
+        return _error(422, error.code.upper(), error.message)
     except ValidationError:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
     try:
@@ -87,21 +96,23 @@ async def construct_baseline_remote(request: Request) -> JSONResponse:
         extra["baselineToken"] = None
         return JSONResponse(content=extra)
     body = public_calibration(artifact, extra)
-    reconstruction = construct_request.model_dump(by_alias=True, exclude_none=True)
-    reconstruction.pop("csvText", None)
-    if construct_request.source_mode in {"jira", "csv"} and extra.get("snapshot"):
-        reconstruction["snapshot"] = extra["snapshot"]
+    reconstruction = compact_reconstruction(artifact, construct_request)
     try:
         body["baselineToken"] = sign_claims(
-            {
-                "kind": "baseline",
-                "appId": trusted_app_id(),
-                "installationId": verified["installationId"],
-                "environmentType": environment_type_from_verified(verified),
-                "sourceMode": construct_request.source_mode,
-                "modelFingerprint": artifact.model_fingerprint,
-                "reconstruction": reconstruction,
-            }
+            artifact_claims(
+                kind="baseline",
+                purpose="transform",
+                app_id=trusted_app_id(),
+                installation_id=str(verified["installationId"]),
+                environment_type=environment_type_from_verified(verified),
+                project_key=project_key,
+                principal_id=principal_id,
+                extra={
+                    "sourceMode": construct_request.source_mode,
+                    "modelFingerprint": artifact.model_fingerprint,
+                    "reconstruction": reconstruction,
+                },
+            )
         )
     except EvidenceTokenError as error:
         return _error(500, error.code.upper(), error.message)

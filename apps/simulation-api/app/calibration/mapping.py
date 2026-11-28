@@ -33,7 +33,7 @@ def suggest_status_mapping(snapshot: dict[str, Any]) -> dict[str, Any]:
         elif "triage" in name:
             role = "processing"
             stage_id = "triage"
-        elif any(token in name for token in ("progress", "pending", "work in")):
+        elif "resolution" in name or any(token in name for token in ("progress", "pending", "work in")):  # noqa: E501
             role = "processing"
             stage_id = "resolution"
         suggestions.append(

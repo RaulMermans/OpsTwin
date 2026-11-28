@@ -17,6 +17,17 @@ const TRANSFORM_PATH = "/api/integrations/atlassian/v1/transform";
 const ECONOMICS_PATH = "/api/integrations/atlassian/v1/evaluate-economics";
 const BASELINE_PATH = "/api/integrations/atlassian/v1/construct-baseline";
 
+function authorizedRemoteScope(request) {
+  const accountId = request.context?.accountId;
+  return {
+    authorizedProjectKey: projectKeyFromContext(request.context),
+    authorizedPrincipal:
+      typeof accountId === "string" && accountId.trim()
+        ? accountId.trim()
+        : "scope:installation-user-context",
+  };
+}
+
 async function readJson(response) {
   try {
     return await response.json();
@@ -74,7 +85,7 @@ resolver.define("getLabIdentity", (request) => {
   return {
     product: "OpsTwin for Jira",
     surface: "AI Transformation Lab",
-    sprint: "CG-7",
+    sprint: "CG-7.1",
     status: "Development integration",
     projectKey,
     accountIdPresent: Boolean(request.context?.accountId),
@@ -378,6 +389,7 @@ resolver.define("runTransformationExperiment", async (request) => {
         execution: payload.execution ?? { itemCount: 20, runCount: 5, baseSeed: 20261127 },
         experimentId: payload.experimentId,
         requestId: payload.requestId,
+        ...authorizedRemoteScope(request),
       }
     : {
         contractVersion: "cg4.v1",
@@ -387,6 +399,7 @@ resolver.define("runTransformationExperiment", async (request) => {
         randomSeed: payload.randomSeed ?? 20260327,
         intervention: payload.intervention,
         execution: payload.execution ?? { itemCount: 40, runCount: 5, baseSeed: 20261127 },
+        ...authorizedRemoteScope(request),
       };
   let remote;
   try {
@@ -459,6 +472,7 @@ resolver.define("runEconomicEvaluation", async (request) => {
     assumptions: payload.assumptions,
     constraints: payload.constraints ?? {},
     explore: payload.explore,
+    ...authorizedRemoteScope(request),
   };
   let remote;
   try {
@@ -514,7 +528,7 @@ resolver.define("constructBaseline", async (request) => {
   }
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
   const sourceMode = payload.sourceMode;
-  const body = { contractVersion: "cg7.v1", sourceMode };
+  const body = { contractVersion: "cg7.v1", sourceMode, ...authorizedRemoteScope(request) };
   if (sourceMode === "synthetic") {
     body.fixtureId = payload.fixtureId;
     body.approveLabAssumptions = payload.approveLabAssumptions === true;
@@ -522,18 +536,33 @@ resolver.define("constructBaseline", async (request) => {
   } else if (sourceMode === "manual") {
     body.manual = payload.manual;
   } else if (sourceMode === "jira") {
-    const snapshot = minimizeSnapshot(payload.snapshot);
-    if (!snapshot) {
-      return { status: "failed", classification: "invalid_request", message: "Import authorized Jira records before constructing a source-linked baseline." };
+    let ingested;
+    try {
+      ingested = await ingestOperationalData({
+        projectKey,
+        installationRef: installationRefFromContext(request.context),
+        payload: { windowDays: payload.windowDays ?? 30 },
+        now: new Date(),
+        requestJson,
+      });
+    } catch (error) {
+      const classified = classifyNetworkFailure(error);
+      return { status: "failed", classification: classified.kind, message: classified.message };
     }
-    if (snapshot.sourceProject?.key && snapshot.sourceProject.key !== projectKey) {
-      return { status: "blocked", kind: "untrusted_project", message: "The snapshot does not belong to the current project." };
+    const snapshot = minimizeSnapshot(ingested?.snapshot);
+    if (!snapshot) {
+      return ingested?.status
+        ? ingested
+        : { status: "failed", classification: "invalid_request", message: "Import authorized Jira records before constructing a source-linked baseline." };
     }
     body.snapshot = snapshot;
+    body.trustedExtraction = true;
     body.calibration = payload.calibration;
   } else if (sourceMode === "csv") {
+    if (typeof payload.csvText !== "string" || !payload.csvText.trim()) {
+      return { status: "failed", classification: "invalid_request", message: "Paste or upload a CSV event log." };
+    }
     body.csvText = payload.csvText;
-    body.snapshot = payload.snapshot ? minimizeSnapshot(payload.snapshot) : undefined;
     body.calibration = payload.calibration;
   } else {
     return { status: "failed", classification: "invalid_request", message: "Unsupported baseline source." };

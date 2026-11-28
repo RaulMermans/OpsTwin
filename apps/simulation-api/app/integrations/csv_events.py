@@ -3,22 +3,12 @@ from __future__ import annotations
 import csv
 import io
 import math
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.calibration.snapshot import content_fingerprint, minutes_between, parse_utc
 
 REQUIRED_COLUMNS = ("case_id", "activity", "timestamp")
-OPTIONAL_COLUMNS = (
-    "request_type",
-    "priority",
-    "resource_group",
-    "processing_stage",
-    "work_duration_minutes",
-    "work_started_at",
-    "work_ended_at",
-    "outcome",
-)
 SUPPORTED_ACTIVITIES = {
     "created": "case_created",
     "case_created": "case_created",
@@ -33,14 +23,24 @@ ACTIVITY_STATUS = {
     "created": "s-open",
     "case_created": "s-open",
     "triage_started": "s-triage",
-    "triage_completed": "s-res",
+    "triage_completed": "s-triage",
     "resolution_started": "s-res",
-    "resolution_completed": "s-done",
+    "resolution_completed": "s-res",
     "completed": "s-done",
     "resolved": "s-done",
 }
 MAX_CSV_BYTES = 128 * 1024
 MAX_ROWS = 400
+CSV_TEMPLATE = """case_id,activity,timestamp,work_duration_minutes,processing_stage,outcome
+CASE-1,created,2026-01-05T08:00:00.000Z,,,
+CASE-1,triage_started,2026-01-05T08:04:00.000Z,5,triage,
+CASE-1,triage_completed,2026-01-05T08:10:00.000Z,,,
+CASE-1,resolution_started,2026-01-05T08:12:00.000Z,18,resolution,
+CASE-1,resolved,2026-01-05T08:35:00.000Z,,,completed
+CASE-2,created,2026-01-05T09:00:00.000Z,,,
+CASE-2,triage_started,2026-01-05T09:06:00.000Z,7,triage,
+CASE-2,resolved,2026-01-05T09:20:00.000Z,,,completed
+"""
 
 
 class CsvImportError(ValueError):
@@ -55,6 +55,25 @@ def _sanitize_cell(value: str) -> str:
     if text[:1] in {"=", "+", "-", "@"}:
         return "'" + text
     return text
+
+
+def _iso(stamp: datetime) -> str:
+    return stamp.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def _csv_provenance(*, source_ref: str, window_text: str, extraction_ts: str) -> dict[str, Any]:
+    return {
+        "sourceSystem": "csv-upload",
+        "sourceProject": "csv:upload",
+        "sourceEndpoint": "file",
+        "extractionTimestamp": extraction_ts,
+        "sourceRecordReference": source_ref,
+        "transformationVersion": "cg7.csv.1",
+        "evidenceClass": "derived",
+        "observationWindow": window_text,
+        "derivationMethod": "csv-event-log",
+        "transportAuthenticity": "unknown",
+    }
 
 
 def parse_csv_event_log(raw: str, *, timezone_name: str = "UTC") -> dict[str, Any]:
@@ -108,47 +127,45 @@ def _snapshot_from_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
         case = cases.setdefault(
             case_id,
             {
+                "schemaVersion": "os.1.0.0",
                 "caseId": case_id,
                 "sourceReference": case_id,
+                "sourceSystem": "csv-upload",
                 "projectReference": "csv:upload",
                 "createdAt": None,
                 "resolvedAt": None,
                 "currentStatusReference": "s-open",
                 "requestTypeReference": row.get("request_type") or "rt-csv",
                 "priorityReference": row.get("priority") or None,
+                "observationStatus": "open",
+                "lifecycleCompleteness": "incomplete",
+                "assigneeReference": None,
+                "updatedAt": None,
                 "createdAtInvalid": False,
+                "syntheticOrigin": False,
             },
         )
         event_type = SUPPORTED_ACTIVITIES[activity]
         status = ACTIVITY_STATUS[activity]
-        previous = case["currentStatusReference"]
+        previous = None if event_type == "case_created" else case["currentStatusReference"]
+        occurred = _iso(stamp)
         if event_type == "case_created" or case["createdAt"] is None:
-            case["createdAt"] = stamp.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            case["createdAt"] = occurred
         if event_type == "resolved":
-            case["resolvedAt"] = stamp.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            case["resolvedAt"] = occurred
+            case["observationStatus"] = "resolved"
+        case["updatedAt"] = occurred
         events.append(
             {
                 "eventId": f"csv-{index}-{case_id}",
                 "caseId": case_id,
                 "eventType": event_type,
-                "occurredAt": stamp.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                "observedAt": stamp.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                "previousValue": None if event_type == "case_created" else previous,
+                "occurredAt": occurred,
+                "observedAt": occurred,
+                "previousValue": previous,
                 "newValue": status,
                 "sourceReference": f"csv:{index}",
                 "durationMinutes": None,
-                "provenance": {
-                    "sourceSystem": "csv-upload",
-                    "sourceProject": "csv:upload",
-                    "sourceEndpoint": "file",
-                    "extractionTimestamp": stamp.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    "sourceRecordReference": case_id,
-                    "transformationVersion": "cg7.csv.1",
-                    "evidenceClass": "derived",
-                    "observationWindow": None,
-                    "derivationMethod": "csv-event-log",
-                    "transportAuthenticity": "user_upload",
-                },
             }
         )
         case["currentStatusReference"] = status
@@ -166,48 +183,64 @@ def _snapshot_from_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
         elif start_at is not None and end_at is not None:
             duration = minutes_between(start_at, end_at)
         if duration is not None:
-            stage = row.get("processing_stage") or ("triage" if "triage" in activity else "resolution")  # noqa: E501
+            begin = start_at or stamp
+            finish = end_at or (begin + timedelta(minutes=duration))
             intervals.append(
                 {
                     "intervalId": f"work-{index}-{case_id}",
                     "caseId": case_id,
-                    "intervalType": "worklog",
-                    "startAt": (start_at or stamp).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    "endAt": (end_at or stamp).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    "durationMinutes": duration,
+                    "intervalType": "recorded_work",
+                    "startAt": _iso(begin),
+                    "endAt": _iso(finish),
+                    "durationMinutes": minutes_between(begin, finish),
                     "censoring": "none",
                     "complete": True,
                     "statusReference": status,
-                    "stageHint": stage,
                 }
             )
     if not stamps:
         raise CsvImportError("invalid_file", "CSV contains no valid timestamps.")
     start = min(stamps).astimezone(UTC)
-    end = max(stamps).astimezone(UTC)
-    if end <= start:
-        end = datetime(start.year, start.month, start.day, 23, 59, 59, tzinfo=UTC)
+    last = max(stamps).astimezone(UTC)
+    end = last + timedelta(seconds=1)
     window = {
-        "start": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-        "end": end.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "start": _iso(start),
+        "end": _iso(end),
         "convention": "closed-start-open-end-utc",
     }
+    window_text = f"{window['start']}/{window['end']}"
+    span_days = max(1, math.ceil((end - start).total_seconds() / 86400))
+    window_days = 30 if span_days <= 30 else 60 if span_days <= 60 else 90
+    extraction_ts = window["end"]
+    for case in cases.values():
+        case["lifecycleCompleteness"] = "complete" if case["createdAt"] and case["resolvedAt"] else "incomplete"  # noqa: E501
+        case["provenance"] = _csv_provenance(
+            source_ref=str(case["caseId"]),
+            window_text=window_text,
+            extraction_ts=extraction_ts,
+        )
+    for event in events:
+        event["provenance"] = _csv_provenance(
+            source_ref=str(event["sourceReference"]),
+            window_text=window_text,
+            extraction_ts=extraction_ts,
+        )
     snapshot = {
         "schemaVersion": "os.1.0.0",
         "snapshotId": "snap_csv_upload",
         "connectorVersion": "csv.1.0.0",
         "sourceSystem": "csv-upload",
-        "sourceProject": {"reference": "csv:upload", "displayName": "CSV upload"},
+        "sourceProject": {"reference": "csv:upload", "key": "CSV", "name": "CSV upload", "serviceDeskId": None},  # noqa: E501
         "authorizedInstallationRef": None,
         "observationWindow": window,
-        "importTimestamp": window["end"],
+        "importTimestamp": extraction_ts,
         "importStartedAt": window["start"],
-        "importCompletedAt": window["end"],
+        "importCompletedAt": extraction_ts,
         "importConfiguration": {
-            "windowDays": max(1, int((end - start).total_seconds() / 86400) or 1),
+            "windowDays": window_days,
             "recordLimit": MAX_ROWS,
             "pageLimit": 1,
-            "cohortPolicy": "events-in-file",
+            "cohortPolicy": "open-during-window",
             "includeWorklogs": bool(intervals),
             "includeSla": False,
         },
@@ -229,31 +262,29 @@ def _snapshot_from_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
                 "unit": "cases",
                 "population": "uploaded cases",
                 "sampleSize": len(cases),
-                "observationWindow": f"{window['start']}/{window['end']}",
+                "observationWindow": window_text,
                 "excludedRecords": 0,
                 "coverage": 1,
-                "provenance": {"sourceSystem": "csv-upload", "evidenceClass": "derived", "transformationVersion": "cg7.csv.1"},  # noqa: E501
+                "provenance": _csv_provenance(
+                    source_ref="csv:upload",
+                    window_text=window_text,
+                    extraction_ts=extraction_ts,
+                ),
                 "interpretationLimitations": "User-uploaded event log. Not independently audited.",
             }
         ],
         "dataQuality": [],
-        "completenessStatus": "complete",
+        "completenessStatus": "partial",
         "readiness": "potentially_suitable_for_calibration_assessment",
-        "provenance": {
-            "sourceSystem": "csv-upload",
-            "sourceProject": "csv:upload",
-            "sourceEndpoint": "file",
-            "extractionTimestamp": window["end"],
-            "sourceRecordReference": "csv:upload",
-            "transformationVersion": "cg7.csv.1",
-            "evidenceClass": "derived",
-            "observationWindow": f"{window['start']}/{window['end']}",
-            "derivationMethod": "csv-event-log",
-            "transportAuthenticity": "user_upload",
-        },
+        "provenance": _csv_provenance(
+            source_ref="csv:upload",
+            window_text=window_text,
+            extraction_ts=extraction_ts,
+        ),
         "contentFingerprint": "0" * 64,
         "limitations": [
             "CSV event logs are user-supplied. They are not historically validated organizational records.",  # noqa: E501
+            "Completeness is partial because the file is not an authorized system extract.",
             "Optional work durations do not by themselves identify resource capacity.",
         ],
         "extraction": {

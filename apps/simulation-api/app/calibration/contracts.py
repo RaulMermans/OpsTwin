@@ -23,6 +23,7 @@ MATERIAL_PARAMETERS = frozenset(
 )
 KNOWN_ASSUMPTION_IDS = frozenset(
     {
+        "arrival.mean_interarrival_time",
         "triage.processing_time.mean",
         "resolution.processing_time.mean",
         "resource.triage-team.capacity",

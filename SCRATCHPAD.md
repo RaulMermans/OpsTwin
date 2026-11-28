@@ -1,5 +1,13 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-7.1 checkpoint — 2026-11-27
+
+- Branch `feat/codegeist-cg7.1-release-blockers` from CG-7 `5f9d98b`. Tag `checkpoint/cg7.1-start`. Not pushed. Commit not created until owner asks.
+- CSV template validates as `os.1.0.0` (partial completeness). Browser Jira snapshots rejected. Tokens bind project/principal/purpose. Mapping editor added.
+- Realistic golden: released 1200 h, cash 12000, investment 8000, net 4000, ROI 0.5. Implausible 72000-min busy withholds cash.
+- Demo 80×8 seed 20261127 congested 1+1: cycle 733.929 / 158.584 / 640.909 / 302.317. The 20×2 AI regression vs baseline is not stable.
+- Live Jira Custom UI journeys and second site still not verified. Feature freeze documented. CG-8 not started.
+
 ## Codegeist CG-7 checkpoint — 2026-11-27
 
 - Branch `feat/codegeist-cg7-byod-production-hardening` from CG-6 `1784a20`. Recoverable `checkpoint/cg7-start`. Working tree uncommitted. Not pushed.

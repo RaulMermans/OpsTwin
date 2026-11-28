@@ -10,7 +10,12 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.economics.decision import DecisionError, DecisionEvaluationRequest, evaluate_decision
-from app.integrations.evidence_token import EvidenceTokenError, bind_context, verify_claims
+from app.integrations.evidence_token import (
+    EvidenceTokenError,
+    authorized_scope_from_payload,
+    bind_context,
+    verify_claims,
+)
 from app.integrations.fit import (
     FitValidationError,
     assert_payload_bounds,
@@ -92,7 +97,12 @@ async def evaluate_economics_remote(request: Request) -> JSONResponse:
         )
     payload.pop("evidence", None)
     try:
+        project_key, principal_id = authorized_scope_from_payload(payload)
+        payload.pop("authorizedProjectKey", None)
+        payload.pop("authorizedPrincipal", None)
         evaluation_request = DecisionEvaluationRequest.model_validate(payload)
+    except EvidenceTokenError as error:
+        return _error(422, error.code.upper(), error.message)
     except ValidationError:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
     try:
@@ -102,9 +112,11 @@ async def evaluate_economics_remote(request: Request) -> JSONResponse:
             app_id=trusted_app_id(),
             installation_id=str(verified["installationId"]),
             environment_type=environment_type_from_verified(verified),
+            project_key=project_key,
+            principal_id=principal_id,
+            kind="experiment",
+            purpose="evaluate",
         )
-        if claims.get("kind") != "experiment":
-            raise EvidenceTokenError("unsupported_token", "The token is not experiment evidence.")
         evidence = MultiExperimentEvidence.model_validate(claims["evidence"])
         evaluation_request = evaluation_request.model_copy(update={"evidence": evidence})
         result = evaluate_decision(evaluation_request)

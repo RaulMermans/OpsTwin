@@ -27,4 +27,10 @@
 | CG-6 decision overlay (cash vs capacity, ROI, payback, break-even) | Source + pytest + Forge 3.6.0 | `app/economics/decision.py`, `cg6.v1`; hosted `dpl_GHxMygNfRXUrCosM8Q8AAcjFNhvK`; live Jira economic click not completed |
 | CG-6 live organizational ROI | Not claimed | Synthetic demonstration assumptions only |
 | CG-7 BYOD + signed evidence | Source + pytest + hosted 3.7.0; live Jira clicks not completed | ADR-030, `construct-baseline`, HMAC on Vercel prod; Forge 3.7.0; iframe journeys pending owner session |
+| CG-7.1 CSV `os.1.0.0` pipeline | Source + pytest | Template parses, validates, and constructs an exploratory model; malformed files refused |
+| CG-7.1 trusted Jira extraction | Source + Forge tests | Resolver re-extracts; `trustedExtraction` required; browser snapshots rejected |
+| CG-7.1 artifact project/principal scope | Source + pytest | Cross-project, cross-principal, and wrong-purpose tokens rejected |
+| CG-7.1 financial feasibility | Source + pytest | Implausible busy hours withhold cash; realistic golden ROI 0.5 |
+| CG-7.1 live Jira journeys | Not claimed | Custom UI iframe acceptance still requires owner session |
+| CG-7.1 second-site isolation | Not claimed | No second installation |
 | CG-7 historical organizational calibration | Not claimed | Exploratory models only unless holdout passes |

@@ -5,7 +5,8 @@
 - Never commit API tokens, OAuth headers, FIT values, or `.env` files.
 - Owner runs `forge login` in their own terminal. Tokens are not pasted into chat.
 - Resolvers use **user context** (`api.asUser()`) and the Forge **extension project key**, not client-supplied IDs.
-- Operational snapshots stay in the Forge resolver/UI session. They are not posted to `/compare` or `/calibrate`.
+- Operational snapshots stay in the Forge resolver/UI session for display. Jira calibration uses resolver re-extraction, not browser-authored cases. They are not posted to `/compare`.
+- Signed `ev1` artifacts bind app, environment, installation, project, principal, purpose, and type. A valid HMAC is not current Jira permission. Tokens without project/principal fail after CG-7.1; TTL is 6 hours. Do not rotate `OPSTWIN_EVIDENCE_HMAC_KEY` unless compromised.
 - CG-3 remote calibration accepts catalog `fixtureId` values only. `snapshot`, `cases`, and Jira payloads are rejected.
 - Assignees are stored as `ref_` plus a truncated SHA-256 of installation-scoped `accountId`. Descriptions, comments, attachments, worklog comments, and emails are not requested. Raw account IDs do not enter the snapshot.
 - Display conditions are not authorization.

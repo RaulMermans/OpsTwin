@@ -180,7 +180,11 @@ def calibrate(snapshot: dict[str, Any], request: CalibrationRequest) -> Calibrat
             diagnostics,
             timings,
         )
-    if snapshot.get("completenessStatus") != "complete":
+    csv_exploratory = (
+        snapshot.get("sourceSystem") == "csv-upload"
+        and request.estimation_configuration.allow_assumption_based_model
+    )
+    if snapshot.get("completenessStatus") != "complete" and not csv_exploratory:
         return _blocked(
             request,
             snapshot,

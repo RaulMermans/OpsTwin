@@ -1,6 +1,8 @@
 const CASE_KEYS = [
+  "schemaVersion",
   "caseId",
   "sourceReference",
+  "sourceSystem",
   "projectReference",
   "requestTypeReference",
   "priorityReference",
@@ -9,9 +11,13 @@ const CASE_KEYS = [
   "resolvedAt",
   "createdAtInvalid",
   "observationStatus",
+  "lifecycleCompleteness",
+  "assigneeReference",
+  "updatedAt",
   "syntheticOrigin",
   "originUnknown",
   "reopened",
+  "provenance",
 ];
 
 const EVENT_KEYS = [

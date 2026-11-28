@@ -5,10 +5,25 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
+from app.calibration.contracts import CalibrationRequest
 from app.calibration.manual import ManualBaselineSpec, construct_manual_artifact, spec_fingerprint
+from app.calibration.mapping import suggest_status_mapping
+from app.calibration.snapshot import validate_snapshot_structure
 from app.economics.decision import DecisionError, DecisionEvaluationRequest, evaluate_decision
-from app.integrations.csv_events import parse_csv_event_log
-from app.integrations.evidence_token import sign_claims, verify_claims
+from app.integrations.baselines import (
+    BaselineConstructRequest,
+    BaselineError,
+    compact_reconstruction,
+    construct_baseline,
+)
+from app.integrations.csv_events import CSV_TEMPLATE, CsvImportError, parse_csv_event_log
+from app.integrations.evidence_token import (
+    EvidenceTokenError,
+    artifact_claims,
+    bind_context,
+    sign_claims,
+    verify_claims,
+)
 from app.main import app
 
 os.environ.setdefault("OPSTWIN_ALLOW_DEV_EVIDENCE_KEY", "1")
@@ -63,8 +78,193 @@ def test_csv_template_normalizes_distinct_cases() -> None:
     assert other["contentFingerprint"] != snapshot["contentFingerprint"]
 
 
+def _assumption(parameter_id: str, value: float, unit: str) -> dict[str, object]:
+    return {
+        "assumptionId": parameter_id,
+        "affectedParameter": parameter_id,
+        "proposedValue": value,
+        "unit": unit,
+        "rationale": "Explicit analyst assumption.",
+        "source": "analyst",
+        "approvalStatus": "approved",
+        "revision": 1,
+        "limitations": ["Not inferred from status residence."],
+        "evidenceAvailable": "none identifiable",
+        "operationalConsequence": "Binds the executed exploratory model.",
+    }
+
+
+def _csv_calibration(snapshot: dict) -> CalibrationRequest:
+    suggested = suggest_status_mapping(snapshot)
+    return CalibrationRequest.model_validate(
+        {
+            "snapshotReference": snapshot["snapshotId"],
+            "snapshotFingerprint": snapshot["contentFingerprint"],
+            "operationalMapping": {
+                "mappingVersion": "status-role.1",
+                "reviewed": True,
+                "statuses": [
+                    {
+                        "statusId": item["statusId"],
+                        "role": item["role"],
+                        "stageId": item["stageId"],
+                        "reviewed": True,
+                    }
+                    for item in suggested["statuses"]
+                ],
+            },
+            "assumptionSet": [
+                _assumption("arrival.mean_interarrival_time", 60, "minutes"),
+                _assumption("triage.processing_time.mean", 8, "minutes"),
+                _assumption("resolution.processing_time.mean", 20, "minutes"),
+                _assumption("resource.triage-team.capacity", 2, "servers"),
+                _assumption("resource.resolution-team.capacity", 3, "servers"),
+            ],
+            "estimationConfiguration": {
+                "treatWorklogsAsProcessing": False,
+                "allowAssumptionBasedModel": True,
+            },
+        }
+    )
+
+
+def test_csv_template_is_canonical_and_drives_construction() -> None:
+    snapshot = parse_csv_event_log(CSV_TEMPLATE)
+    assert validate_snapshot_structure(snapshot) is None
+    assert snapshot["completenessStatus"] == "partial"
+    assert snapshot["sourceProject"]["key"] == "CSV"
+    suggested = suggest_status_mapping(snapshot)
+    resolution = next(item for item in suggested["statuses"] if item["statusId"] == "s-res")
+    assert resolution["role"] == "processing"
+    assert resolution["stageId"] == "resolution"
+    artifact, extra = construct_baseline(
+        BaselineConstructRequest(
+            source_mode="csv",
+            csv_text=CSV_TEMPLATE,
+            calibration=_csv_calibration(snapshot),
+        )
+    )
+    assert artifact is not None
+    assert artifact.constructed_model is not None
+    assert extra["sourceMode"] == "csv"
+    reconstruction = compact_reconstruction(artifact, BaselineConstructRequest(source_mode="csv", csv_text=CSV_TEMPLATE))  # noqa: E501
+    assert "snapshot" not in reconstruction
+    assert len(__import__("json").dumps(reconstruction).encode()) < 20_000
+
+
+def test_independent_csv_is_valid_and_malformed_csv_is_refused() -> None:
+    other = """case_id,activity,timestamp
+TICKET-9,created,2026-02-01T10:00:00.000Z
+TICKET-9,triage_started,2026-02-01T10:05:00.000Z
+TICKET-9,resolution_started,2026-02-01T10:20:00.000Z
+TICKET-9,resolved,2026-02-01T11:00:00.000Z
+"""
+    snapshot = parse_csv_event_log(other)
+    assert validate_snapshot_structure(snapshot) is None
+    assert snapshot["cases"][0]["caseId"] == "TICKET-9"
+    with pytest.raises(CsvImportError):
+        parse_csv_event_log("not,a,csv\n1,2,3")
+    with pytest.raises(CsvImportError):
+        parse_csv_event_log("case_id,activity,timestamp\nX,created,not-a-date")
+
+
+def test_browser_jira_snapshot_is_not_trusted_evidence() -> None:
+    snapshot = parse_csv_event_log(CSV_TEMPLATE)
+    snapshot["sourceSystem"] = "jira-jsm"
+    snapshot["sourceProject"] = {
+        "reference": "project:OPS",
+        "key": "OPS",
+        "name": "Ops",
+        "serviceDeskId": None,
+    }
+    snapshot["provenance"]["evidenceClass"] = "observed"
+    snapshot["provenance"]["transportAuthenticity"] = "unknown"
+    with pytest.raises(BaselineError, match="trusted Forge resolver"):
+        construct_baseline(
+            BaselineConstructRequest(
+                source_mode="jira",
+                snapshot=snapshot,
+                trusted_extraction=False,
+            )
+        )
+    with pytest.raises(BaselineError, match="live authorized extraction"):
+        construct_baseline(
+            BaselineConstructRequest(
+                source_mode="jira",
+                snapshot=snapshot,
+                trusted_extraction=True,
+                authorized_project_key="OPS",
+            )
+        )
+
+
+def test_signed_artifacts_bind_project_principal_and_purpose() -> None:
+    token = sign_claims(
+        artifact_claims(
+            kind="baseline",
+            purpose="transform",
+            app_id="app",
+            installation_id="inst",
+            environment_type="DEVELOPMENT",
+            project_key="OPS",
+            principal_id="user-1",
+            extra={"modelFingerprint": "a" * 64},
+        )
+    )
+    claims = verify_claims(token)
+    bind_context(
+        claims,
+        app_id="app",
+        installation_id="inst",
+        environment_type="DEVELOPMENT",
+        project_key="OPS",
+        principal_id="user-1",
+        kind="baseline",
+        purpose="transform",
+    )
+    with pytest.raises(EvidenceTokenError, match="projects"):
+        bind_context(
+            claims,
+            app_id="app",
+            installation_id="inst",
+            environment_type="DEVELOPMENT",
+            project_key="OTHER",
+            principal_id="user-1",
+        )
+    with pytest.raises(EvidenceTokenError, match="principal"):
+        bind_context(
+            claims,
+            app_id="app",
+            installation_id="inst",
+            environment_type="DEVELOPMENT",
+            project_key="OPS",
+            principal_id="user-2",
+        )
+    with pytest.raises(EvidenceTokenError, match="artifact type"):
+        bind_context(
+            claims,
+            app_id="app",
+            installation_id="inst",
+            environment_type="DEVELOPMENT",
+            project_key="OPS",
+            principal_id="user-1",
+            kind="experiment",
+        )
+
+
 def test_signed_evidence_rejects_tampering() -> None:
-    token = sign_claims({"kind": "experiment", "appId": "app", "installationId": "inst", "environmentType": "DEVELOPMENT", "evidence": {"n": 1}})  # noqa: E501
+    token = sign_claims(
+        artifact_claims(
+            kind="experiment",
+            purpose="evaluate",
+            app_id="app",
+            installation_id="inst",
+            environment_type="DEVELOPMENT",
+            project_key="OPS",
+            principal_id="user-1",
+            extra={"evidence": {"n": 1}},
+        )
+    )
     claims = verify_claims(token)
     assert claims["evidence"]["n"] == 1
     head, body, digest = token.split(".")

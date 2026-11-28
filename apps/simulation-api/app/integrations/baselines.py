@@ -34,6 +34,9 @@ class BaselineConstructRequest(ContractModel):
     snapshot: dict[str, Any] | None = None
     csv_text: str | None = None
     calibration: CalibrationRequest | None = None
+    trusted_extraction: bool = False
+    authorized_project_key: str | None = None
+    authorized_principal: str | None = None
 
     @model_validator(mode="after")
     def matching_source(self) -> BaselineConstructRequest:
@@ -42,9 +45,9 @@ class BaselineConstructRequest(ContractModel):
         if self.source_mode == "manual" and self.manual is None:
             raise ValueError("manual baselines require a parameter specification")
         if self.source_mode == "jira" and self.snapshot is None:
-            raise ValueError("Jira baselines require a minimized operational snapshot")
-        if self.source_mode == "csv" and self.csv_text is None and self.snapshot is None:
-            raise ValueError("CSV baselines require csvText or a normalized snapshot")
+            raise ValueError("Jira baselines require a trusted operational snapshot")
+        if self.source_mode == "csv" and self.csv_text is None:
+            raise ValueError("CSV baselines require csvText")
         return self
 
 
@@ -65,8 +68,10 @@ def minimize_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         return {key: value for key, value in item.items() if key in allowed}
 
     case_fields = {
+        "schemaVersion",
         "caseId",
         "sourceReference",
+        "sourceSystem",
         "projectReference",
         "requestTypeReference",
         "priorityReference",
@@ -75,9 +80,13 @@ def minimize_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "resolvedAt",
         "createdAtInvalid",
         "observationStatus",
+        "lifecycleCompleteness",
+        "assigneeReference",
+        "updatedAt",
         "syntheticOrigin",
         "originUnknown",
         "reopened",
+        "provenance",
     }
     event_fields = {
         "eventId",
@@ -99,11 +108,33 @@ def minimize_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
 
 
 def _source_snapshot(request: BaselineConstructRequest) -> dict[str, Any]:
-    if request.source_mode == "csv" and request.snapshot is None:
+    if request.source_mode == "csv":
         assert request.csv_text is not None
         return parse_csv_event_log(request.csv_text)
+    if request.source_mode == "jira" and not request.trusted_extraction:
+        raise BaselineError(
+            "untrusted_evidence",
+            "Jira evidence must be extracted by the trusted Forge resolver, not supplied from the browser.",  # noqa: E501
+        )
     assert request.snapshot is not None
-    return minimize_snapshot(request.snapshot)
+    snapshot = minimize_snapshot(request.snapshot)
+    project = (snapshot.get("sourceProject") or {}).get("key")
+    if (
+        request.authorized_project_key
+        and project
+        and project != request.authorized_project_key
+    ):
+        raise BaselineError(
+            "untrusted_project",
+            "The extracted snapshot does not belong to the authorized project.",
+        )
+    provenance = snapshot.get("provenance") or {}
+    if provenance.get("evidenceClass") == "observed" and provenance.get("transportAuthenticity") != "live_api":  # noqa: E501
+        raise BaselineError(
+            "untrusted_evidence",
+            "Observed Jira records require live authorized extraction.",
+        )
+    return snapshot
 
 
 def construct_baseline(
@@ -156,6 +187,10 @@ def construct_baseline(
     extra["evidenceClass"] = (
         "csv_exploratory" if request.source_mode == "csv" else "source_linked_exploratory"
     )
+    cases = snapshot.get("cases") or []
+    if request.source_mode == "jira" and cases and all(item.get("syntheticOrigin") for item in cases):  # noqa: E501
+        extra["synthetic"] = True
+        extra["evidenceClass"] = "synthetic"
     extra["historicallyValidated"] = False
     if request.calibration is None:
         extra.update(
@@ -170,27 +205,65 @@ def construct_baseline(
     extra.update(
         {
             "fixtureId": None,
-            "disclosure": "Source-linked model. Importing records does not by itself establish historical validation.",  # noqa: E501
+            "disclosure": (
+                "Jira-hosted synthetic laboratory records. Not genuine historical operations."
+                if extra["evidenceClass"] == "synthetic"
+                else "Source-linked model. Importing records does not by itself establish historical validation."  # noqa: E501
+            ),
         }
     )
     extra["historicallyValidated"] = artifact.readiness_status == "validated_for_defined_scope"
+    extra.pop("snapshot", None)
     return artifact, extra
+
+
+def compact_reconstruction(
+    artifact: CalibrationArtifact, request: BaselineConstructRequest
+) -> dict[str, Any]:
+    if request.source_mode == "synthetic":
+        return {
+            "contractVersion": "cg7.v1",
+            "sourceMode": "synthetic",
+            "fixtureId": request.fixture_id,
+            "approveLabAssumptions": request.approve_lab_assumptions,
+            "randomSeed": request.random_seed,
+        }
+    if request.source_mode == "manual":
+        assert request.manual is not None
+        return {
+            "contractVersion": "cg7.v1",
+            "sourceMode": "manual",
+            "manual": request.manual.model_dump(by_alias=True, exclude_none=True),
+        }
+    payload = artifact.model_dump(by_alias=True, exclude_none=True)
+    payload.pop("validationReport", None)
+    return {"sourceMode": request.source_mode, "artifact": payload}
 
 
 def reconstruct_from_claims(claims: dict[str, Any]) -> CalibrationArtifact:
     reconstruction = claims.get("reconstruction")
     if not isinstance(reconstruction, dict):
         raise BaselineError("invalid_baseline", "Baseline token is missing reconstruction claims.")
+    signed = reconstruction.get("artifact")
+    if isinstance(signed, dict):
+        artifact = CalibrationArtifact.model_validate(signed)
+        expected = claims.get("modelFingerprint")
+        if expected and artifact.model_fingerprint != expected:
+            raise BaselineError(
+                "model_identity_violation",
+                "Reconstructed baseline fingerprint does not match the signed baseline.",
+            )
+        return artifact
     request = BaselineConstructRequest.model_validate(reconstruction)
-    artifact, extra = construct_baseline(request)
-    if artifact is None:
+    rebuilt, extra = construct_baseline(request)
+    if rebuilt is None:
         raise BaselineError(
             "baseline_not_executable", extra.get("disclosure") or "Baseline is not executable."
         )
     expected = claims.get("modelFingerprint")
-    if expected and artifact.model_fingerprint != expected:
+    if expected and rebuilt.model_fingerprint != expected:
         raise BaselineError(
             "model_identity_violation",
             "Reconstructed baseline fingerprint does not match the signed baseline.",
         )
-    return artifact
+    return rebuilt

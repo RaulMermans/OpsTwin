@@ -13,6 +13,7 @@ from app.interventions.execute import MultiExperimentEvidence
 TOKEN_VERSION = "ev1"
 MAX_CLAIMS_BYTES = 48 * 1024
 DEFAULT_TTL_SECONDS = 6 * 60 * 60
+# Existing ev1 tokens without project/principal fail bind_context after CG-7.1; TTL is 6 hours.
 DEV_FALLBACK_KEY = "opstwin-dev-evidence-hmac-not-for-production"
 
 
@@ -108,6 +109,9 @@ def bind_context(
     installation_id: str,
     environment_type: str,
     project_key: str | None = None,
+    principal_id: str | None = None,
+    kind: str | None = None,
+    purpose: str | None = None,
 ) -> None:
     if claims.get("appId") != app_id:
         raise EvidenceTokenError("scope_mismatch", "Evidence was issued for a different application.")  # noqa: E501
@@ -119,5 +123,59 @@ def bind_context(
     if claims.get("environmentType") != environment_type:
         raise EvidenceTokenError("scope_mismatch", "Evidence was issued for a different environment.")  # noqa: E501
     expected_project = claims.get("projectKey")
-    if expected_project and expected_project != project_key:
+    if not expected_project:
+        raise EvidenceTokenError("scope_mismatch", "Evidence is missing project authorization scope.")  # noqa: E501
+    if expected_project != project_key:
         raise EvidenceTokenError("scope_mismatch", "Evidence cannot be reused across Jira projects.")  # noqa: E501
+    expected_principal = claims.get("principalId")
+    if not expected_principal:
+        raise EvidenceTokenError("scope_mismatch", "Evidence is missing principal authorization scope.")  # noqa: E501
+    if expected_principal != principal_id:
+        raise EvidenceTokenError(
+            "scope_mismatch",
+            "Evidence cannot be reused by an unauthorized principal.",
+        )
+    if kind is not None and claims.get("kind") != kind:
+        raise EvidenceTokenError("unsupported_token", "The token is not the required artifact type.")  # noqa: E501
+    if purpose is not None and claims.get("purpose") != purpose:
+        raise EvidenceTokenError("unsupported_token", "The token cannot be reused for this purpose.")  # noqa: E501
+
+
+def authorized_scope_from_payload(payload: dict[str, Any]) -> tuple[str, str]:
+    project = payload.get("authorizedProjectKey")
+    principal = payload.get("authorizedPrincipal")
+    if not isinstance(project, str) or not project.strip():
+        raise EvidenceTokenError("scope_mismatch", "Authorized project context is required.")
+    if not isinstance(principal, str) or not principal.strip():
+        raise EvidenceTokenError("scope_mismatch", "Authorized principal context is required.")
+    return project.strip(), principal.strip()
+
+
+def artifact_claims(
+    *,
+    kind: str,
+    purpose: str,
+    app_id: str,
+    installation_id: str,
+    environment_type: str,
+    project_key: str | None,
+    principal_id: str | None,
+    extra: dict[str, Any],
+) -> dict[str, Any]:
+    if not project_key or not principal_id:
+        raise EvidenceTokenError(
+            "scope_mismatch",
+            "Signed evidence requires authorized project and principal scope.",
+        )
+    return {
+        "kind": kind,
+        "purpose": purpose,
+        "artifactType": kind,
+        "contractVersion": extra.get("contractVersion", "cg7.v1"),
+        "appId": app_id,
+        "installationId": installation_id,
+        "environmentType": environment_type,
+        "projectKey": project_key,
+        "principalId": principal_id,
+        **extra,
+    }

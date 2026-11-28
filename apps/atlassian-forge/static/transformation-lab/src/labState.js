@@ -371,8 +371,21 @@ export function originForSource(mode) {
   return "synthetic_demonstration";
 }
 
-export function sourceLinkedCalibrationPayload(preview, staffing, mappingReviewed) {
-  const mapping = preview?.suggestedMapping ?? { mappingVersion: "status-role.1", statuses: [], reviewed: false };
+function arrivalMeanMinutes(preview) {
+  const snapshot = preview?.snapshot;
+  const cases = snapshot?.cases?.length || 0;
+  const start = Date.parse(snapshot?.observationWindow?.start || "");
+  const end = Date.parse(snapshot?.observationWindow?.end || "");
+  if (!cases || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 60;
+  return Math.max(1, (end - start) / 60000 / cases);
+}
+
+export function sourceLinkedCalibrationPayload(preview, staffing, mappingReviewed, statusMapping) {
+  const mapping = {
+    mappingVersion: "status-role.1",
+    statuses: statusMapping ?? preview?.suggestedMapping?.statuses ?? [],
+    requestTypeClasses: preview?.suggestedMapping?.requestTypeClasses ?? {},
+  };
   return {
     snapshotReference: preview?.snapshotFingerprint ?? "jira",
     snapshotFingerprint: preview?.snapshotFingerprint,
@@ -388,6 +401,7 @@ export function sourceLinkedCalibrationPayload(preview, staffing, mappingReviewe
       })),
     },
     assumptionSet: [
+      ["arrival.mean_interarrival_time", arrivalMeanMinutes(preview), "minutes"],
       ["triage.processing_time.mean", staffing.triageMeanMinutes, "minutes"],
       ["resolution.processing_time.mean", staffing.resolutionMeanMinutes, "minutes"],
       ["resource.triage-team.capacity", staffing.triageCapacity, "servers"],

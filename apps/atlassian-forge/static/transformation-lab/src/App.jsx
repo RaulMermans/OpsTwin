@@ -79,6 +79,7 @@ export function App() {
     resolutionMeanMinutes: 20,
   });
   const [mappingReviewed, setMappingReviewed] = useState(false);
+  const [statusMapping, setStatusMapping] = useState([]);
   const calibrating = useRef(false);
   const experimenting = useRef(false);
   const [importState, setImportState] = useState({
@@ -255,6 +256,10 @@ export function App() {
         sourceMode: mode,
         message: result.evidence.disclosure,
       }));
+      if (!result.evidence.constructedModel && Array.isArray(result.evidence.suggestedMapping?.statuses)) {
+        setStatusMapping(result.evidence.suggestedMapping.statuses);
+        setMappingReviewed(false);
+      }
       if (result.evidence.constructedModel) {
         setAssumptions((current) => ({
           ...current,
@@ -331,8 +336,10 @@ export function App() {
     try {
       const result = await invoke("constructBaseline", {
         sourceMode: "jira",
-        snapshot: importState.snapshot,
-        calibration: construct ? sourceLinkedCalibrationPayload(calibration.evidence, jiraStaffing, mappingReviewed) : undefined,
+        windowDays: importConfig.windowDays,
+        calibration: construct
+          ? sourceLinkedCalibrationPayload(calibration.evidence, jiraStaffing, mappingReviewed, statusMapping)
+          : undefined,
       });
       applyBaselineResult(result, "jira");
     } catch (caught) {
@@ -353,9 +360,10 @@ export function App() {
     try {
       const result = await invoke("constructBaseline", {
         sourceMode: "csv",
-        csvText: construct ? undefined : csvText,
-        snapshot: construct ? calibration.evidence?.snapshot : undefined,
-        calibration: construct ? sourceLinkedCalibrationPayload(calibration.evidence, jiraStaffing, mappingReviewed) : undefined,
+        csvText,
+        calibration: construct
+          ? sourceLinkedCalibrationPayload(calibration.evidence, jiraStaffing, mappingReviewed, statusMapping)
+          : undefined,
       });
       applyBaselineResult(result, "csv");
     } catch (caught) {
@@ -713,6 +721,21 @@ export function App() {
             CSV event log
             <textarea rows="6" value={csvText} onChange={(event) => setCsvText(event.target.value)} placeholder="Paste the supported CSV template" />
           </label>
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => {
+              const blob = new Blob([CSV_TEMPLATE], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = "opstwin-event-log-template.csv";
+              link.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Download CSV template
+          </button>
           <button className="secondary" type="button" onClick={() => navigator.clipboard?.writeText(CSV_TEMPLATE)}>
             Copy CSV template
           </button>
@@ -837,9 +860,79 @@ export function App() {
                   </label>
                 ))}
               </div>
+              <h3>Operational mapping</h3>
+              <p>Suggested mappings are not approved facts. Status residence is not processing time.</p>
+              {(statusMapping.length ? statusMapping : calibration.evidence?.suggestedMapping?.statuses ?? []).map((item) => (
+                <div className="grid" key={item.statusId}>
+                  <span>{item.displayName || item.statusId}</span>
+                  <label className="stack">
+                    Role
+                    <select
+                      value={item.role}
+                      onChange={(event) => {
+                        const role = event.target.value;
+                        setStatusMapping((current) => {
+                          const base = current.length ? current : calibration.evidence?.suggestedMapping?.statuses ?? [];
+                          return base.map((row) =>
+                            row.statusId === item.statusId
+                              ? {
+                                  ...row,
+                                  role,
+                                  stageId: role === "processing" ? row.stageId || "triage" : null,
+                                  reviewed: false,
+                                }
+                              : row,
+                          );
+                        });
+                        setMappingReviewed(false);
+                        setExperiment((previous) =>
+                          previous.evidence
+                            ? { status: "stale", evidence: previous.evidence, message: "Mapping changed. Previous results are stale.", requestId: previous.requestId }
+                            : previous,
+                        );
+                        setEconomics((previous) =>
+                          previous.evidence
+                            ? { ...previous, status: "stale", message: "Mapping changed. Reconstruct the baseline before using financial results." }
+                            : previous,
+                        );
+                        setCalibration((current) =>
+                          current.evidence?.constructedModel
+                            ? { ...current, status: "preview", message: "Mapping changed. Construct the baseline again." }
+                            : current,
+                        );
+                      }}
+                    >
+                      <option value="queue">Waiting</option>
+                      <option value="processing">Processing</option>
+                      <option value="completed">Completed</option>
+                      <option value="excluded">Excluded</option>
+                      <option value="unknown">Unknown</option>
+                    </select>
+                  </label>
+                  {item.role === "processing" ? (
+                    <label className="stack">
+                      Stage
+                      <select
+                        value={item.stageId || "triage"}
+                        onChange={(event) => {
+                          const stageId = event.target.value;
+                          setStatusMapping((current) => {
+                            const base = current.length ? current : calibration.evidence?.suggestedMapping?.statuses ?? [];
+                            return base.map((row) => (row.statusId === item.statusId ? { ...row, stageId, reviewed: false } : row));
+                          });
+                          setMappingReviewed(false);
+                        }}
+                      >
+                        <option value="triage">Triage processing</option>
+                        <option value="resolution">Resolution processing</option>
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+              ))}
               <label className="inline">
                 <input type="checkbox" checked={mappingReviewed} onChange={(event) => setMappingReviewed(event.target.checked)} />
-                I reviewed the suggested status mapping. Status residence is not processing time.
+                I reviewed the operational mapping. Status residence is not processing time.
               </label>
               <button className="primary" type="button" onClick={() => (calibration.sourceMode === "csv" ? runCsvBaseline(true) : runJiraBaseline(true))} disabled={calibration.status === "running" || !mappingReviewed}>
                 Construct source-linked baseline

@@ -17,6 +17,8 @@ from app.domain.models import ContractModel
 from app.integrations.baselines import BaselineError, reconstruct_from_claims
 from app.integrations.evidence_token import (
     EvidenceTokenError,
+    artifact_claims,
+    authorized_scope_from_payload,
     bind_context,
     compact_operational_evidence,
     sign_claims,
@@ -147,7 +149,12 @@ async def transform_remote(request: Request) -> JSONResponse:
             "Remote experiments reconstruct baselines from signed tokens or synthetic fixtures only.",  # noqa: E501
         )
     try:
+        project_key, principal_id = authorized_scope_from_payload(payload)
+        payload.pop("authorizedProjectKey", None)
+        payload.pop("authorizedPrincipal", None)
         transform_request = AtlassianTransformRequest.model_validate(payload)
+    except EvidenceTokenError as error:
+        return _error(422, error.code.upper(), error.message)
     except ValidationError:
         return _error(422, "REQUEST_VALIDATION_FAILED", "Check the highlighted request fields.")
     environment_type = environment_type_from_verified(verified)
@@ -160,9 +167,11 @@ async def transform_remote(request: Request) -> JSONResponse:
                 app_id=trusted_app_id(),
                 installation_id=str(verified["installationId"]),
                 environment_type=environment_type,
+                project_key=project_key,
+                principal_id=principal_id,
+                kind="baseline",
+                purpose="transform",
             )
-            if claims.get("kind") != "baseline":
-                raise EvidenceTokenError("unsupported_token", "The token is not a baseline artifact.")  # noqa: E501
             return reconstruct_from_claims(claims)
         assert transform_request.fixture_id is not None
         if transform_request.fixture_id not in LABORATORY_FIXTURES:
@@ -246,17 +255,22 @@ async def transform_remote(request: Request) -> JSONResponse:
         return _error(500, "RESPONSE_VALIDATION_FAILED", "Transform response contract was invalid.")
     try:
         body["evidenceToken"] = sign_claims(
-            {
-                "kind": "experiment",
-                "appId": trusted_app_id(),
-                "installationId": str(verified["installationId"]),
-                "environmentType": environment_type,
-                "sourceMode": transform_request.source_mode,
-                "experimentIdentity": body.get("experimentIdentity"),
-                "evidence": compact_operational_evidence(evidence)
-                if isinstance(evidence, MultiExperimentEvidence)
-                else body,
-            }
+            artifact_claims(
+                kind="experiment",
+                purpose="evaluate",
+                app_id=trusted_app_id(),
+                installation_id=str(verified["installationId"]),
+                environment_type=environment_type,
+                project_key=project_key,
+                principal_id=principal_id,
+                extra={
+                    "sourceMode": transform_request.source_mode,
+                    "experimentIdentity": body.get("experimentIdentity"),
+                    "evidence": compact_operational_evidence(evidence)
+                    if isinstance(evidence, MultiExperimentEvidence)
+                    else body,
+                },
+            )
         )
     except EvidenceTokenError as error:
         return _error(500, error.code.upper(), error.message)

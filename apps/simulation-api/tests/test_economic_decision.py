@@ -107,6 +107,12 @@ ALTERNATIVES = [
 ]
 
 ROWS = {
+    "baseline": {"cycle": 17.61, "completions": 20, "busy_minutes": 10_400},
+    "human-expansion": {"cycle": 17.61, "completions": 20, "busy_minutes": 10_400},
+    "ai-assisted": {"cycle": 16.707, "completions": 20, "busy_minutes": 8_000},
+    "hybrid": {"cycle": 14.139, "completions": 20, "busy_minutes": 4_400},
+}
+IMPLAUSIBLE_ROWS = {
     "baseline": {"cycle": 17.61, "completions": 20, "busy_minutes": 72_000},
     "human-expansion": {"cycle": 17.61, "completions": 20, "busy_minutes": 72_000},
     "ai-assisted": {"cycle": 16.707, "completions": 20, "busy_minutes": 60_000},
@@ -137,7 +143,7 @@ def test_released_hours_are_not_cash_when_realization_is_none() -> None:
     )
     hybrid = next(item for item in result.strategies if item.strategy_id == "hybrid")
     human = next(item for item in result.strategies if item.strategy_id == "human-expansion")
-    assert hybrid.released_human_hours == pytest.approx(1_000)
+    assert hybrid.released_human_hours == pytest.approx(100)
     assert hybrid.realizable_cash_benefit == 0
     assert hybrid.roi is None
     assert hybrid.payback_status == "not_applicable"
@@ -149,10 +155,10 @@ def test_released_hours_are_not_cash_when_realization_is_none() -> None:
 
 
 def test_known_roi_and_payback_with_explicit_realization() -> None:
-    # Independent golden: demand 20 cases/month, 12 months, simulated 20 completions → scale 12.
-    # Released hours 1000 × 12 = 12000; hourly 1600/160 = 10; realizable = 120000.
-    # AI subscription 500×12 = 6000; implementation 2000; incremental investment 8000.
-    # Net 112000; ROI 14; payback 2000 / ((120000-6000)/12) = 0.210526 months.
+    # 2 FTE × 160 h × 12 months = 3840 staffed hours.
+    # Simulated busy 10400 min; hybrid 4400 min; scale 12 → released 1200 h.
+    # Hourly 1600/160 = 10; realizable 12000. Investment 2000 + 500×12 = 8000.
+    # Net 4000; ROI 0.5; payback 2000 / ((12000-6000)/12) = 4 months.
     assumptions = DecisionAssumptions(
         monthly_staff_cost_per_fte=1_600,
         paid_hours_per_month=160,
@@ -177,14 +183,44 @@ def test_known_roi_and_payback_with_explicit_realization() -> None:
         )
     )
     hybrid = next(item for item in result.strategies if item.strategy_id == "hybrid")
-    assert hybrid.released_human_hours == pytest.approx(12_000)
-    assert hybrid.realizable_cash_benefit == pytest.approx(120_000)
+    assert hybrid.released_human_hours == pytest.approx(1_200)
+    assert hybrid.realizable_cash_benefit == pytest.approx(12_000)
     assert hybrid.incremental_investment == pytest.approx(8_000)
-    assert hybrid.net_benefit == pytest.approx(112_000)
-    assert hybrid.roi == pytest.approx(14)
+    assert hybrid.net_benefit == pytest.approx(4_000)
+    assert hybrid.roi == pytest.approx(0.5)
     assert hybrid.payback_status == "recovered_within_horizon"
-    assert hybrid.payback_months == pytest.approx(2_000 / 9_500)
-    assert hybrid.potential_capacity_value == pytest.approx(120_000)
+    assert hybrid.payback_months == pytest.approx(4)
+    assert hybrid.potential_capacity_value == pytest.approx(12_000)
+
+
+def test_implausible_busy_time_withholds_cash() -> None:
+    assumptions = DecisionAssumptions(
+        monthly_staff_cost_per_fte=1_600,
+        paid_hours_per_month=160,
+        evaluation_basis="recurring_period",
+        expected_demand_per_month=20,
+        evaluation_months=12,
+        realization_mechanism="avoided_hiring",
+        realization_rate=1,
+        ai_subscription_monthly=500,
+        implementation_cost=2_000,
+    )
+    identity, evidence = evidence_for(ALTERNATIVES, IMPLAUSIBLE_ROWS)
+    result = evaluate_decision(
+        DecisionEvaluationRequest(
+            fixture_id="cg5-hybrid-support",
+            alternatives=ALTERNATIVES,
+            execution=evidence.experiment,
+            experiment_identity=identity,
+            evidence=evidence,
+            assumptions=assumptions,
+        )
+    )
+    hybrid = next(item for item in result.strategies if item.strategy_id == "hybrid")
+    assert hybrid.realizable_cash_benefit is None
+    assert hybrid.roi is None
+    assert hybrid.decision_state == "operationally_beneficial_financially_unattractive"
+    assert "exceeds staffed paid hours" in " ".join(hybrid.notes)
 
 
 def test_break_even_subscription_matches_hand_calculation() -> None:
@@ -196,8 +232,8 @@ def test_break_even_subscription_matches_hand_calculation() -> None:
         evaluation_months=12,
         realization_mechanism="avoided_hiring",
         realization_rate=1,
-        ai_subscription_monthly=900,
-        implementation_cost=2_000,
+        ai_subscription_monthly=80,
+        implementation_cost=200,
     )
     identity, evidence = evidence_for(
         [ALTERNATIVES[2]],
@@ -215,7 +251,7 @@ def test_break_even_subscription_matches_hand_calculation() -> None:
                 "strategyId": "hybrid",
                 "parameter": "aiSubscriptionMonthly",
                 "low": 0,
-                "high": 1_000,
+                "high": 100,
                 "pointCount": 5,
             },
         )
@@ -223,7 +259,7 @@ def test_break_even_subscription_matches_hand_calculation() -> None:
     assert result.break_even is not None
     assert result.break_even.reused_operational_evidence is True
     assert result.break_even.threshold_status == "one_threshold"
-    assert result.break_even.threshold == pytest.approx(666.666, rel=0.05)
+    assert result.break_even.threshold == pytest.approx(66.666, rel=0.05)
 
 
 def test_failed_and_invalid_integrity_cannot_rank() -> None:
