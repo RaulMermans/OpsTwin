@@ -2,11 +2,13 @@
 
 ## Codegeist CG-7.1 checkpoint — 2026-11-28
 
-- Branch `feat/codegeist-cg7.1-release-blockers` from CG-7 `5f9d98b`. HEAD still `2c09815` plus uncommitted continuity/auth fixes. Not pushed. RC commit awaits owner approval.
+- Branch `feat/codegeist-cg7.1-release-blockers`. RC commit `6d3b82a`. Not pushed. Rollback git `checkpoint/cg7.1-start` (`5f9d98b`).
 - Snapshot continuity: construct re-extracts using the reviewed observation window. Clock drift no longer invalidates an unchanged cohort. Material source change returns `review_required` without replacing the reviewed fingerprint.
 - Auth: no shared `scope:installation-user-context` fallback. Missing principal fails closed. FIT principal must match when present. Jira source access is rechecked before construct/transform/economics. Signed `sourceMode` must match the request. Jira-hosted synthetic origin stays synthetic on the artifact and token.
-- Local BYOD: synthetic + manual + CSV each completed transform and economics. CSV stays enabled. Jira live construct still needs owner session.
-- `pnpm verify` 352 pytest; `pnpm verify:forge` 94 tests. Production still `dpl_BsEjmQGguZYQSbdtR5FMjh7aXqJh`; preview `dpl_C7n7BuWfbobDLJB8AJq6osAFiKPd` does not include these fixes. Forge development 3.7.0. CG-8 not started.
+- Local BYOD: synthetic + manual + CSV each completed transform and economics. CSV stays enabled.
+- Hosted: preview `dpl_GyjpyQVqHdMjrvzL7b9sn2cVP7RB`. Production `dpl_Fg2pyDcFU7KUBVr4P6VnAFZ1Wb39` aliased to `https://ops-twin.vercel.app`. HMAC secret preserved. Homepage 200, health 200, unauth construct 401 `FIT_INVALID`, public simulate integrity passed (16). Previous production rollback: `dpl_BsEjmQGguZYQSbdtR5FMjh7aXqJh`.
+- Forge development **3.8.0** deployed; OPS install `b1bb872d-ce8d-4b4a-ba6b-d61fcd61b815` reported up to date. No Forge production / Marketplace.
+- Live Custom UI journeys still need an owner session. `pnpm verify` 352 pytest; `pnpm verify:forge` 94 tests. CG-8 not started.
 
 ## Codegeist CG-7 checkpoint — 2026-11-27
 
