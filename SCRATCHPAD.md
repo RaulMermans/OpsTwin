@@ -1,5 +1,13 @@
 # OpsTwin Scratchpad
 
+## Codegeist CG-7.1 — reconstruct fix 2026-11-28
+
+- Jira/CSV transform failed after FIT accept: compact reconstruction dumps `exclude_none`, diagnostic `ParameterEstimate.value` is null, reconstruct raised uncaught `ValidationError`. Same fingerprint as live Jira exploratory model (`2a5324ff72a5a001…`). Manual path reconstructs from spec, so it worked.
+- Fix: `value` defaults to `None`; transform catches reconstruct `ValidationError` as 422; Forge transform/economics resolvers wrap uncaught errors; Custom UI execution selects include 80×8. Resolver `timeoutSeconds` is invalid for queue/project pages — not used.
+- Local: `test_csv_baseline_token_completes_remote_transform` 200 complete; `test_cg7_byod.py` 15 passed; Forge 98 tests + UI build.
+- Hosted: production `dpl_4PYB627CiNLCVPgTHhwDNC7yr32E` aliased to `https://ops-twin.vercel.app`. `GET /api/simulation/health` 200. Unauth transform 401 `FIT_INVALID`. HMAC unchanged. Forge development **3.11.0**. Live Custom UI click of Jira transform not re-captured (iframe). Not pushed.
+- GitHub `origin/master` remains PR #13 `6ed94d1`. CG-8 not started.
+
 ## Codegeist CG-7.1 live acceptance — 2026-11-28 (final)
 
 - Branch `feat/codegeist-cg7.1-release-blockers`. Local HEAD will move past `515711e` with fail-closed project GET + non-synthetic economics fixture omission. Do not treat browser `sourceMode` as permission. Project GET ≠ issue-level access (`docs/integrations/atlassian/SECURITY.md`).

@@ -390,89 +390,95 @@ resolver.define("runSyntheticCalibration", async (request) => {
 });
 
 resolver.define("runTransformationExperiment", async (request) => {
-  const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
-  if (substitution) return substitution;
-  const auth = authorizedRemoteScope(request);
-  if (auth.error) return auth.error;
-  const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
-  const fixtureId =
-    payload.fixtureId === "cg5-hybrid-support"
-      ? "cg5-hybrid-support"
-      : payload.fixtureId === "cg3-partially-observable"
-        ? "cg3-partially-observable"
-        : "cg3-golden-analytical";
-  const multi = payload.contractVersion === "cg5.v1" && Array.isArray(payload.alternatives);
-  const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
-  if (denied) return denied;
-  const sourceMode = payload.sourceMode === "manual" || payload.sourceMode === "jira" || payload.sourceMode === "csv" ? payload.sourceMode : "synthetic";
-  const body = multi
-    ? {
-        contractVersion: "cg5.v1",
-        fixtureId: sourceMode === "synthetic" ? fixtureId : undefined,
-        sourceMode,
-        baselineToken: payload.baselineToken,
-        approveLabAssumptions: payload.approveLabAssumptions === true,
-        randomSeed: payload.randomSeed ?? 20260327,
-        alternatives: payload.alternatives,
-        execution: payload.execution ?? { itemCount: 20, runCount: 5, baseSeed: 20261127 },
-        experimentId: payload.experimentId,
-        requestId: payload.requestId,
-        ...auth.scope,
-      }
-    : {
-        contractVersion: "cg4.v1",
-        fixtureId,
-        sourceMode: "synthetic",
-        approveLabAssumptions: payload.approveLabAssumptions === true,
-        randomSeed: payload.randomSeed ?? 20260327,
-        intervention: payload.intervention,
-        execution: payload.execution ?? { itemCount: 40, runCount: 5, baseSeed: 20261127 },
-        ...auth.scope,
-      };
-  let remote;
   try {
-    remote = await invokeRemote(REMOTE_KEY, {
-      path: TRANSFORM_PATH,
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+    const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
+    if (substitution) return substitution;
+    const auth = authorizedRemoteScope(request);
+    if (auth.error) return auth.error;
+    const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
+    const fixtureId =
+      payload.fixtureId === "cg5-hybrid-support"
+        ? "cg5-hybrid-support"
+        : payload.fixtureId === "cg3-partially-observable"
+          ? "cg3-partially-observable"
+          : "cg3-golden-analytical";
+    const multi = payload.contractVersion === "cg5.v1" && Array.isArray(payload.alternatives);
+    const denied = await requireCurrentSourceAccess(auth.scope.authorizedProjectKey);
+    if (denied) return denied;
+    const sourceMode = payload.sourceMode === "manual" || payload.sourceMode === "jira" || payload.sourceMode === "csv" ? payload.sourceMode : "synthetic";
+    const body = multi
+      ? {
+          contractVersion: "cg5.v1",
+          fixtureId: sourceMode === "synthetic" ? fixtureId : undefined,
+          sourceMode,
+          baselineToken: payload.baselineToken,
+          approveLabAssumptions: payload.approveLabAssumptions === true,
+          randomSeed: payload.randomSeed ?? 20260327,
+          alternatives: payload.alternatives,
+          execution: payload.execution ?? { itemCount: 20, runCount: 5, baseSeed: 20261127 },
+          experimentId: payload.experimentId,
+          requestId: payload.requestId,
+          ...auth.scope,
+        }
+      : {
+          contractVersion: "cg4.v1",
+          fixtureId,
+          sourceMode: "synthetic",
+          approveLabAssumptions: payload.approveLabAssumptions === true,
+          randomSeed: payload.randomSeed ?? 20260327,
+          intervention: payload.intervention,
+          execution: payload.execution ?? { itemCount: 40, runCount: 5, baseSeed: 20261127 },
+          ...auth.scope,
+        };
+    let remote;
+    try {
+      remote = await invokeRemote(REMOTE_KEY, {
+        path: TRANSFORM_PATH,
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      const classified = classifyNetworkFailure(error);
+      return { status: "failed", classification: classified.kind, message: classified.message };
+    }
+    const remoteBody = await readJson(remote);
+    if (remote.status === 401) {
+      return {
+        status: "failed",
+        classification: "authentication_failed",
+        message: "The remote could not verify the Forge Invocation Token.",
+      };
+    }
+    if (!remote.ok) {
+      const message =
+        remoteBody && remoteBody.error && typeof remoteBody.error.message === "string"
+          ? remoteBody.error.message
+          : "The transformation experiment failed.";
+      return {
+        status: "failed",
+        classification: remote.status === 408 ? "timeout" : "remote_error",
+        httpStatus: remote.status,
+        message,
+      };
+    }
+    const validated = validateTransformEvidence(remoteBody, {
+      requestId: payload.requestId,
+      experimentId: payload.experimentId,
+      alternativeIds: multi ? payload.alternatives?.map((item) => item.alternativeId) : undefined,
     });
+    if (!validated.ok) {
+      return { status: "failed", classification: "invalid_response", message: validated.message };
+    }
+    return { status: "ok", evidence: remoteBody };
   } catch (error) {
     const classified = classifyNetworkFailure(error);
     return { status: "failed", classification: classified.kind, message: classified.message };
   }
-  const remoteBody = await readJson(remote);
-  if (remote.status === 401) {
-    return {
-      status: "failed",
-      classification: "authentication_failed",
-      message: "The remote could not verify the Forge Invocation Token.",
-    };
-  }
-  if (!remote.ok) {
-    const message =
-      remoteBody && remoteBody.error && typeof remoteBody.error.message === "string"
-        ? remoteBody.error.message
-        : "The transformation experiment failed.";
-    return {
-      status: "failed",
-      classification: remote.status === 408 ? "timeout" : "remote_error",
-      httpStatus: remote.status,
-      message,
-    };
-  }
-  const validated = validateTransformEvidence(remoteBody, {
-    requestId: payload.requestId,
-    experimentId: payload.experimentId,
-    alternativeIds: multi ? payload.alternatives?.map((item) => item.alternativeId) : undefined,
-  });
-  if (!validated.ok) {
-    return { status: "failed", classification: "invalid_response", message: validated.message };
-  }
-  return { status: "ok", evidence: remoteBody };
 });
 
 resolver.define("runEconomicEvaluation", async (request) => {
+  try {
   const substitution = rejectBrowserProjectSubstitution(request.context, request.payload);
   if (substitution) return substitution;
   const auth = authorizedRemoteScope(request);
@@ -538,6 +544,10 @@ resolver.define("runEconomicEvaluation", async (request) => {
     return { status: "failed", classification: "invalid_response", message: validated.message };
   }
   return { status: "ok", evidence: remoteBody };
+  } catch (error) {
+    const classified = classifyNetworkFailure(error);
+    return { status: "failed", classification: classified.kind, message: classified.message };
+  }
 });
 
 resolver.define("constructBaseline", async (request) => {

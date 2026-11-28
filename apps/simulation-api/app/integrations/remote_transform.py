@@ -246,6 +246,18 @@ async def transform_remote(request: Request) -> JSONResponse:
         )  # noqa: E501
     except ScenarioComparisonError:
         return _error(500, "COMPARISON_FAILED", "The comparison could not be completed.")
+    except ValidationError:
+        emit(
+            "transform.refused",
+            {"correlationId": correlation_id, "reason": "reconstruction_invalid", "operation": "transform"},  # noqa: E501
+        )
+        return _error(422, "REQUEST_VALIDATION_FAILED", "Signed baseline evidence could not be reconstructed.")  # noqa: E501
+    except Exception:
+        emit(
+            "transform.failed",
+            {"correlationId": correlation_id, "reason": "uncaught", "operation": "transform"},
+        )
+        return _error(500, "EXECUTION_FAILED", "The transformation experiment failed unexpectedly.")
     duration_ms = int((time.perf_counter() - started) * 1000)
     emit(
         "transform.completed",

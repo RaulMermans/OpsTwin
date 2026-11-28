@@ -1149,7 +1149,7 @@ export function App() {
               <label className="stack">
                 Items
                 <select value={transform.itemCount} onChange={(event) => updateTransform({ itemCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[20, 40].map((value) => (
+                  {[20, 40, 80].map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
@@ -1157,7 +1157,7 @@ export function App() {
               <label className="stack">
                 Replications
                 <select value={transform.runCount} onChange={(event) => updateTransform({ runCount: Number(event.target.value) })} disabled={experiment.status === "running"}>
-                  {[2, 5].map((value) => (
+                  {[2, 5, 8].map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>

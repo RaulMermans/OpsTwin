@@ -37,6 +37,8 @@ test("signed evidence operations recheck current project access regardless of br
   assert.match(construct, /requireCurrentSourceAccess/);
   assert.doesNotMatch(transform, /if \(sourceMode === "jira"\)/);
   assert.doesNotMatch(economics, /if \(payload\.sourceMode === "jira"\)/);
+  assert.equal(transform.split("catch (error)").length >= 3, true);
+  assert.equal(economics.split("catch (error)").length >= 3, true);
 });
 
 test("operational import never uses asApp and never forwards issues to the simulation remote", () => {

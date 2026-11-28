@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { afterCalibrationChange, afterConfigChange, afterFailedImport, afterFinancialChange, calibrationPayload, comparisonPayload, defaultConfig, defaultTransform, economicsPayload, hybridSupported, selectedAlternatives, sourceLinkedCalibrationPayload, transformPayload } from "../../static/transformation-lab/src/labState.js";
 
 test("configuration changes invalidate displayed evidence", () => {
@@ -111,6 +114,12 @@ test("non-synthetic economics omit the synthetic fixture identity", () => {
     "req-e",
   );
   assert.equal(synthetic.fixtureId, "cg5-hybrid-support");
+});
+
+test("custom UI exposes product-max execution volume", () => {
+  const app = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../static/transformation-lab/src/App.jsx"), "utf8");
+  assert.match(app, /\[20, 40, 80\]/);
+  assert.match(app, /\[2, 5, 8\]/);
 });
 
 test("hybrid is omitted when the baseline has no completion route", () => {

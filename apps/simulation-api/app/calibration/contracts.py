@@ -96,7 +96,7 @@ class ParameterEstimate(ContractModel):
     parameter_id: str
     target_model_path: str
     parameter_type: str
-    value: float | int | str | None
+    value: float | int | str | None = None
     unit: str
     estimation_method: str
     evidence_class: EvidenceClass
