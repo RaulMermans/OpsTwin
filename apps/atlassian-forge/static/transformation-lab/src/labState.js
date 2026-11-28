@@ -152,13 +152,25 @@ export function selectedAlternatives(transform, calibration) {
   return alternatives;
 }
 
+function compactId(parts) {
+  const raw = parts.join(":");
+  let hash = 2166136261;
+  for (let i = 0; i < raw.length; i += 1) {
+    hash ^= raw.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 export function experimentIdFor(calibration, transform, alternatives) {
-  return [
-    calibration.fixtureId,
-    transform.itemCount,
-    transform.runCount,
+  const digest = compactId([
+    calibration.sourceMode || "synthetic",
+    calibration.fixtureId || "none",
+    String(transform.itemCount),
+    String(transform.runCount),
     JSON.stringify(alternatives),
-  ].join(":");
+  ]);
+  return `${calibration.fixtureId || "baseline"}:${transform.itemCount}x${transform.runCount}:${digest}`;
 }
 
 export function defaultManualSpec() {
